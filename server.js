@@ -3571,21 +3571,52 @@ function fG(){
 
 function rTb(bid,rows,showC){
   var tb=$(bid);if(!tb)return;
+  // Couleurs statuts
+  var stCols={Prioritaire:'#dc2626',Programmé:'#2563eb',Planifié:'#7c3aed','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#6b7280',Suspendu:'#9ca3af',ND:'#9ca3af'};
+  // Options responsables
+  var respOpts='<option value="">—</option>'+ELUS_DATA.map(function(e){return'<option value="'+e.id+'">'+(e.prenom?e.prenom.charAt(0)+'. ':'')+e.nom+'</option>';}).join('');
   tb.innerHTML=rows.map(function(p){
-    var st=ST[p.id]||p.statut||"ND";
-    var opts=SLIST.map(function(sv){return '<option value="'+sv+'"'+(st===sv?" selected":"")+'>'+sv+'</option>';}).join("");
+    var st=ST[p.id]||p.statut||'ND';
+    var av=p.avancement||0;
+    var col=stCols[st]||'#9ca3af';
+    var stOpts=SLIST.map(function(sv){return'<option value="'+sv+'"'+(st===sv?' selected':'')+'>'+sv+'</option>';}).join('');
     var c1=showC
-      ?'<td><span class="chip">'+t2c(p.theme||"")+'</span><br><span style="font-size:.63rem;color:var(--i4)">'+(p.theme||"—")+'</span></td>'
-      :'<td style="font-size:.72rem;color:var(--i3)">'+(p.theme||"—")+'</td>';
-    return '<tr>'+c1
-      +'<td><div class="pn">'+(p.titre||"—")+'</div><div class="pr">'+(p.resume||"")+'</div></td>'
-      +'<td><span class="b '+bc(st)+'">'+st+'</span></td>'
-      +'<td style="color:var(--i3);font-family:var(--fm);font-size:.72rem">'+(p.annee||"—")+'</td>'
-      +'<td>'+imp(p.importance)+'</td>'
-      +'<td><div style="display:flex;align-items:center;gap:5px"><select class="ssel" data-pid="'+p.id+'" data-t="'+p.titre.replace(/"/g,"&quot;")+'" onchange="uSt(+this.dataset.pid,this.value,this.dataset.t)">'+opts+'</select>'
-      +'<button onclick="oProj('+p.id+')" title="Modifier" style="padding:8px 16px;font-size:.82rem;font-weight:700;cursor:pointer;background:var(--g2);color:#fff;border:none;border-radius:8px;flex-shrink:0;font-family:var(--fd);display:flex;align-items:center;gap:5px;white-space:nowrap">&#x270F;&#xFE0F; Modifier</button></div></td>'
+      ?'<td style="padding:0 .5rem"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+(COLORS[t2c(p.theme||'')]||'var(--g3)')+';margin-right:4px"></span><span style="font-size:.68rem;color:var(--i3)">'+(p.theme||'—')+'</span></td>'
+      :'<td style="font-size:.68rem;color:var(--i3);padding:0 .5rem">'+(p.theme||'—')+'</td>';
+    // Badge statut cliquable → select inline
+    var stBadge='<div style="display:inline-flex;align-items:center;position:relative">'
+      +'<select class="ssel" data-pid="'+p.id+'" data-t="'+p.titre.replace(/"/g,'&quot;')+'" onchange="uSt(+this.dataset.pid,this.value,this.dataset.t)" style="appearance:none;-webkit-appearance:none;background:'+col+'18;color:'+col+';border:1.5px solid '+col+'44;border-radius:20px;padding:3px 22px 3px 10px;font-size:.7rem;font-weight:700;cursor:pointer;outline:none">'+stOpts+'</select>'
+      +'<span style="position:absolute;right:7px;pointer-events:none;font-size:.5rem;color:'+col+'">▼</span>'
+      +'</div>';
+    // Barre avancement
+    var avBar='<div style="display:flex;align-items:center;gap:6px">'
+      +'<div style="flex:1;background:var(--w2);border-radius:4px;height:6px;overflow:hidden;min-width:50px">'
+      +'<div style="height:100%;border-radius:4px;background:'+col+';width:'+av+'%"></div>'
+      +'</div>'
+      +'<span style="font-size:.65rem;color:var(--i3);font-weight:600;white-space:nowrap">'+av+'%</span>'
+      +'</div>';
+    // Responsable inline
+    var respSel='<select onchange="uResp('+p.id+',this)" style="background:none;border:1px solid var(--w2);border-radius:6px;font-size:.68rem;color:var(--i3);padding:2px 5px;cursor:pointer;max-width:100px">'+respOpts+'</select>';
+    // Passer la valeur sélectionnée au bon état
+    var respSelFull='<select onchange="uResp('+p.id+',this)" style="background:none;border:1px solid var(--w2);border-radius:6px;font-size:.68rem;color:var(--i3);padding:2px 5px;cursor:pointer;max-width:110px"><option value="">—</option>'+ELUS_DATA.map(function(e){return'<option value="'+e.id+'"'+(p.responsable_id===e.id?' selected':'')+'>'+( e.prenom?e.prenom.charAt(0)+'. ':'')+e.nom+'</option>';}).join('')+'</select>';
+    return '<tr style="border-left:3px solid '+col+'">'+c1
+      +'<td><div class="pn" style="cursor:pointer" onclick="oProj('+p.id+')">'+(p.titre||'—')+'</div><div class="pr">'+(p.resume||'')+'</div></td>'
+      +'<td>'+stBadge+'</td>'
+      +'<td>'+avBar+'</td>'
+      +'<td>'+respSelFull+'</td>'
+      +'<td style="color:var(--i3);font-family:var(--fm);font-size:.72rem">'+(p.annee||'—')+'</td>'
+      +'<td><button onclick="oProj('+p.id+')" style="padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;background:var(--g2);color:#fff;border:none;border-radius:7px;white-space:nowrap">✏️ Ouvrir</button></td>'
       +'</tr>';
-  }).join("");
+  }).join('');
+}
+
+function uResp(pid,sel){
+  var rid=parseInt(sel.value)||null;
+  var opt=sel.options[sel.selectedIndex];
+  var rnom=rid&&opt?opt.text:'';
+  apiPatch('/api/projet/'+pid+'/avancement',{responsable_id:rid,responsable_nom:rnom,avancement:(P.find(function(p){return p.id===pid;})||{}).avancement||0}).then(function(r){
+    if(r&&r.ok){P=P.map(function(p){return p.id===pid?Object.assign({},p,{responsable_id:rid,responsable_nom:rnom}):p;});}
+  });
 }
 
 function uSt(id,nst,titre){
@@ -3650,7 +3681,7 @@ function showCD(idx){
     +'<span class="fcnt" id="cd-cnt-p"></span>'
     +'</div>'
     +'<div class="tbw" style="border-radius:0;border-left:none;border-right:none;border-bottom:none">'
-    +'<table><thead><tr><th>Thème</th><th>Projet</th><th>Statut</th><th>Année</th><th>Imp.</th><th>Modifier</th></tr></thead>'
+    +'<table><thead><tr><th>Thème</th><th>Projet</th><th>Statut</th><th>Avancement</th><th>Référent</th><th>Année</th><th>Action</th></tr></thead>'
     +'<tbody id="cd-tb-p"></tbody></table></div>';
   fCDP();
 }

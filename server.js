@@ -4526,6 +4526,10 @@ function fpRenderJournal(pid,p,statut,fiche){
     +'</select></div>'
     // Lien URL alternatif
     +'<input id="dc-ul-'+pid+'" class="fi" placeholder="Ou coller un lien (kDrive, Google Drive, URL…)" style="font-size:.79rem;padding:6px 9px;margin-bottom:8px;width:100%;box-sizing:border-box">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.75rem;color:var(--i3)">'
+    +'<input type="checkbox" id="dc-bib-'+pid+'" style="width:14px;height:14px;accent-color:var(--g2);cursor:pointer">'
+    +'<label for="dc-bib-'+pid+'" style="cursor:pointer">Ajouter aussi à la <strong>Bibliothèque générale</strong></label>'
+    +'</div>'
     +'<button onclick="fpAddDoc('+pid+')" class="btn btn-p" style="width:100%;font-size:.82rem">💾 Joindre ce document</button>'
     +'</div></div>';
 
@@ -4637,6 +4641,10 @@ function fpRenderDocs(pid,items){
     +'<select id="dc-ty-'+pid+'" class="fi" style="font-size:.79rem;padding:6px 9px">'+tyOpts+'</select>'
     +'</div>'
     +'<input id="dc-ul-'+pid+'" class="fi" placeholder="Ou coller un lien URL (optionnel si fichier joint)" style="font-size:.79rem;padding:6px 9px;width:100%;box-sizing:border-box;margin-bottom:8px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.75rem;color:var(--i3)">'
+    +'<input type="checkbox" id="dc-bib-'+pid+'" style="width:14px;height:14px;accent-color:var(--g2);cursor:pointer">'
+    +'<label for="dc-bib-'+pid+'" style="cursor:pointer">Ajouter aussi à la <strong>Bibliothèque générale</strong></label>'
+    +'</div>'
     +'<div style="display:flex;justify-content:flex-end">'
     +'<button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">💾 Enregistrer</button></div></div>';
 
@@ -4709,7 +4717,8 @@ function fpAddDoc(pid){
     xhr.onload=function(){
       var r=JSON.parse(xhr.responseText||'{}');
       if(r.ok){
-        // Recharger l'onglet courant (docs ou journal)
+        var bibCb=document.getElementById('dc-bib-'+pid);
+        if(bibCb&&bibCb.checked) fpAddToBiblio(titre,ty,r.url||'',pid);
         var activeTab=document.querySelector('.fpt.on');
         var tab=activeTab?activeTab.getAttribute('data-tab'):'docs';
         if(tab==='journal') fpReload('journal'); else fpReload('docs');
@@ -4721,6 +4730,8 @@ function fpAddDoc(pid){
   } else if(ul){
     apiPost('/api/projet/'+pid+'/docs',{titre:titre,type:ty,url:ul}).then(function(r){
       if(r&&r.ok){
+        var bibCb=document.getElementById('dc-bib-'+pid);
+        if(bibCb&&bibCb.checked) fpAddToBiblio(titre,ty,ul,pid);
         var activeTab=document.querySelector('.fpt.on');
         var tab=activeTab?activeTab.getAttribute('data-tab'):'docs';
         if(tab==='journal') fpReload('journal'); else fpReload('docs');
@@ -4735,6 +4746,14 @@ function fpAddDoc(pid){
 function fpDelDoc(id,pid){
   if(!confirm('Supprimer ce document ?'))return;
   apiDel('/api/projdoc/'+id).then(function(){fpReload('docs');});
+}
+
+function fpAddToBiblio(titre,type,url,pid){
+  var proj=P.find(function(p){return p.id===pid;})||{};
+  var desc='Projet : '+(proj.titre||'');
+  apiPost('/api/biblio',{titre:titre,type:type||'Autre',url:url,description:desc,auteur:ME.nom||'',visibilite:'prive'}).then(function(r){
+    if(r&&r.ok){if(window.BIBLIO)BIBLIO.unshift(r.item);toast('📚 Ajouté à la bibliothèque ✓');}
+  });
 }
 
 function fpRenderPresse(pid,items){

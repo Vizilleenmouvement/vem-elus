@@ -527,13 +527,71 @@ const server=http.createServer(function(req,res){
     return J(res,{jalons:ProjetJalons.get(pid2),partenaires:ProjetPartenaires.get(pid2),contacts:ProjetContacts.get(pid2),docs:ProjetDocs.get(pid2),presse:ProjetPresse.get(pid2),journal:ProjetJournal.get(pid2)});
   }
   if(p.match(/^\/api\/projet\/\d+\/jalons$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetJalons.insert(parseInt(p.split('/')[3]),d)});});
-  if(p.match(/^\/api\/jalon\/\d+$/)&&m==='PATCH')return body(req,function(err,d){if(err)return J(res,{ok:false},400);ProjetJalons.patch(parseInt(p.split('/').pop()),d);return J(res,{ok:true});});
+  if(p.match(/^\/api\/jalon\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var jid=parseInt(p.split('/').pop());
+    ProjetJalons.patch(jid,d);
+    // Recalcul avancement automatique depuis les jalons
+    var j0=db.prepare('SELECT projet_id FROM projet_jalons WHERE id=?').get(jid);
+    var avancement=0;
+    if(j0){
+      var all=db.prepare('SELECT statut FROM projet_jalons WHERE projet_id=?').all(j0.projet_id);
+      if(all.length>0){avancement=Math.round(all.filter(function(j){return j.statut==='realise';}).length/all.length*100);}
+      try{db.prepare('UPDATE projets SET avancement=? WHERE id=?').run(avancement,j0.projet_id);}catch(e){}
+    }
+    return J(res,{ok:true,avancement:avancement});
+  });
   if(p.match(/^\/api\/jalon\/\d+$/)&&m==='DELETE'){ProjetJalons.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p.match(/^\/api\/projet\/\d+\/partenaires$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetPartenaires.insert(parseInt(p.split('/')[3]),d)});});
   if(p.match(/^\/api\/partenaire\/\d+$/)&&m==='DELETE'){ProjetPartenaires.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p.match(/^\/api\/projet\/\d+\/contacts$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetContacts.insert(parseInt(p.split('/')[3]),d)});});
   if(p.match(/^\/api\/contact\/\d+$/)&&m==='DELETE'){ProjetContacts.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p.match(/^\/api\/projet\/\d+\/docs$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetDocs.insert(parseInt(p.split('/')[3]),d)});});
+  if(p.match(/^\/api\/projet\/\d+\/upload-doc$/)&&m==='POST'){
+    var pid3=parseInt(p.split('/')[3]);
+    var ct3=req.headers['content-type']||'';
+    if(!ct3.includes('multipart/form-data'))return J(res,{ok:false,error:'multipart requis'},400);
+    var boundary3=ct3.split('boundary=')[1]; if(!boundary3)return J(res,{ok:false,error:'boundary manquant'},400);
+    var chunks3=[];
+    req.on('data',function(c){chunks3.push(c);});
+    req.on('end',function(){
+      try{
+        var buf3=Buffer.concat(chunks3);
+        var bnd3=Buffer.from('--'+boundary3);
+        var fileData3=null,fileName3='',titre3='',type3='Autre';
+        var pos3=0;
+        while(pos3<buf3.length){
+          var s3=buf3.indexOf(bnd3,pos3); if(s3<0)break;
+          var e3=buf3.indexOf(bnd3,s3+bnd3.length); if(e3<0)e3=buf3.length;
+          var part3=buf3.slice(s3+bnd3.length,e3);
+          var he3=part3.indexOf('\r\n\r\n'); if(he3<0){pos3=e3;continue;}
+          var hdr3=part3.slice(0,he3).toString();
+          var bod3=part3.slice(he3+4);
+          if(bod3[bod3.length-2]===13&&bod3[bod3.length-1]===10)bod3=bod3.slice(0,-2);
+          if(hdr3.includes('filename=')){
+            var fm3=hdr3.match(/filename="([^"]+)"/); if(fm3)fileName3=fm3[1];
+            fileData3=bod3;
+          } else {
+            var nm3=hdr3.match(/name="([^"]+)"/); if(nm3){
+              if(nm3[1]==='titre')titre3=bod3.toString().trim();
+              else if(nm3[1]==='type')type3=bod3.toString().trim();
+            }
+          }
+          pos3=e3;
+        }
+        if(!fileData3||!fileName3)return J(res,{ok:false,error:'Fichier non trouvé'},400);
+        var safe3=fileName3.replace(/[^a-zA-Z0-9._\-]/g,'_');
+        var outName3=Date.now()+'_'+safe3;
+        var outPath3=path.join(DIR,'uploads',outName3);
+        try{fs.mkdirSync(path.join(DIR,'uploads'),{recursive:true});}catch(e){}
+        fs.writeFileSync(outPath3,fileData3);
+        var item3=ProjetDocs.insert(pid3,{titre:titre3||fileName3,type:type3,url:'/uploads/'+outName3,description:''});
+        try{ProjetJournal.log(pid3,ME.id,ME.nom,'doc','',titre3||fileName3);}catch(e){}
+        return J(res,{ok:true,item:item3});
+      }catch(e){return J(res,{ok:false,error:e.message},500);}
+    });
+    return;
+  }
   if(p.match(/^\/api\/projdoc\/\d+$/)&&m==='DELETE'){ProjetDocs.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p.match(/^\/api\/projet\/\d+\/presse$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetPresse.insert(parseInt(p.split('/')[3]),d)});});
   if(p.match(/^\/api\/presse\/\d+$/)&&m==='DELETE'){ProjetPresse.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
@@ -4218,7 +4276,22 @@ function fpRenderJalons(pid,items){
   pb.innerHTML=html;
 }
 function fpAddJalon(pid){var ti=document.getElementById('jl-ti'),dt=document.getElementById('jl-dt');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/jalons',{titre:ti.value.trim(),date:dt?dt.value:'',statut:'prevu'}).then(function(r){if(r&&r.ok)fpReload('jalons');});}
-function fpPatchJalon(id,s){apiPatch('/api/jalon/'+id,{statut:s}).then(function(){toast('✅ Jalon mis à jour');});}
+function fpPatchJalon(id,s){
+  apiPatch('/api/jalon/'+id,{statut:s}).then(function(r){
+    toast('✅ Jalon mis à jour');
+    if(r&&r.avancement!==undefined){
+      var pid=window._fpPid;
+      P=P.map(function(p){return p.id===pid?Object.assign({},p,{avancement:r.avancement}):p;});
+      var bar=document.getElementById('fp-av-bar');
+      var pct=document.getElementById('fp-av-pct');
+      var rng=document.getElementById('fp-av-rng');
+      if(bar)bar.style.width=r.avancement+'%';
+      if(pct)pct.textContent=r.avancement+'%';
+      if(rng)rng.value=r.avancement;
+    }
+    fpReload('jalons');
+  });
+}
 function fpDelJalon(id,pid){if(!confirm('Supprimer ?'))return;apiDel('/api/jalon/'+id).then(function(){fpReload('jalons');});}
 
 function fpRenderPartenaires(pid,items){
@@ -4257,19 +4330,107 @@ function fpDelCt(id,pid){apiDel('/api/contact/'+id).then(function(){fpReload('co
 
 function fpRenderDocs(pid,items){
   var pb=document.getElementById('fp-body'); if(!pb)return;
-  var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px">'
-    +'<input id="dc-ti" class="fi" placeholder="Titre *" style="font-size:.79rem;padding:6px 9px">'
-    +'<select id="dc-ty" class="fi" style="font-size:.79rem;padding:6px 9px"><option>Délibération</option><option>Étude</option><option>Devis</option><option>Compte rendu</option><option>Courrier</option><option>Autre</option></select>'
-    +'</div><input id="dc-ul" class="fi" placeholder="URL" style="font-size:.79rem;padding:6px 9px;margin-top:8px;width:100%;box-sizing:border-box">'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:8px">'
-    +'<button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div></div>';
-  items.forEach(function(d){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)"><span style="font-size:1.2rem;flex-shrink:0">📄</span><div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+d.titre+'</div>'+(d.type?'<span style="font-size:.68rem;background:var(--g8);color:var(--g2);padding:1px 7px;border-radius:5px">'+d.type+'</span>':'')+(d.url?'<a href="'+d.url+'" target="_blank" style="font-size:.7rem;color:var(--g3);display:block;margin-top:2px">🔗 Ouvrir</a>':'')+'</div><button onclick="fpDelDoc('+d.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button></div>';});
-  if(!items.length)html+='<div class="empty"><div class="empty-ico">📄</div><div class="empty-s">Aucun document.</div></div>';
+  var tyOpts='<option value="CR de commission">CR de commission</option><option value="Délibération">Délibération</option><option value="Étude">Étude</option><option value="Rapport">Rapport</option><option value="Avis">Avis</option><option value="Devis">Devis</option><option value="Courrier">Courrier</option><option value="Email">Email</option><option value="Autre">Autre</option>';
+  var icoMap={'CR de commission':'📋','Délibération':'🏛','Étude':'🔬','Rapport':'📊','Avis':'⚖️','Devis':'💶','Courrier':'📨','Email':'📧','Autre':'📄'};
+  var html=
+    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.85rem">📎 Déposer un document</div>'
+    // Upload fichier
+    +'<div style="border:2px dashed var(--w2);border-radius:10px;padding:1rem;text-align:center;margin-bottom:.85rem;background:var(--g8);cursor:pointer" onclick="fpOpenFile('+pid+')">'
+    +'<div style="font-size:1.5rem;margin-bottom:.3rem">📂</div>'
+    +'<div style="font-size:.78rem;color:var(--i3)">Cliquer pour sélectionner un fichier</div>'
+    +'<div style="font-size:.67rem;color:var(--i4);margin-top:2px">PDF, Word, Excel, Email, Image…</div>'
+    +'<input type="file" id="dc-file-'+pid+'" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.eml,.msg,.txt,.jpg,.jpeg,.png,.odt,.ods,.ppt,.pptx" onchange="fpPreviewDoc(this,'+pid+')">'
+    +'</div>'
+    +'<div id="dc-preview-'+pid+'" style="display:none;margin-bottom:.85rem;padding:.7rem;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0">'
+    +'<div style="font-size:.75rem;font-weight:700;color:var(--g1)" id="dc-fname-'+pid+'"></div>'
+    +'</div>'
+    // Métadonnées + lien optionnel
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:8px">'
+    +'<input id="dc-ti-'+pid+'" class="fi" placeholder="Titre du document *" style="font-size:.79rem;padding:6px 9px">'
+    +'<select id="dc-ty-'+pid+'" class="fi" style="font-size:.79rem;padding:6px 9px">'+tyOpts+'</select>'
+    +'</div>'
+    +'<input id="dc-ul-'+pid+'" class="fi" placeholder="Ou coller un lien URL (optionnel si fichier joint)" style="font-size:.79rem;padding:6px 9px;width:100%;box-sizing:border-box;margin-bottom:8px">'
+    +'<div style="display:flex;justify-content:flex-end">'
+    +'<button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">💾 Enregistrer</button></div></div>';
+
+  // Liste des documents
+  if(items.length){
+    items.forEach(function(d){
+      var ico=icoMap[d.type]||'📄';
+      var ext=d.url?(d.url.split('.').pop().toLowerCase()):'';
+      var isFile=d.url&&d.url.startsWith('/uploads/');
+      var isPdf=ext==='pdf';
+      var isImg=['jpg','jpeg','png','gif','webp'].indexOf(ext)>=0;
+      html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1rem;margin-bottom:.6rem;box-shadow:var(--s1)">'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<span style="font-size:1.3rem;flex-shrink:0">'+ico+'</span>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:.82rem;font-weight:700;font-family:var(--fd)">'+d.titre+'</div>'
+        +(d.type?'<span style="font-size:.67rem;background:var(--g8);color:var(--g2);padding:1px 8px;border-radius:6px;font-weight:600">'+d.type+'</span>':'')
+        +(d.created_at?'<span style="font-size:.65rem;color:var(--i4);margin-left:8px">'+d.created_at.slice(0,10)+'</span>':'')
+        +'</div>'
+        +'<div style="display:flex;gap:6px;flex-shrink:0">'
+        +(d.url
+          ?'<a href="'+d.url+'" target="_blank" style="background:var(--g8);border:1px solid var(--g7);border-radius:7px;padding:4px 10px;font-size:.72rem;font-weight:700;color:var(--g2);text-decoration:none;display:flex;align-items:center;gap:4px">'+(isFile?'⬇️ Télécharger':'🔗 Ouvrir')+'</a>'
+          :'')
+        +'<button onclick="fpDelDoc('+d.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:.8rem">×</button>'
+        +'</div></div>'
+        // Aperçu PDF inline
+        +(isPdf&&isFile?'<div style="margin-top:.75rem;border-radius:8px;overflow:hidden;border:1px solid var(--w2)"><iframe src="'+d.url+'" style="width:100%;height:320px;border:none"></iframe></div>':'')
+        +(isImg&&isFile?'<div style="margin-top:.75rem"><img src="'+d.url+'" style="max-width:100%;border-radius:8px;border:1px solid var(--w2)"></div>':'')
+        +'</div>';
+    });
+  } else {
+    html+='<div class="empty"><div class="empty-ico">📂</div><div class="empty-s">Aucun document — déposez des CR, rapports, courriers, emails…</div></div>';
+  }
   pb.innerHTML=html;
 }
-function fpAddDoc(pid){var ti=document.getElementById('dc-ti');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/docs',{titre:ti.value.trim(),type:(document.getElementById('dc-ty')||{}).value||'Autre',url:(document.getElementById('dc-ul')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('docs');});}
-function fpDelDoc(id,pid){apiDel('/api/projdoc/'+id).then(function(){fpReload('docs');});}
+
+function fpOpenFile(pid){var fi=document.getElementById('dc-file-'+pid);if(fi)fi.click();}
+function fpPreviewDoc(input,pid){
+  var file=input.files[0]; if(!file)return;
+  var prev=document.getElementById('dc-preview-'+pid);
+  var fname=document.getElementById('dc-fname-'+pid);
+  var ti=document.getElementById('dc-ti-'+pid);
+  if(prev)prev.style.display='block';
+  if(fname)fname.textContent='📎 '+file.name+' ('+Math.round(file.size/1024)+'Ko)';
+  if(ti&&!ti.value)ti.value=file.name.replace(/\.[^.]+$/,'');
+}
+
+function fpAddDoc(pid){
+  var ti=document.getElementById('dc-ti-'+pid);
+  var ty=(document.getElementById('dc-ty-'+pid)||{value:'Autre'}).value||'Autre';
+  var ul=(document.getElementById('dc-ul-'+pid)||{value:''}).value||'';
+  var fi=document.getElementById('dc-file-'+pid);
+  var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null;
+  if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}
+  if(file){
+    // Upload fichier
+    var form=new FormData();
+    form.append('file',file,file.name);
+    form.append('titre',ti.value.trim());
+    form.append('type',ty);
+    var xhr=new XMLHttpRequest();
+    xhr.open('POST','/api/projet/'+pid+'/upload-doc');
+    xhr.withCredentials=true;
+    xhr.onload=function(){
+      var r=JSON.parse(xhr.responseText||'{}');
+      if(r.ok){fpReload('docs');}else{toast('Erreur upload',3000);}
+    };
+    xhr.send(form);
+  } else if(ul){
+    // Lien URL simple
+    apiPost('/api/projet/'+pid+'/docs',{titre:ti.value.trim(),type:ty,url:ul}).then(function(r){if(r&&r.ok)fpReload('docs');});
+  } else {
+    toast('Joindre un fichier ou saisir un lien');
+  }
+}
+
+function fpDelDoc(id,pid){
+  if(!confirm('Supprimer ce document ?'))return;
+  apiDel('/api/projdoc/'+id).then(function(){fpReload('docs');});
+}
 
 function fpRenderPresse(pid,items){
   var pb=document.getElementById('fp-body'); if(!pb)return;

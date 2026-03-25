@@ -1,6 +1,6 @@
 const http=require('http'),https=require('https'),fs=require('fs'),path=require('path');
 const PORT=process.env.PORT||3000, DIR=__dirname;
-const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db} = require('./db.js');
+const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db,ProjetJalons,ProjetPartenaires,ProjetContacts,ProjetDocs,ProjetPresse,ProjetJournal} = require('./db.js');
 
 // Comptes élus — peuvent être surchargés via ACCOUNTS_JSON env var
 const ACCOUNTS_DEFAULT = {
@@ -515,6 +515,28 @@ const server=http.createServer(function(req,res){
   });
 
   // SUPPRIMER UN PROJET
+  if(p.match(/^\/api\/projet\/\d+\/avancement$/)&&m==='PATCH')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var pid2=parseInt(p.split('/')[3]);
+    try{db.prepare('UPDATE projets SET avancement=?,responsable_id=?,responsable_nom=? WHERE id=?').run(parseInt(d.avancement)||0,d.responsable_id||null,d.responsable_nom||'',pid2);}catch(e){}
+    try{ProjetJournal.log(pid2,ME.id,ME.nom,'avancement','',(d.avancement||0)+'%');}catch(e){}
+    return J(res,{ok:true});
+  });
+  if(p.match(/^\/api\/projet\/\d+\/fiche$/)&&m==='GET'){
+    var pid2=parseInt(p.split('/')[3]);
+    return J(res,{jalons:ProjetJalons.get(pid2),partenaires:ProjetPartenaires.get(pid2),contacts:ProjetContacts.get(pid2),docs:ProjetDocs.get(pid2),presse:ProjetPresse.get(pid2),journal:ProjetJournal.get(pid2)});
+  }
+  if(p.match(/^\/api\/projet\/\d+\/jalons$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetJalons.insert(parseInt(p.split('/')[3]),d)});});
+  if(p.match(/^\/api\/jalon\/\d+$/)&&m==='PATCH')return body(req,function(err,d){if(err)return J(res,{ok:false},400);ProjetJalons.patch(parseInt(p.split('/').pop()),d);return J(res,{ok:true});});
+  if(p.match(/^\/api\/jalon\/\d+$/)&&m==='DELETE'){ProjetJalons.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+  if(p.match(/^\/api\/projet\/\d+\/partenaires$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetPartenaires.insert(parseInt(p.split('/')[3]),d)});});
+  if(p.match(/^\/api\/partenaire\/\d+$/)&&m==='DELETE'){ProjetPartenaires.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+  if(p.match(/^\/api\/projet\/\d+\/contacts$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetContacts.insert(parseInt(p.split('/')[3]),d)});});
+  if(p.match(/^\/api\/contact\/\d+$/)&&m==='DELETE'){ProjetContacts.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+  if(p.match(/^\/api\/projet\/\d+\/docs$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetDocs.insert(parseInt(p.split('/')[3]),d)});});
+  if(p.match(/^\/api\/projdoc\/\d+$/)&&m==='DELETE'){ProjetDocs.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+  if(p.match(/^\/api\/projet\/\d+\/presse$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetPresse.insert(parseInt(p.split('/')[3]),d)});});
+  if(p.match(/^\/api\/presse\/\d+$/)&&m==='DELETE'){ProjetPresse.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p.match(/^\/api\/projet\/\d+$/)&&m==='DELETE'){
     Projets.delete(parseInt(p.split('/').pop()));
     return J(res,{ok:true});
@@ -4039,128 +4061,245 @@ function navToAgenda(){gp("agenda",qsa(".sbi")[3]);}
 
 // ── ÉDITION PROJET ──────────────────────────────────────────────────────────
 var _ePid=null;
+
+// ── FICHE PROJET v3 ──────────────────────────────────────────────────────────
+function _fpPanel(){
+  var p=document.getElementById('main-panel');
+  if(!p){p=document.createElement('div');p.id='main-panel';document.body.appendChild(p);}
+  p.style.cssText='position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
+  return p;
+}
+function _fpCss(){
+  if(document.getElementById('fp-css'))return;
+  var s=document.createElement('style');s.id='fp-css';
+  s.textContent='.fpt{background:none;border:none;padding:.55rem 1rem;font-size:.75rem;font-weight:600;color:var(--i3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:var(--fd)}.fpt.on{color:var(--g1);border-bottom-color:var(--g1);background:#fff}';
+  document.head.appendChild(s);
+}
 function oProj(pid){
   var p=P.find(function(x){return x.id===pid;}); if(!p)return;
-  _ePid=pid;
+  _ePid=pid; window._fpPid=pid;
   var statut=ST[pid]||p.statut||'ND';
-  var col={Prioritaire:'var(--red)',Programmé:'var(--blue)','En cours':'var(--amber)',Réalisé:'var(--g4)',Étude:'#8B5CF6',Abandonné:'var(--i4)'}[statut]||'var(--i3)';
-  var imp=['','★ Normale','★★ Importante','★★★ Prioritaire'][p.importance||1]||'★★ Importante';
-  var tags=Array.isArray(p.tags)?p.tags:(p.tags?p.tags.split(','):[]);
-
-  // Construire les options
-  var themeOpts=Object.keys(COMM).map(function(k){return COMM[k].map(function(t){return'<option value="'+t+'"'+(p.theme===t?' selected':'')+'>'+k+' — '+t+'</option>';}).join('');}).join('');
-  var statutOpts=SLIST.map(function(s){return'<option value="'+s+'"'+(statut===s?' selected':'')+'>'+s+'</option>';}).join('');
-
-  // Ouvrir un panneau dédié
-  var panel=document.getElementById("main-panel");
-  if(!panel){panel=document.createElement("div");panel.id="main-panel";panel.style.cssText="position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";document.body.appendChild(panel);}
+  var cols={Prioritaire:'#dc2626',Programmé:'#2563eb','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#8B5CF6',Abandonné:'#9ca3af'};
+  var col=cols[statut]||'#64748b';
+  var panel=_fpPanel(); _fpCss();
+  var TABS=['infos','jalons','partenaires','contacts','docs','presse','journal'];
+  var TLBL={infos:'📋 Infos',jalons:'🏁 Jalons',partenaires:'🤝 Partenaires',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
+  var th=''; TABS.forEach(function(t){th+='<button class="'+(t==='infos'?'fpt on':'fpt')+'" data-tab="'+t+'" onclick="fpTab(this)">'+TLBL[t]+'</button>';});
   panel.innerHTML=
-    '<div style="background:var(--g1);color:#fff;padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:.78rem;font-weight:600;font-family:var(--fd);">'
-    +'<span style="flex:1">📋 Fiche projet</span>'
-    +'<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:.9rem;">✕</button>'
-    +'</div>'
-    +'<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
+    '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'
+    +'<div style="width:8px;height:8px;border-radius:50%;background:'+col+'"></div>'
+    +'<span style="flex:1;font-size:.78rem;font-weight:700;font-family:var(--fd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.titre+'</span>'
+    +'<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;flex-shrink:0">✕</button></div>'
+    +'<div style="display:flex;background:var(--g8);border-bottom:1px solid var(--w2);flex-shrink:0;overflow-x:auto">'+th+'</div>'
+    +'<div id="fp-body" style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem"></div>';
+  fpTab(panel.querySelector('.fpt'));
+  panel.style.display='flex';
+  qsa('.sbi').forEach(function(n){n.classList.remove('on');});
+}
+function fpTab(btn){
+  var panel=document.getElementById('main-panel'); if(!panel)return;
+  panel.querySelectorAll('.fpt').forEach(function(b){b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  var tab=btn?(btn.getAttribute('data-tab')||'infos'):'infos';
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var pid=window._fpPid;
+  var p=P.find(function(x){return x.id===pid;})||{};
+  var statut=ST[pid]||p.statut||'ND';
+  if(tab==='infos'){fpRenderInfos(pid,p,statut);return;}
+  pb.innerHTML='<div style="text-align:center;padding:3rem;color:var(--i3)">⏳ Chargement…</div>';
+  apiGet('/api/projet/'+pid+'/fiche').then(function(f){
+    if(!f){pb.innerHTML='<div style="text-align:center;padding:2rem;color:var(--red)">Erreur</div>';return;}
+    if(tab==='jalons')       fpRenderJalons(pid,f.jalons||[]);
+    else if(tab==='partenaires') fpRenderPartenaires(pid,f.partenaires||[]);
+    else if(tab==='contacts')    fpRenderContacts(pid,f.contacts||[]);
+    else if(tab==='docs')        fpRenderDocs(pid,f.docs||[]);
+    else if(tab==='presse')      fpRenderPresse(pid,f.presse||[]);
+    else if(tab==='journal')     fpRenderJournal(pid,f.journal||[]);
+  });
+}
+function fpReload(tab){var b=document.querySelector('.fpt[data-tab="'+tab+'"]');if(b)fpTab(b);}
 
-  var pb=document.getElementById("panel-body");
-
+function fpRenderInfos(pid,p,statut){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var av=p.avancement||0;
+  var thO=''; Object.keys(COMM).forEach(function(k){COMM[k].forEach(function(t){thO+='<option value="'+t+'"'+(p.theme===t?' selected':'')+'>'+k+' — '+t+'</option>';});});
+  var stO=''; SLIST.forEach(function(s){stO+='<option value="'+s+'"'+(statut===s?' selected':'')+'>'+s+'</option>';});
+  var rO='<option value="">— Aucun référent —</option>';
+  ELUS_DATA.forEach(function(e){var n=(e.prenom?e.prenom+' ':'')+e.nom;rO+='<option value="'+e.id+'"'+(p.responsable_id===e.id?' selected':'')+'>'+n+'</option>';});
+  var ti=(p.titre||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  var rs=(p.resume||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  var ds=(p.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  var tg=(Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')).replace(/"/g,'&quot;');
+  var imp=p.importance||2;
   pb.innerHTML=
-    // En-tête coloré
-    '<div style="background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.5rem">'
-    +'<div style="display:flex;align-items:flex-start;gap:12px">'
-    +'<div style="flex:1">'
-    +'<div style="font-size:.72rem;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem">'+p.theme+'</div>'
-    +'<div style="font-size:1.2rem;font-weight:800;font-family:var(--fd);line-height:1.3;margin-bottom:.4rem">'+p.titre+'</div>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-    +'<span style="background:'+col+'33;border:1px solid '+col+'66;color:#fff;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px">'+statut+'</span>'
-    +(p.annee?'<span style="opacity:.6;font-size:.72rem">📅 '+p.annee+'</span>':'')
-    +'<span style="opacity:.6;font-size:.72rem">'+imp+'</span>'
-    +'</div></div>'
-    +'</div></div>'
-
-    // Corps
-    +'<div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1.25rem">'
-
-    // Résumé
-    +(p.resume?'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">'
-      +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Résumé</div>'
-      +'<div style="font-size:.84rem;color:var(--ink);line-height:1.6">'+p.resume+'</div>'
-      +'</div>':"")
-
-    // Description
-    +(p.description?'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">'
-      +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Description détaillée</div>'
-      +'<div style="font-size:.82rem;color:var(--ink);line-height:1.7;white-space:pre-wrap">'+p.description+'</div>'
-      +'</div>':"")
-
-    // Tags
-    +(tags.length?'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +tags.filter(Boolean).map(function(t){return'<span style="background:var(--g8);color:var(--g2);font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--g7)">'+t.trim()+'</span>';}).join('')
-      +'</div>':"")
-
-    // Formulaire de modification
-    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.25rem;box-shadow:var(--s1)">'
-    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.85rem">✏️ Modifier ce projet</div>'
-    +'<div style="display:flex;flex-direction:column;gap:10px">'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Titre *</label><input id="fp-titre" class="fi" value="'+p.titre.replace(/"/g,'&quot;')+'" style="font-size:.82rem;padding:8px 11px"></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-statut" class="fi" style="font-size:.79rem;padding:7px 10px">'+statutOpts+'</select></div>'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Année cible</label><input id="fp-annee" class="fi" type="number" value="'+(p.annee||'')+'" min="2026" max="2032" style="font-size:.79rem;padding:7px 10px"></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Commission / Thème</label><select id="fp-theme" class="fi" style="font-size:.79rem;padding:7px 10px">'+themeOpts+'</select></div>'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Importance</label><select id="fp-imp" class="fi" style="font-size:.79rem;padding:7px 10px"><option value="1"'+(( p.importance||2)===1?" selected":"")+'>★ Normale</option><option value="2"'+(( p.importance||2)===2?" selected":"")+'>★★ Importante</option><option value="3"'+(( p.importance||2)===3?" selected":"")+'>★★★ Prioritaire</option></select></div>'
-    +'</div>'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Résumé</label><input id="fp-resume" class="fi" value="'+(p.resume||'').replace(/"/g,'&quot;')+'" style="font-size:.79rem;padding:7px 10px"></div>'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Description</label><textarea id="fp-desc" class="fi" rows="4" style="font-size:.79rem;padding:7px 10px;resize:vertical">'+(p.description||'')+'</textarea></div>'
-    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Tags</label><input id="fp-tags" class="fi" value="'+( Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')).replace(/"/g,'&quot;')+'" placeholder="tag1, tag2…" style="font-size:.79rem;padding:7px 10px"></div>'
-    +'<div style="display:flex;align-items:center;gap:10px;padding-top:4px">'
-    +'<button onclick="svFicheProj('+pid+')" class="btn btn-p" style="padding:9px 20px;font-size:.82rem">💾 Enregistrer</button>'
-    +'<button onclick="dlFicheProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer ce projet</button>'
-    +'</div>'
-    +'</div></div>'
-
-    +'</div>'; // fin corps
-
-  panel.style.display="flex";
-
-  // Marquer la sidebar
-  qsa(".sbi").forEach(function(n){n.classList.remove("on");});
+    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">'
+    +'<span style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase">Avancement</span>'
+    +'<span id="fp-av-pct" style="font-size:1.1rem;font-weight:800;color:var(--g1)">'+av+'%</span></div>'
+    +'<div style="background:var(--w2);border-radius:20px;height:10px;overflow:hidden;margin-bottom:.75rem">'
+    +'<div id="fp-av-bar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--g3),var(--g1));width:'+av+'%;transition:width .3s"></div></div>'
+    +'<input type="range" id="fp-av-rng" min="0" max="100" value="'+av+'" style="width:100%;accent-color:var(--g2)" oninput="fpAvInput(this)">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">'
+    +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-st" class="fi" style="font-size:.78rem;padding:6px 9px">'+stO+'</select></div>'
+    +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Élu référent</label><select id="fp-rsp" class="fi" style="font-size:.78rem;padding:6px 9px">'+rO+'</select></div>'
+    +'</div><div style="display:flex;justify-content:flex-end;margin-top:.75rem">'
+    +'<button onclick="fpSvAv('+pid+')" class="btn btn-p btn-sm">💾 Enregistrer avancement</button></div></div>'
+    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">Modifier le projet</div>'
+    +'<div style="display:flex;flex-direction:column;gap:9px">'
+    +'<input id="fp-ti" class="fi" value="'+ti+'" style="font-size:.82rem;padding:8px 11px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">'
+    +'<select id="fp-th" class="fi" style="font-size:.78rem;padding:7px 10px">'+thO+'</select>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<input id="fp-an" class="fi" type="number" value="'+(p.annee||'')+'" min="2026" max="2032" placeholder="Année" style="font-size:.78rem;padding:7px 10px">'
+    +'<select id="fp-im" class="fi" style="font-size:.78rem;padding:7px 10px">'
+    +'<option value="1"'+(imp===1?' selected':'')+'>★ Normale</option>'
+    +'<option value="2"'+(imp===2?' selected':'')+'>★★ Import.</option>'
+    +'<option value="3"'+(imp===3?' selected':'')+'>★★★ Prio.</option>'
+    +'</select></div></div>'
+    +'<input id="fp-rs" class="fi" value="'+rs+'" placeholder="Résumé" style="font-size:.78rem;padding:7px 10px">'
+    +'<textarea id="fp-ds" class="fi" rows="4" style="font-size:.78rem;padding:7px 10px;resize:vertical">'+ds+'</textarea>'
+    +'<input id="fp-tg" class="fi" value="'+tg+'" placeholder="Tags…" style="font-size:.78rem;padding:7px 10px">'
+    +'<div style="display:flex;gap:10px">'
+    +'<button onclick="fpSvProj('+pid+')" class="btn btn-p">💾 Enregistrer</button>'
+    +'<button onclick="fpDlProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer</button>'
+    +'</div></div></div>';
 }
-
-function svFicheProj(pid){
-  var titre=(document.getElementById("fp-titre")||{value:""}).value.trim();
-  if(!titre){toast("Titre obligatoire");return;}
-  var d={
-    titre:titre,
-    theme:(document.getElementById("fp-theme")||{value:""}).value,
-    statut:(document.getElementById("fp-statut")||{value:""}).value,
-    annee:(document.getElementById("fp-annee")||{value:""}).value||null,
-    importance:parseInt((document.getElementById("fp-imp")||{value:"2"}).value)||2,
-    resume:(document.getElementById("fp-resume")||{value:""}).value,
-    description:(document.getElementById("fp-desc")||{value:""}).value,
-    tags:(document.getElementById("fp-tags")||{value:""}).value
-  };
-  apiPatch("/api/projet/"+pid,d).then(function(r){
+function fpAvInput(el){
+  var b=document.getElementById('fp-av-bar'),p=document.getElementById('fp-av-pct');
+  if(b)b.style.width=el.value+'%'; if(p)p.textContent=el.value+'%';
+}
+function fpSvAv(pid){
+  var rng=document.getElementById('fp-av-rng'),st=document.getElementById('fp-st'),rsp=document.getElementById('fp-rsp');
+  var av=rng?parseInt(rng.value)||0:0, rid=rsp?parseInt(rsp.value)||null:null, rnom='';
+  if(rsp&&rsp.selectedIndex>=0){var opt=rsp.options[rsp.selectedIndex];if(opt&&opt.text!=='— Aucun référent —')rnom=opt.text;}
+  apiPatch('/api/projet/'+pid+'/avancement',{avancement:av,responsable_id:rid,responsable_nom:rnom}).then(function(r){
     if(r&&r.ok){
-      P=P.map(function(p){return p.id===pid?r.projet:p;});
-      ST[pid]=d.statut;
-      fG();buildCG();buildCharts();
-      closePanel();
-      toast("✅ Projet mis à jour !");
-    } else {toast("Erreur",3000);}
+      P=P.map(function(p){return p.id===pid?Object.assign({},p,{avancement:av,responsable_id:rid,responsable_nom:rnom}):p;});
+      if(st&&st.value){apiPatch('/api/projet/'+pid,{statut:st.value}).then(function(){ST[pid]=st.value;fG();buildCG();});}
+      toast('✅ Avancement enregistré !');
+    }
   });
 }
-
-function dlFicheProj(pid){
-  if(!confirm("Supprimer définitivement ce projet ?"))return;
-  apiDel("/api/projet/"+pid).then(function(d){
-    if(d.ok){P=P.filter(function(p){return p.id!==pid;});delete ST[pid];fG();buildCG();buildCharts();closePanel();toast("Projet supprimé.");}
+function fpSvProj(pid){
+  var ti=document.getElementById('fp-ti'); if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}
+  var d={titre:ti.value.trim(),theme:(document.getElementById('fp-th')||{}).value||'',statut:(document.getElementById('fp-st')||{}).value||'',annee:(document.getElementById('fp-an')||{}).value||null,importance:parseInt((document.getElementById('fp-im')||{}).value)||2,resume:(document.getElementById('fp-rs')||{}).value||'',description:(document.getElementById('fp-ds')||{}).value||'',tags:(document.getElementById('fp-tg')||{}).value||''};
+  apiPatch('/api/projet/'+pid,d).then(function(r){
+    if(r&&r.ok){P=P.map(function(p){return p.id===pid?r.projet:p;});ST[pid]=d.statut;fG();buildCG();buildCharts();closePanel();toast('✅ Projet mis à jour !');}
+    else{toast('Erreur',3000);}
   });
 }
+function fpDlProj(pid){
+  if(!confirm('Supprimer définitivement ce projet ?'))return;
+  apiDel('/api/projet/'+pid).then(function(d){if(d.ok){P=P.filter(function(p){return p.id!==pid;});delete ST[pid];fG();buildCG();buildCharts();closePanel();toast('Projet supprimé.');}});
+}
 
-// Alias legacy
-function svProj(){svFicheProj(_ePid);}
-function dlProj(){dlFicheProj(_ePid);}
+function fpRenderJalons(pid,items){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var ico={prevu:'🔵',en_cours:'🟡',realise:'✅',annule:'❌'};
+  var lbl={prevu:'Prévu',en_cours:'En cours',realise:'Réalisé',annule:'Annulé'};
+  var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end">'
+    +'<input id="jl-ti" class="fi" placeholder="Titre du jalon *" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="jl-dt" class="fi" type="date" style="font-size:.79rem;padding:6px 9px">'
+    +'<button onclick="fpAddJalon('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button>'
+    +'</div></div>';
+  items.forEach(function(j){
+    var sO=''; ['prevu','en_cours','realise','annule'].forEach(function(s){sO+='<option value="'+s+'"'+(j.statut===s?' selected':'')+'>'+lbl[s]+'</option>';});
+    html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)">'
+      +'<span style="font-size:1.1rem">'+(ico[j.statut]||'🔵')+'</span>'
+      +'<div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+j.titre+'</div>'
+      +(j.date_jalon?'<div style="font-size:.7rem;color:var(--i3)">📅 '+j.date_jalon+'</div>':'')+'</div>'
+      +'<select class="fi" style="font-size:.72rem;padding:4px 6px;width:auto" onchange="fpPatchJalon('+j.id+',this.value)">'+sO+'</select>'
+      +'<button onclick="fpDelJalon('+j.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button>'
+      +'</div>';
+  });
+  if(!items.length)html+='<div class="empty"><div class="empty-ico">🏁</div><div class="empty-s">Aucun jalon.</div></div>';
+  pb.innerHTML=html;
+}
+function fpAddJalon(pid){var ti=document.getElementById('jl-ti'),dt=document.getElementById('jl-dt');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/jalons',{titre:ti.value.trim(),date:dt?dt.value:'',statut:'prevu'}).then(function(r){if(r&&r.ok)fpReload('jalons');});}
+function fpPatchJalon(id,s){apiPatch('/api/jalon/'+id,{statut:s}).then(function(){toast('✅ Jalon mis à jour');});}
+function fpDelJalon(id,pid){if(!confirm('Supprimer ?'))return;apiDel('/api/jalon/'+id).then(function(){fpReload('jalons');});}
+
+function fpRenderPartenaires(pid,items){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<input id="pt-nm" class="fi" placeholder="Nom *" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="pt-ty" class="fi" placeholder="Type" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="pt-em" class="fi" placeholder="Email" type="email" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="pt-te" class="fi" placeholder="Téléphone" style="font-size:.79rem;padding:6px 9px">'
+    +'</div><div style="display:flex;justify-content:flex-end;margin-top:8px">'
+    +'<button onclick="fpAddPart('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div></div>';
+  items.forEach(function(p){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)"><div style="width:34px;height:34px;border-radius:9px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">🤝</div><div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+p.nom+'</div>'+(p.type?'<div style="font-size:.7rem;color:var(--i3)">'+p.type+'</div>':'')+(p.email?'<a href="mailto:'+p.email+'" style="font-size:.7rem;color:var(--g3)">'+p.email+'</a>':'')+'</div><button onclick="fpDelPart('+p.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button></div>';});
+  if(!items.length)html+='<div class="empty"><div class="empty-ico">🤝</div><div class="empty-s">Aucun partenaire.</div></div>';
+  pb.innerHTML=html;
+}
+function fpAddPart(pid){var nm=document.getElementById('pt-nm');if(!nm||!nm.value.trim()){toast('Nom obligatoire');return;}apiPost('/api/projet/'+pid+'/partenaires',{nom:nm.value.trim(),type:(document.getElementById('pt-ty')||{}).value||'',email:(document.getElementById('pt-em')||{}).value||'',tel:(document.getElementById('pt-te')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('partenaires');});}
+function fpDelPart(id,pid){apiDel('/api/partenaire/'+id).then(function(){fpReload('partenaires');});}
+
+function fpRenderContacts(pid,items){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<input id="ct-nm" class="fi" placeholder="Nom *" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="ct-ro" class="fi" placeholder="Rôle" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="ct-og" class="fi" placeholder="Organisation" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="ct-em" class="fi" placeholder="Email" type="email" style="font-size:.79rem;padding:6px 9px">'
+    +'</div><div style="display:flex;justify-content:flex-end;margin-top:8px">'
+    +'<button onclick="fpAddCt('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div></div>';
+  items.forEach(function(c){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)"><div style="width:34px;height:34px;border-radius:9px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">👤</div><div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+c.nom+'</div>'+(c.role?'<div style="font-size:.7rem;color:var(--i3)">'+c.role+(c.organisation?' · '+c.organisation:'')+'</div>':'')+(c.email?'<a href="mailto:'+c.email+'" style="font-size:.7rem;color:var(--g3)">'+c.email+'</a>':'')+'</div><button onclick="fpDelCt('+c.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button></div>';});
+  if(!items.length)html+='<div class="empty"><div class="empty-ico">👤</div><div class="empty-s">Aucun contact.</div></div>';
+  pb.innerHTML=html;
+}
+function fpAddCt(pid){var nm=document.getElementById('ct-nm');if(!nm||!nm.value.trim()){toast('Nom obligatoire');return;}apiPost('/api/projet/'+pid+'/contacts',{nom:nm.value.trim(),role:(document.getElementById('ct-ro')||{}).value||'',organisation:(document.getElementById('ct-og')||{}).value||'',email:(document.getElementById('ct-em')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('contacts');});}
+function fpDelCt(id,pid){apiDel('/api/contact/'+id).then(function(){fpReload('contacts');});}
+
+function fpRenderDocs(pid,items){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px">'
+    +'<input id="dc-ti" class="fi" placeholder="Titre *" style="font-size:.79rem;padding:6px 9px">'
+    +'<select id="dc-ty" class="fi" style="font-size:.79rem;padding:6px 9px"><option>Délibération</option><option>Étude</option><option>Devis</option><option>Compte rendu</option><option>Courrier</option><option>Autre</option></select>'
+    +'</div><input id="dc-ul" class="fi" placeholder="URL" style="font-size:.79rem;padding:6px 9px;margin-top:8px;width:100%;box-sizing:border-box">'
+    +'<div style="display:flex;justify-content:flex-end;margin-top:8px">'
+    +'<button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div></div>';
+  items.forEach(function(d){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)"><span style="font-size:1.2rem;flex-shrink:0">📄</span><div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+d.titre+'</div>'+(d.type?'<span style="font-size:.68rem;background:var(--g8);color:var(--g2);padding:1px 7px;border-radius:5px">'+d.type+'</span>':'')+(d.url?'<a href="'+d.url+'" target="_blank" style="font-size:.7rem;color:var(--g3);display:block;margin-top:2px">🔗 Ouvrir</a>':'')+'</div><button onclick="fpDelDoc('+d.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button></div>';});
+  if(!items.length)html+='<div class="empty"><div class="empty-ico">📄</div><div class="empty-s">Aucun document.</div></div>';
+  pb.innerHTML=html;
+}
+function fpAddDoc(pid){var ti=document.getElementById('dc-ti');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/docs',{titre:ti.value.trim(),type:(document.getElementById('dc-ty')||{}).value||'Autre',url:(document.getElementById('dc-ul')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('docs');});}
+function fpDelDoc(id,pid){apiDel('/api/projdoc/'+id).then(function(){fpReload('docs');});}
+
+function fpRenderPresse(pid,items){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<input id="pr-ti" class="fi" placeholder="Titre *" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="pr-me" class="fi" placeholder="Média" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="pr-ul" class="fi" placeholder="URL" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="pr-dt" class="fi" type="date" style="font-size:.79rem;padding:6px 9px">'
+    +'</div><div style="display:flex;justify-content:flex-end;margin-top:8px">'
+    +'<button onclick="fpAddPresse('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div></div>';
+  items.forEach(function(a){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)"><span style="font-size:1.2rem;flex-shrink:0">📰</span><div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+a.titre+'</div><div style="font-size:.7rem;color:var(--i3)">'+(a.media||'')+(a.date_pub?' · '+a.date_pub:'')+'</div>'+(a.url?'<a href="'+a.url+'" target="_blank" style="font-size:.7rem;color:var(--g3)">🔗 Lire</a>':'')+'</div><button onclick="fpDelPresse('+a.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button></div>';});
+  if(!items.length)html+='<div class="empty"><div class="empty-ico">📰</div><div class="empty-s">Aucun article.</div></div>';
+  pb.innerHTML=html;
+}
+function fpAddPresse(pid){var ti=document.getElementById('pr-ti');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/presse',{titre:ti.value.trim(),media:(document.getElementById('pr-me')||{}).value||'',url:(document.getElementById('pr-ul')||{}).value||'',date:(document.getElementById('pr-dt')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('presse');});}
+function fpDelPresse(id,pid){apiDel('/api/presse/'+id).then(function(){fpReload('presse');});}
+
+function fpRenderJournal(pid,items){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  if(!items.length){pb.innerHTML='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune modification.</div></div>';return;}
+  var html='';
+  items.forEach(function(j){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.75rem 1rem;margin-bottom:.5rem;display:flex;gap:10px;box-shadow:var(--s1)"><span style="font-size:1rem;flex-shrink:0">📝</span><div><div style="font-size:.79rem;font-weight:700">'+(j.auteur_nom||'Système')+'</div>'+(j.nouveau_val?'<div style="font-size:.73rem;color:var(--i3)">→ '+j.nouveau_val+'</div>':'')+'<div style="font-size:.68rem;color:var(--i4)">'+(j.created_at||'')+'</div></div></div>';});
+  pb.innerHTML=html;
+}
+
+function svFicheProj(pid){fpSvProj(pid);}
+function dlFicheProj(pid){fpDlProj(pid);}
+function svProj(){fpSvProj(_ePid);}
+function dlProj(){fpDlProj(_ePid);}
 
 
 // ── RESTRICTION MENUS SELON ROLE ─────────────────────────────────────────────

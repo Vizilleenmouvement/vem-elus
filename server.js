@@ -691,7 +691,7 @@ const server=http.createServer(function(req,res){
 
   // ── ESPACE PRIVÉ (avec authentification) ───────────────────────────────────
   if(p==='/logout'){res.writeHead(401,{'WWW-Authenticate':'Basic realm="VeM-logout"','Content-Type':'text/html;charset=utf-8'});return res.end('<html><body><script>window.location="/espace";<\/script></body></html>');}
-  if(p==='/espace'||p==='/dashboard'){res.writeHead(200,{'Content-Type':'text/html;charset=utf-8'});return res.end(buildPage());}
+  if(p==='/espace'||p==='/espace/'||p==='/dashboard'){res.writeHead(200,{'Content-Type':'text/html;charset=utf-8'});return res.end(buildPage());}
   res.writeHead(404);res.end('404');
 });
 

@@ -4140,7 +4140,7 @@ function oProj(pid){
   var cols={Prioritaire:'#dc2626',Programmé:'#2563eb','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#8B5CF6',Abandonné:'#9ca3af'};
   var col=cols[statut]||'#64748b';
   var panel=_fpPanel(); _fpCss();
-  var TABS=['infos','jalons','partenaires','contacts','docs','presse','journal'];
+  var TABS=['infos','contacts','docs','presse','journal'];
   var TLBL={infos:'📋 Infos',jalons:'🏁 Jalons',partenaires:'🤝 Partenaires',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
   var th=''; TABS.forEach(function(t){th+='<button class="'+(t==='infos'?'fpt on':'fpt')+'" data-tab="'+t+'" onclick="fpTab(this)">'+TLBL[t]+'</button>';});
   panel.innerHTML=
@@ -4167,8 +4167,8 @@ function fpTab(btn){
   pb.innerHTML='<div style="text-align:center;padding:3rem;color:var(--i3)">⏳ Chargement…</div>';
   apiGet('/api/projet/'+pid+'/fiche').then(function(f){
     if(!f){pb.innerHTML='<div style="text-align:center;padding:2rem;color:var(--red)">Erreur</div>';return;}
-    if(tab==='jalons')       fpRenderJalons(pid,f.jalons||[]);
-    else if(tab==='partenaires') fpRenderPartenaires(pid,f.partenaires||[]);
+
+
     else if(tab==='contacts')    fpRenderContacts(pid,f.contacts||[]);
     else if(tab==='docs')        fpRenderDocs(pid,f.docs||[]);
     else if(tab==='presse')      fpRenderPresse(pid,f.presse||[]);

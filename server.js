@@ -535,6 +535,10 @@ const server=http.createServer(function(req,res){
     if(err)return J(res,{ok:false},400);
     var item=Agenda.insert(d);return J(res,{ok:true,item:item});
   });
+  if(p.match(/^\/api\/agenda\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    Agenda.patch(parseInt(p.split('/').pop()),d);return J(res,{ok:true});
+  });
   if(p.match(/^\/api\/agenda\/\d+$/)&&m==='DELETE'){Agenda.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
 
   // DOCUMENTS (liens simples)
@@ -3001,25 +3005,78 @@ function renderAg(){
   var sorted=AG.slice().sort(function(a,b){return a.date>b.date?1:-1;});
   al.innerHTML=sorted.map(function(e){
     var past=e.date<now;
-    return '<div class="agc'+(past?" past":"")+'">'
+    var tyLbl={bureau:"Bureau",commission:"Commission",conseil:"Conseil",autre:"Autre"}[e.type]||e.type||"Autre";
+    var tyCls={bureau:"at-b",commission:"at-c",conseil:"at-cs",autre:"at-a"}[e.type]||"at-a";
+    return '<div class="agc'+(past?" past":"")+'" data-agid="'+e.id+'">'
       +'<div class="agc-db"><div class="agc-day">'+e.date.slice(8)+'</div><div class="agc-mon">'+MOIS[+e.date.slice(5,7)-1]+'</div></div>'
       +'<div class="agc-inf">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
       +'<span class="agc-t">'+e.titre+'</span>'
-      +'<span class="atch '+(ATCLS[e.type]||"at-a")+'">'+(ATMAP[e.type]||e.type||"Autre")+'</span>'
+      +'<span class="atch '+tyCls+'">'+tyLbl+'</span>'
       +'</div>'
       +'<div class="agc-m">'+(e.heure?"🕐 "+e.heure+"  ":"")+(e.lieu?"📍 "+e.lieu:"")+'</div>'
       +(e.notes?'<div class="agc-n">'+e.notes+'</div>':'')
       +'</div>'
-      +'<button class="btn btn-d btn-sm" style="flex-shrink:0;align-self:flex-start" onclick="delAg('+e.id+')">×</button>'
+      +'<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;align-self:flex-start">'
+      +'<button class="btn btn-s btn-sm" onclick="editAgInline('+e.id+',this)" title="Modifier">✏️</button>'
+      +'<button class="btn btn-d btn-sm" onclick="delAg('+e.id+')">×</button>'
+      +'</div>'
       +'</div>';
   }).join("")||'<div class="empty"><div class="empty-ico">📅</div><div class="empty-t">Aucune réunion</div><div class="empty-s">Cliquez sur + Ajouter.</div></div>';
 }
-function svAg(){
-  apiPost("/api/agenda",{titre:v("ag-ti"),date:v("ag-d"),heure:v("ag-h"),lieu:v("ag-l"),type:v("ag-ty"),notes:v("ag-n")})
-    .then(function(d){if(d.ok){AG.push(d.item);cm();renderAg();renderNextMtg();toast("Réunion ajoutée");}});
+
+function editAgInline(id, btn){
+  var e=AG.find(function(a){return a.id===id;}); if(!e)return;
+  var card=btn.closest ? btn.closest("[data-agid]") : (function(){var n=btn;while(n&&n.getAttribute&&!n.getAttribute("data-agid"))n=n.parentNode;return n;})();
+  if(!card)return;
+  card.innerHTML=
+    '<div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:2px">'
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px">'
+    +'<input id="ae-ti-'+id+'" class="fi" value="'+e.titre.replace(/"/g,"&quot;")+'" placeholder="Titre *" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="ae-d-'+id+'" class="fi" type="date" value="'+e.date+'" style="font-size:.79rem;padding:6px 9px">'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+    +'<input id="ae-h-'+id+'" class="fi" value="'+( e.heure||"")+'" placeholder="Heure ex: 18h30" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="ae-l-'+id+'" class="fi" value="'+( e.lieu||"").replace(/"/g,"&quot;")+'" placeholder="Lieu" style="font-size:.79rem;padding:6px 9px">'
+    +'<select id="ae-ty-'+id+'" class="fi" style="font-size:.79rem;padding:6px 9px">'
+    +'<option value="bureau"'+(e.type==="bureau"?" selected":"")+'>Bureau</option>'
+    +'<option value="commission"'+(e.type==="commission"?" selected":"")+'>Commission</option>'
+    +'<option value="conseil"'+(e.type==="conseil"?" selected":"")+'>Conseil</option>'
+    +'<option value="autre"'+(e.type==="autre"?" selected":"")+'>Autre</option>'
+    +'</select></div>'
+    +'<input id="ae-n-'+id+'" class="fi" value="'+( e.notes||"").replace(/"/g,"&quot;")+'" placeholder="Notes" style="font-size:.79rem;padding:6px 9px">'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+    +'<button onclick="renderAg()" class="btn btn-g btn-sm">Annuler</button>'
+    +'<button onclick="saveAgInline('+id+')" class="btn btn-p btn-sm">💾 Enregistrer</button>'
+    +'</div></div>';
 }
-function delAg(id){if(!confirm("Supprimer cette réunion ?"))return;apiDel("/api/agenda/"+id).then(function(d){if(d.ok){AG=AG.filter(function(a){return a.id!==id;});renderAg();renderNextMtg();}});}
+
+function saveAgInline(id){
+  var titre=(document.getElementById("ae-ti-"+id)||{value:""}).value.trim();
+  if(!titre){toast("Titre obligatoire");return;}
+  var d={
+    titre:titre,
+    date:(document.getElementById("ae-d-"+id)||{value:""}).value,
+    heure:(document.getElementById("ae-h-"+id)||{value:""}).value,
+    lieu:(document.getElementById("ae-l-"+id)||{value:""}).value,
+    type:(document.getElementById("ae-ty-"+id)||{value:"autre"}).value,
+    notes:(document.getElementById("ae-n-"+id)||{value:""}).value
+  };
+  apiPatch("/api/agenda/"+id,d).then(function(r){
+    if(r&&r.ok){
+      AG=AG.map(function(a){return a.id===id?Object.assign({},a,d):a;});
+      renderAg();renderNextMtg();renderWidgetAgenda();
+      toast("Réunion mise à jour !");
+    } else {toast("Erreur",3000);}
+  });
+}
+
+function svAg(){
+  var d={titre:v("ag-ti"),date:v("ag-d"),heure:v("ag-h"),lieu:v("ag-l"),type:v("ag-ty"),notes:v("ag-n")};
+  if(!d.titre||!d.date){toast("Titre et date obligatoires");return;}
+  apiPost("/api/agenda",d).then(function(r){if(r.ok){AG.push(r.item);cm();renderAg();renderNextMtg();renderWidgetAgenda();toast("Réunion ajoutée");}});
+}
+function delAg(id){if(!confirm("Supprimer cette réunion ?"))return;apiDel("/api/agenda/"+id).then(function(d){if(d.ok){AG=AG.filter(function(a){return a.id!==id;});renderAg();renderNextMtg();renderWidgetAgenda();}});}
 
 // ── COMPTES RENDUS ───────────────────────────────────────────────────────────
 var CR_COM_COL={"Bureau municipal":"#1d3d2b","Conseil municipal":"#2d5a40","Culture, Patrimoine & Jumelages":"#8B5CF6","Mobilités":"#3B82F6","Transition écologique":"#10B981","Action sociale":"#F59E0B","Concertation citoyenne":"#6366F1","Animations de proximité":"#EC4899","Enfance/Jeunesse":"#F97316","Tranquillité publique":"#EF4444","Travaux & Urbanisme":"#84CC16","Santé":"#06B6D4"};

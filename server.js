@@ -702,9 +702,12 @@ const server=http.createServer(function(req,res){
       if(e.id!==id)return e;
       updated=true;
       return Object.assign({},e,{
+        prenom:d.prenom!==undefined?d.prenom:e.prenom,
+        nom:d.nom!==undefined?d.nom:e.nom,
+        role:d.role!==undefined?d.role:e.role,
         tel:d.tel!==undefined?d.tel:e.tel,
         email:d.email!==undefined?d.email:e.email,
-        delegation:d.delegation!==undefined?d.delegation:e.delegation,
+        delegation:e.delegation,
         commission:d.commission!==undefined?d.commission:e.commission
       });
     });
@@ -2482,7 +2485,7 @@ function openPanel(id){
   if(!panel){
     panel = document.createElement("div");
     panel.id = "main-panel";
-    panel.style.cssText = "position:fixed;left:var(--sw);right:0;top:var(--th);bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
+    panel.style.cssText = "position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
     document.body.appendChild(panel);
   }
 
@@ -3045,7 +3048,8 @@ function buildRess(){
 var ATMAP={bureau:"Bureau municipal",commission:"Commission",conseil:"Conseil municipal",autre:"Autre"};
 var ATCLS={bureau:"at-b",commission:"at-c",conseil:"at-k",autre:"at-a"};
 function renderAg(){
-  var al=$("ag-list"); if(!al)return;
+  var _pb=document.getElementById("panel-body");
+  var al=(_pb&&_pb.querySelector("#ag-list"))||$("ag-list"); if(!al)return;
   var now=new Date().toISOString().slice(0,10);
   var sorted=AG.slice().sort(function(a,b){return a.date>b.date?1:-1;});
   al.innerHTML=sorted.map(function(e){
@@ -3334,7 +3338,8 @@ function delRepFile(id){
 
 // ── ÉLUS ─────────────────────────────────────────────────────────────────────
 function renderElus(){
-  var el2=$("elus-list"); if(!el2)return;
+  var _pb=document.getElementById("panel-body");
+  var el2=(_pb&&_pb.querySelector("#elus-list"))||$("elus-list"); if(!el2)return;
   var list=ELUS_DATA.length?ELUS_DATA:ELUS0;
   el2.innerHTML=list.map(function(e,i){
     var photoHtml=e.photo
@@ -3356,45 +3361,49 @@ function openElu(i){
   var col=e.color||"var(--g3)";
   var fullName=(e.prenom?e.prenom+" ":"")+e.nom;
   $("elu-det-t").textContent=fullName;
-  var photoBlock=e.photo
-    ?'<img src="'+e.photo+'" style="width:72px;height:72px;border-radius:14px;object-fit:cover;object-position:'+(e.photoPos||"center center")+';flex-shrink:0" onerror="hideImg(this)">   '
-    :'<div style="width:72px;height:72px;border-radius:14px;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;flex-shrink:0">'+e.avatar+'</div>';
+  var commOpts=Object.keys(COMM).map(function(c){return'<option value="'+c+'"'+(e.commission===c?' selected':'')+'>'+c+'</option>';}).join('');
   $("elu-det-b").innerHTML=
-    '<div style="display:flex;align-items:center;gap:14px;padding:.9rem;background:var(--g8);border-radius:var(--R);margin-bottom:1rem;border:1px solid var(--g7)">'
-    +photoBlock
-    +'<div><div style="font-size:1rem;font-weight:700;font-family:var(--fd)">'+fullName+'</div>'
-    +'<div style="font-size:.78rem;color:var(--g3);margin-top:2px;font-weight:600">'+e.role+'</div>'
-    
-    +'</div></div>'
-    +(e.commission?'<div style="font-size:.78rem;padding:.5rem 0;border-bottom:1px solid var(--w2)"><strong style="color:var(--i3)">Commission :</strong> <span class="chip">'+e.commission+'</span></div>':"")
-    +(e.tel?'<div style="font-size:.78rem;padding:.5rem 0;border-bottom:1px solid var(--w2)"><strong style="color:var(--i3)">Tél : </strong><a href="tel:'+e.tel+'" style="color:var(--g3)">'+e.tel+'</a></div>':"")
-    +(e.email?'<div style="font-size:.78rem;padding:.5rem 0"><strong style="color:var(--i3)">Email : </strong><a href="mailto:'+e.email+'" style="color:var(--g3)">'+e.email+'</a></div>':"")
-    + '<div style="margin-top:.85rem;padding-top:.75rem;border-top:1px solid var(--w2)">'
-    + '<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Modifier les coordonnées</div>'
-    + '<div style="display:flex;flex-direction:column;gap:8px">'
-    + '<div style="display:flex;align-items:center;gap:8px"><label style="font-size:.7rem;color:var(--i3);width:60px;flex-shrink:0">Tél.</label><input id="elu-edit-tel" class="fi" value="'+(e.tel||"")+'" placeholder="06 00 00 00 00" style="flex:1;font-size:.76rem;padding:6px 9px"></div>'
-    + '<div style="display:flex;align-items:center;gap:8px"><label style="font-size:.7rem;color:var(--i3);width:60px;flex-shrink:0">Email</label><input id="elu-edit-email" class="fi" value="'+(e.email||"")+'" placeholder="prenom.nom@ville.fr" type="email" style="flex:1;font-size:.76rem;padding:6px 9px"></div>'
-    + '<div style="display:flex;justify-content:flex-end;margin-top:4px"><button class="btn btn-p btn-sm" onclick="saveEluContact('+e.id+')">&#x1F4BE; Enregistrer</button></div>'
-    + '</div></div>';
+    '<div style="display:flex;align-items:center;gap:12px;padding:.85rem;background:var(--g8);border-radius:var(--R);margin-bottom:1rem;border:1px solid var(--g7)">'
+    +'<div style="width:52px;height:52px;border-radius:12px;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:#fff;flex-shrink:0">'+e.avatar+'</div>'
+    +'<div><div style="font-size:.95rem;font-weight:700;font-family:var(--fd)">'+fullName+'</div>'
+    +'<div style="font-size:.75rem;color:var(--g3)">'+(e.role||'')+'</div></div></div>'
+    +'<div style="display:flex;flex-direction:column;gap:9px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Prénom</label><input id="ef-pr" class="fi" value="'+(e.prenom||'')+'" style="font-size:.76rem;padding:6px 9px"></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Nom</label><input id="ef-no" class="fi" value="'+(e.nom||'')+'" style="font-size:.76rem;padding:6px 9px"></div>'
+    +'</div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Rôle</label><input id="ef-ro" class="fi" value="'+(e.role||'')+'" placeholder="1ère Adjointe, Conseiller délégué…" style="font-size:.76rem;padding:6px 9px"></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Commission</label><select id="ef-co" class="fi" style="font-size:.76rem;padding:6px 9px"><option value="">— aucune —</option>'+commOpts+'</select></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Téléphone</label><input id="ef-te" class="fi" value="'+(e.tel||'')+'" placeholder="06 00 00 00 00" style="font-size:.76rem;padding:6px 9px"></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Email</label><input id="ef-em" class="fi" value="'+(e.email||'')+'" type="email" style="font-size:.76rem;padding:6px 9px"></div>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:flex-end;padding-top:4px"><button class="btn btn-p" onclick="saveEluFull('+e.id+')">💾 Enregistrer</button></div>'
+    +'</div>';
   om("elu-det");
 }
 
-function saveEluContact(eluId) {
-  var tel = v("elu-edit-tel"), email = v("elu-edit-email");
-  apiPatch("/api/elus/"+eluId, {tel:tel, email:email})
-    .then(function(d){
-      if(d.ok) {
-        // Mettre à jour localement
-        var list = ELUS_DATA.length ? ELUS_DATA : ELUS0;
-        list.forEach(function(e){ if(e.id===eluId){e.tel=tel;e.email=email;} });
-        ELUS_DATA.forEach(function(e){ if(e.id===eluId){e.tel=tel;e.email=email;} });
-        cm(); renderElus();
-        toast("Coordonnées enregistrées !");
-      } else {
-        toast("Erreur d'enregistrement", 3000);
-      }
-    });
+function saveEluFull(eluId){
+  var d={
+    prenom:(document.getElementById("ef-pr")||{value:""}).value.trim(),
+    nom:(document.getElementById("ef-no")||{value:""}).value.trim(),
+    role:(document.getElementById("ef-ro")||{value:""}).value.trim(),
+    commission:(document.getElementById("ef-co")||{value:""}).value,
+    tel:(document.getElementById("ef-te")||{value:""}).value.trim(),
+    email:(document.getElementById("ef-em")||{value:""}).value.trim()
+  };
+  if(!d.nom){toast("Le nom est obligatoire");return;}
+  apiPatch("/api/elus/"+eluId,d).then(function(r){
+    if(r&&r.ok){
+      [ELUS_DATA,ELUS0].forEach(function(arr){arr.forEach(function(e){
+        if(e.id===eluId){e.prenom=d.prenom;e.nom=d.nom;e.role=d.role;e.commission=d.commission;e.tel=d.tel;e.email=d.email;}
+      });});
+      cm();renderElus();toast("Élu mis à jour !");
+    } else {toast("Erreur",3000);}
+  });
 }
+function saveEluContact(eluId){saveEluFull(eluId);}
+
 
 
 // ── COMMISSIONS ──────────────────────────────────────────────────────────────

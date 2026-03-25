@@ -4773,38 +4773,6 @@ function fpRenderPresse(pid,items){
 function fpAddPresse(pid){var ti=document.getElementById('pr-ti');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/presse',{titre:ti.value.trim(),media:(document.getElementById('pr-me')||{}).value||'',url:(document.getElementById('pr-ul')||{}).value||'',date:(document.getElementById('pr-dt')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('presse');});}
 function fpDelPresse(id,pid){apiDel('/api/presse/'+id).then(function(){fpReload('presse');});}
 
-function fpRenderJournal(pid,items){
-  var pb=document.getElementById('fp-body'); if(!pb)return;
-  var icoMap={avancement:'📊',statut:'🔄',titre:'✏️',doc:'📄',note:'💬'};
-  var html=
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">✍️ Ajouter une note</div>'
-    +'<textarea id="jr-txt" class="fi" rows="3" placeholder="Observation, compte rendu oral, décision prise, point de situation…" style="font-size:.79rem;padding:8px 10px;resize:vertical;width:100%;box-sizing:border-box"></textarea>'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:8px">'
-    +'<button onclick="fpAddNote('+pid+')" class="btn btn-p btn-sm">💬 Publier la note</button>'
-    +'</div></div>';
-  if(items.length){
-    items.forEach(function(j){
-      var ico=icoMap[j.action]||'📝';
-      var isNote=j.action==='note';
-      html+='<div style="background:#fff;border-radius:var(--R);border:1px solid '+(isNote?'var(--g7)':'var(--w2)')+';padding:.85rem 1rem;margin-bottom:.5rem;display:flex;gap:10px;box-shadow:var(--s1)">'
-        +'<span style="font-size:1.1rem;flex-shrink:0">'+ico+'</span>'
-        +'<div style="flex:1">'
-        +'<div style="display:flex;align-items:baseline;gap:8px">'
-        +'<span style="font-size:.79rem;font-weight:700">'+(j.auteur_nom||'Système')+'</span>'
-        +'<span style="font-size:.65rem;color:var(--i4)">'+(j.created_at||'')+'</span>'
-        +'</div>'
-        +(isNote
-          ?'<div style="font-size:.8rem;color:var(--ink);margin-top:3px;line-height:1.5;white-space:pre-wrap">'+j.nouveau_val+'</div>'
-          :(j.nouveau_val?'<div style="font-size:.73rem;color:var(--i3);margin-top:2px">→ '+j.nouveau_val+'</div>':''))
-        +'</div></div>';
-    });
-  } else {
-    html+='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune entrée — commencez par publier une note.</div></div>';
-  }
-  pb.innerHTML=html;
-}
-
 function svFicheProj(pid){fpSvProj(pid);}
 function dlFicheProj(pid){fpDlProj(pid);}
 function svProj(){fpSvProj(_ePid);}

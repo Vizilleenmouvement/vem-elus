@@ -4352,7 +4352,7 @@ function fpRenderJournal(pid,p,statut,fiche){
   notes.forEach(function(n){items.push({type:n.action||'note',date:n.created_at||'',titre:n.nouveau_val||'',auteur:n.auteur_nom||'',id:n.id,src:'journal'});});
   items.sort(function(a,b){return (b.date||'') > (a.date||'') ? 1 : -1;});
 
-  var icoMap={etape:'🏁',note:'📝','statut':'🔄','doc':'📄','avancement':'📊'};
+  var icoMap={etape:'🏁',note:'📝',statut:'🔄',doc:'📎',avancement:'📊',note_doc:'📄'};
   var stEtape={prevu:'🔵',en_cours:'🟡',realise:'✅',annule:'❌'};
 
   if(items.length){
@@ -4427,7 +4427,8 @@ function fpRenderJournal(pid,p,statut,fiche){
     +'<option>CR de commission</option><option>Délibération</option><option>Rapport</option>'
     +'<option>Avis</option><option>Courrier</option><option>Email</option><option>Devis</option><option>Autre</option>'
     +'</select></div>'
-    +'<div style="display:flex;justify-content:flex-end"><button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">💾 Joindre au journal</button></div>'
+    +'<input id="dc-ul-'+pid+'" class="fi" placeholder="Ou coller un lien URL" style="font-size:.79rem;padding:6px 9px;margin-top:6px;width:100%;box-sizing:border-box">'
+    +'<div style="display:flex;justify-content:flex-end;margin-top:6px"><button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">💾 Joindre au journal</button></div>'
     +'</div></div>';
 
   pb.innerHTML=html;
@@ -4455,10 +4456,10 @@ function fpAddNote(pid){
 }
 
 function fpAttachDrafts(pid){
-  // Attacher les brouillons après rendu
   setTimeout(function(){
     draftAttach(document.getElementById('jn-tx'),'note_'+pid);
     draftAttach(document.getElementById('je-ti'),'etape_ti_'+pid);
+    draftAttach(document.getElementById('dc-ti-'+pid),'doc_ti_'+pid);
   },50);
 }
 
@@ -4578,37 +4579,56 @@ function fpOpenFile(pid){var fi=document.getElementById('dc-file-'+pid);if(fi)fi
 function fpPreviewDoc(input,pid){
   var file=input.files[0]; if(!file)return;
   var prev=document.getElementById('dc-preview-'+pid);
-  var fname=document.getElementById('dc-fname-'+pid);
   var ti=document.getElementById('dc-ti-'+pid);
-  if(prev)prev.style.display='block';
-  if(fname)fname.textContent='📎 '+file.name+' ('+Math.round(file.size/1024)+'Ko)';
+  if(prev){
+    prev.style.display='block';
+    prev.textContent='📎 '+file.name+' ('+Math.round(file.size/1024)+' Ko)';
+  }
   if(ti&&!ti.value)ti.value=file.name.replace(/\.[^.]+$/,'');
 }
 
 function fpAddDoc(pid){
   var ti=document.getElementById('dc-ti-'+pid);
   var ty=(document.getElementById('dc-ty-'+pid)||{value:'Autre'}).value||'Autre';
-  var ul=(document.getElementById('dc-ul-'+pid)||{value:''}).value||'';
+  var ul=(document.getElementById('dc-ul-'+pid)||{value:''}).value.trim()||'';
   var fi=document.getElementById('dc-file-'+pid);
   var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null;
-  if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}
+  // Titre automatique depuis le fichier si vide
+  if(file&&ti&&!ti.value.trim()) ti.value=file.name.replace(/\.[^.]+$/,'');
+  var titre=ti?ti.value.trim():'';
+  if(!titre&&!file&&!ul){toast('Ajouter un fichier ou un lien');return;}
+  if(!titre)titre=file?file.name:(ul.split('/').pop()||'Document');
   if(file){
-    // Upload fichier
+    var btn=document.querySelector('[onclick="fpAddDoc('+pid+')"]');
+    if(btn){btn.disabled=true;btn.textContent='⏳ Upload…';}
     var form=new FormData();
     form.append('file',file,file.name);
-    form.append('titre',ti.value.trim());
+    form.append('titre',titre);
     form.append('type',ty);
     var xhr=new XMLHttpRequest();
     xhr.open('POST','/api/projet/'+pid+'/upload-doc');
     xhr.withCredentials=true;
     xhr.onload=function(){
       var r=JSON.parse(xhr.responseText||'{}');
-      if(r.ok){fpReload('docs');}else{toast('Erreur upload',3000);}
+      if(r.ok){
+        // Recharger l'onglet courant (docs ou journal)
+        var activeTab=document.querySelector('.fpt.on');
+        var tab=activeTab?activeTab.getAttribute('data-tab'):'docs';
+        if(tab==='journal') fpReload('journal'); else fpReload('docs');
+        toast('📎 Document enregistré ✓');
+      } else {toast('Erreur upload : '+(r.error||'?'),3000);}
     };
+    xhr.onerror=function(){toast('Erreur réseau',3000);};
     xhr.send(form);
   } else if(ul){
-    // Lien URL simple
-    apiPost('/api/projet/'+pid+'/docs',{titre:ti.value.trim(),type:ty,url:ul}).then(function(r){if(r&&r.ok)fpReload('docs');});
+    apiPost('/api/projet/'+pid+'/docs',{titre:titre,type:ty,url:ul}).then(function(r){
+      if(r&&r.ok){
+        var activeTab=document.querySelector('.fpt.on');
+        var tab=activeTab?activeTab.getAttribute('data-tab'):'docs';
+        if(tab==='journal') fpReload('journal'); else fpReload('docs');
+        toast('🔗 Lien enregistré ✓');
+      }
+    });
   } else {
     toast('Joindre un fichier ou saisir un lien');
   }

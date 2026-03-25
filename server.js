@@ -3446,7 +3446,7 @@ function rTb(bid,rows,showC){
       +'<td style="color:var(--i3);font-family:var(--fm);font-size:.72rem">'+(p.annee||"—")+'</td>'
       +'<td>'+imp(p.importance)+'</td>'
       +'<td><div style="display:flex;align-items:center;gap:5px"><select class="ssel" data-pid="'+p.id+'" data-t="'+p.titre.replace(/"/g,"&quot;")+'" onchange="uSt(+this.dataset.pid,this.value,this.dataset.t)">'+opts+'</select>'
-      +'<button onclick="oProj('+p.id+')" title="Modifier le projet" style="padding:4px 8px;font-size:.8rem;cursor:pointer;background:var(--g3);color:#fff;border:none;border-radius:6px;flex-shrink:0;line-height:1">&#x270F;</button></div></td>'
+      +'<button onclick="oProj('+p.id+')" title="Modifier" style="padding:8px 16px;font-size:.82rem;font-weight:700;cursor:pointer;background:var(--g2);color:#fff;border:none;border-radius:8px;flex-shrink:0;font-family:var(--fd);display:flex;align-items:center;gap:5px;white-space:nowrap">&#x270F;&#xFE0F; Modifier</button></div></td>'
       +'</tr>';
   }).join("");
 }

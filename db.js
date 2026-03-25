@@ -8,6 +8,70 @@ db.pragma('journal_mode = WAL');   // Écritures concurrentes
 db.pragma('foreign_keys = ON');
 db.pragma('synchronous = NORMAL'); // Bon compromis perf/sécurité
 
+// ── TABLES SUIVI PROJET (créées automatiquement si absentes) ─────────────────
+try { db.exec("ALTER TABLE projets ADD COLUMN avancement INTEGER DEFAULT 0;"); } catch(e) {}
+try { db.exec("ALTER TABLE projets ADD COLUMN responsable_id INTEGER;"); } catch(e) {}
+try { db.exec("ALTER TABLE projets ADD COLUMN responsable_nom TEXT DEFAULT '';"); } catch(e) {}
+try { db.exec("ALTER TABLE projets ADD COLUMN budget_prevu REAL DEFAULT 0;"); } catch(e) {}
+try { db.exec("ALTER TABLE projets ADD COLUMN budget_engage REAL DEFAULT 0;"); } catch(e) {}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS projet_jalons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    projet_id INTEGER NOT NULL,
+    titre TEXT NOT NULL,
+    date_jalon TEXT DEFAULT '',
+    statut TEXT DEFAULT 'prevu',
+    notes TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS projet_partenaires (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    projet_id INTEGER NOT NULL,
+    nom TEXT NOT NULL,
+    type TEXT DEFAULT '',
+    contact TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    tel TEXT DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS projet_contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    projet_id INTEGER NOT NULL,
+    nom TEXT NOT NULL,
+    role TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    tel TEXT DEFAULT '',
+    organisation TEXT DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS projet_docs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    projet_id INTEGER NOT NULL,
+    titre TEXT NOT NULL,
+    type TEXT DEFAULT 'Autre',
+    url TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS projet_presse (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    projet_id INTEGER NOT NULL,
+    titre TEXT NOT NULL,
+    media TEXT DEFAULT '',
+    url TEXT DEFAULT '',
+    date_pub TEXT DEFAULT ''
+  );
+  CREATE TABLE IF NOT EXISTS projet_journal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    projet_id INTEGER NOT NULL,
+    auteur_id INTEGER DEFAULT 0,
+    auteur_nom TEXT DEFAULT '',
+    action TEXT NOT NULL,
+    ancien_val TEXT DEFAULT '',
+    nouveau_val TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function ts() { return new Date().toLocaleString('fr-FR'); }
 function nid(table) {
@@ -295,4 +359,62 @@ function stats() {
   return {total, prioritaires:pr, annee2026:n26, realises:re, en_cours:ec, sig_new, sig_ec};
 }
 
-module.exports = {db, Elus, Agenda, Projets, Statuts, CR, Biblio, Signalements, Evenements, Chat, Annonces, Tasks, Notifs, RepElus, stats, ts, nid};
+// ── PROJETS ÉTENDU ────────────────────────────────────────────────────────────
+const ProjetJalons = {
+  get(pid) { return db.prepare('SELECT * FROM projet_jalons WHERE projet_id=? ORDER BY date_jalon').all(pid); },
+  insert(pid, d) {
+    const r = db.prepare('INSERT INTO projet_jalons (projet_id,titre,date_jalon,statut,notes) VALUES (?,?,?,?,?)').run(pid, d.titre||'', d.date||d.date_jalon||'', d.statut||'prevu', d.notes||'');
+    return db.prepare('SELECT * FROM projet_jalons WHERE id=?').get(r.lastInsertRowid);
+  },
+  patch(id, d) {
+    const j = db.prepare('SELECT * FROM projet_jalons WHERE id=?').get(id); if(!j) return false;
+    db.prepare('UPDATE projet_jalons SET titre=?,date_jalon=?,statut=?,notes=? WHERE id=?').run(d.titre||j.titre, d.date||j.date_jalon||'', d.statut||j.statut, d.notes!==undefined?d.notes:j.notes, id);
+    return true;
+  },
+  delete(id) { db.prepare('DELETE FROM projet_jalons WHERE id=?').run(id); }
+};
+
+const ProjetPartenaires = {
+  get(pid) { return db.prepare('SELECT * FROM projet_partenaires WHERE projet_id=? ORDER BY id').all(pid); },
+  insert(pid, d) {
+    const r = db.prepare('INSERT INTO projet_partenaires (projet_id,nom,type,contact,email,tel) VALUES (?,?,?,?,?,?)').run(pid, d.nom||'', d.type||'', d.contact||'', d.email||'', d.tel||'');
+    return db.prepare('SELECT * FROM projet_partenaires WHERE id=?').get(r.lastInsertRowid);
+  },
+  delete(id) { db.prepare('DELETE FROM projet_partenaires WHERE id=?').run(id); }
+};
+
+const ProjetContacts = {
+  get(pid) { return db.prepare('SELECT * FROM projet_contacts WHERE projet_id=? ORDER BY id').all(pid); },
+  insert(pid, d) {
+    const r = db.prepare('INSERT INTO projet_contacts (projet_id,nom,role,email,tel,organisation) VALUES (?,?,?,?,?,?)').run(pid, d.nom||'', d.role||'', d.email||'', d.tel||'', d.organisation||'');
+    return db.prepare('SELECT * FROM projet_contacts WHERE id=?').get(r.lastInsertRowid);
+  },
+  delete(id) { db.prepare('DELETE FROM projet_contacts WHERE id=?').run(id); }
+};
+
+const ProjetDocs = {
+  get(pid) { return db.prepare('SELECT * FROM projet_docs WHERE projet_id=? ORDER BY id DESC').all(pid); },
+  insert(pid, d) {
+    const r = db.prepare('INSERT INTO projet_docs (projet_id,titre,type,url,description) VALUES (?,?,?,?,?)').run(pid, d.titre||'', d.type||'Autre', d.url||'', d.description||'');
+    return db.prepare('SELECT * FROM projet_docs WHERE id=?').get(r.lastInsertRowid);
+  },
+  delete(id) { db.prepare('DELETE FROM projet_docs WHERE id=?').run(id); }
+};
+
+const ProjetPresse = {
+  get(pid) { return db.prepare('SELECT * FROM projet_presse WHERE projet_id=? ORDER BY date_pub DESC,id DESC').all(pid); },
+  insert(pid, d) {
+    const r = db.prepare('INSERT INTO projet_presse (projet_id,titre,media,url,date_pub) VALUES (?,?,?,?,?)').run(pid, d.titre||'', d.media||'', d.url||'', d.date||d.date_pub||'');
+    return db.prepare('SELECT * FROM projet_presse WHERE id=?').get(r.lastInsertRowid);
+  },
+  delete(id) { db.prepare('DELETE FROM projet_presse WHERE id=?').run(id); }
+};
+
+const ProjetJournal = {
+  get(pid) { return db.prepare('SELECT * FROM projet_journal WHERE projet_id=? ORDER BY id DESC LIMIT 50').all(pid); },
+  log(pid, auteurId, auteurNom, action, ancien, nouveau) {
+    db.prepare('INSERT INTO projet_journal (projet_id,auteur_id,auteur_nom,action,ancien_val,nouveau_val) VALUES (?,?,?,?,?,?)').run(pid, auteurId||0, auteurNom||'', action||'', ancien||'', nouveau||'');
+  }
+};
+
+module.exports = {db, Elus, Agenda, Projets, Statuts, CR, Biblio, Signalements, Evenements, Chat, Annonces, Tasks, Notifs, RepElus, stats, ts, nid, ProjetJalons, ProjetPartenaires, ProjetContacts, ProjetDocs, ProjetPresse, ProjetJournal};

@@ -4141,7 +4141,7 @@ function oProj(pid){
   var col=cols[statut]||'#64748b';
   var panel=_fpPanel(); _fpCss();
   var TABS=['infos','contacts','docs','presse','journal'];
-  var TLBL={infos:'📋 Infos',jalons:'🏁 Jalons',partenaires:'🤝 Partenaires',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
+  var TLBL={infos:'📋 Infos',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
   var th=''; TABS.forEach(function(t){th+='<button class="'+(t==='infos'?'fpt on':'fpt')+'" data-tab="'+t+'" onclick="fpTab(this)">'+TLBL[t]+'</button>';});
   panel.innerHTML=
     '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'

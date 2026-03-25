@@ -3983,37 +3983,129 @@ function navToAgenda(){gp("agenda",qsa(".sbi")[3]);}
 // ── ÉDITION PROJET ──────────────────────────────────────────────────────────
 var _ePid=null;
 function oProj(pid){
-  var p=P.find(function(x){return x.id===pid;});if(!p)return;
+  var p=P.find(function(x){return x.id===pid;}); if(!p)return;
   _ePid=pid;
-  var ts=$("ep-theme");
-  ts.innerHTML=Object.keys(COMM).map(function(k){return COMM[k].map(function(t){return'<option value="'+t+'"'+(p.theme===t?' selected':'')+'>'+k+' — '+t+'</option>';}).join('');}).join('');
-  var ss=$("ep-statut");
-  ss.innerHTML=SLIST.map(function(s){return'<option value="'+s+'"'+((ST[pid]||p.statut)===s?' selected':'')+'>'+s+'</option>';}).join('');
-  $("ep-titre").value=p.titre||'';
-  $("ep-resume").value=p.resume||'';
-  $("ep-desc").value=p.description||'';
-  $("ep-annee").value=p.annee||'';
-  $("ep-imp").value=String(p.importance||2);
-  $("ep-tags").value=Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'');
-  $("ep-msg").textContent='';
-  om("projet-edit");
+  var statut=ST[pid]||p.statut||'ND';
+  var col={Prioritaire:'var(--red)',Programmé:'var(--blue)','En cours':'var(--amber)',Réalisé:'var(--g4)',Étude:'#8B5CF6',Abandonné:'var(--i4)'}[statut]||'var(--i3)';
+  var imp=['','★ Normale','★★ Importante','★★★ Prioritaire'][p.importance||1]||'★★ Importante';
+  var tags=Array.isArray(p.tags)?p.tags:(p.tags?p.tags.split(','):[]);
+
+  // Construire les options
+  var themeOpts=Object.keys(COMM).map(function(k){return COMM[k].map(function(t){return'<option value="'+t+'"'+(p.theme===t?' selected':'')+'>'+k+' — '+t+'</option>';}).join('');}).join('');
+  var statutOpts=SLIST.map(function(s){return'<option value="'+s+'"'+(statut===s?' selected':'')+'>'+s+'</option>';}).join('');
+
+  // Ouvrir un panneau dédié
+  var panel=document.getElementById("main-panel");
+  if(!panel){panel=document.createElement("div");panel.id="main-panel";panel.style.cssText="position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";document.body.appendChild(panel);}
+  panel.innerHTML=
+    '<div style="background:var(--g1);color:#fff;padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:.78rem;font-weight:600;font-family:var(--fd);">'
+    +'<span style="flex:1">📋 Fiche projet</span>'
+    +'<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:.9rem;">✕</button>'
+    +'</div>'
+    +'<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
+
+  var pb=document.getElementById("panel-body");
+
+  pb.innerHTML=
+    // En-tête coloré
+    '<div style="background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.5rem">'
+    +'<div style="display:flex;align-items:flex-start;gap:12px">'
+    +'<div style="flex:1">'
+    +'<div style="font-size:.72rem;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem">'+p.theme+'</div>'
+    +'<div style="font-size:1.2rem;font-weight:800;font-family:var(--fd);line-height:1.3;margin-bottom:.4rem">'+p.titre+'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    +'<span style="background:'+col+'33;border:1px solid '+col+'66;color:#fff;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px">'+statut+'</span>'
+    +(p.annee?'<span style="opacity:.6;font-size:.72rem">📅 '+p.annee+'</span>':'')
+    +'<span style="opacity:.6;font-size:.72rem">'+imp+'</span>'
+    +'</div></div>'
+    +'</div></div>'
+
+    // Corps
+    +'<div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1.25rem">'
+
+    // Résumé
+    +(p.resume?'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">'
+      +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Résumé</div>'
+      +'<div style="font-size:.84rem;color:var(--ink);line-height:1.6">'+p.resume+'</div>'
+      +'</div>':"")
+
+    // Description
+    +(p.description?'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">'
+      +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Description détaillée</div>'
+      +'<div style="font-size:.82rem;color:var(--ink);line-height:1.7;white-space:pre-wrap">'+p.description+'</div>'
+      +'</div>':"")
+
+    // Tags
+    +(tags.length?'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +tags.filter(Boolean).map(function(t){return'<span style="background:var(--g8);color:var(--g2);font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--g7)">'+t.trim()+'</span>';}).join('')
+      +'</div>':"")
+
+    // Formulaire de modification
+    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.25rem;box-shadow:var(--s1)">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.85rem">✏️ Modifier ce projet</div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Titre *</label><input id="fp-titre" class="fi" value="'+p.titre.replace(/"/g,'&quot;')+'" style="font-size:.82rem;padding:8px 11px"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-statut" class="fi" style="font-size:.79rem;padding:7px 10px">'+statutOpts+'</select></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Année cible</label><input id="fp-annee" class="fi" type="number" value="'+(p.annee||'')+'" min="2026" max="2032" style="font-size:.79rem;padding:7px 10px"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Commission / Thème</label><select id="fp-theme" class="fi" style="font-size:.79rem;padding:7px 10px">'+themeOpts+'</select></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Importance</label><select id="fp-imp" class="fi" style="font-size:.79rem;padding:7px 10px"><option value="1"'+(( p.importance||2)===1?" selected":"")+'>★ Normale</option><option value="2"'+(( p.importance||2)===2?" selected":"")+'>★★ Importante</option><option value="3"'+(( p.importance||2)===3?" selected":"")+'>★★★ Prioritaire</option></select></div>'
+    +'</div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Résumé</label><input id="fp-resume" class="fi" value="'+(p.resume||'').replace(/"/g,'&quot;')+'" style="font-size:.79rem;padding:7px 10px"></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Description</label><textarea id="fp-desc" class="fi" rows="4" style="font-size:.79rem;padding:7px 10px;resize:vertical">'+(p.description||'')+'</textarea></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Tags</label><input id="fp-tags" class="fi" value="'+( Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')).replace(/"/g,'&quot;')+'" placeholder="tag1, tag2…" style="font-size:.79rem;padding:7px 10px"></div>'
+    +'<div style="display:flex;align-items:center;gap:10px;padding-top:4px">'
+    +'<button onclick="svFicheProj('+pid+')" class="btn btn-p" style="padding:9px 20px;font-size:.82rem">💾 Enregistrer</button>'
+    +'<button onclick="dlFicheProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer ce projet</button>'
+    +'</div>'
+    +'</div></div>'
+
+    +'</div>'; // fin corps
+
+  panel.style.display="flex";
+
+  // Marquer la sidebar
+  qsa(".sbi").forEach(function(n){n.classList.remove("on");});
 }
-function svProj(){
-  if(!_ePid)return;
-  var titre=v("ep-titre");
-  if(!titre){$("ep-msg").textContent="Titre obligatoire.";return;}
-  apiPatch("/api/projet/"+_ePid,{titre:titre,theme:v("ep-theme"),statut:v("ep-statut"),annee:v("ep-annee")||null,importance:parseInt(v("ep-imp"))||2,resume:v("ep-resume"),description:v("ep-desc"),tags:v("ep-tags")}).then(function(d){
-    if(d.ok){P=P.map(function(p){return p.id===_ePid?d.projet:p;});ST[_ePid]=v("ep-statut");fG();buildCG();buildCharts();renderWidgetMandat();cm();toast("Projet modifie !");}
-    else{$("ep-msg").textContent=d.error||"Erreur.";}
+
+function svFicheProj(pid){
+  var titre=(document.getElementById("fp-titre")||{value:""}).value.trim();
+  if(!titre){toast("Titre obligatoire");return;}
+  var d={
+    titre:titre,
+    theme:(document.getElementById("fp-theme")||{value:""}).value,
+    statut:(document.getElementById("fp-statut")||{value:""}).value,
+    annee:(document.getElementById("fp-annee")||{value:""}).value||null,
+    importance:parseInt((document.getElementById("fp-imp")||{value:"2"}).value)||2,
+    resume:(document.getElementById("fp-resume")||{value:""}).value,
+    description:(document.getElementById("fp-desc")||{value:""}).value,
+    tags:(document.getElementById("fp-tags")||{value:""}).value
+  };
+  apiPatch("/api/projet/"+pid,d).then(function(r){
+    if(r&&r.ok){
+      P=P.map(function(p){return p.id===pid?r.projet:p;});
+      ST[pid]=d.statut;
+      fG();buildCG();buildCharts();
+      closePanel();
+      toast("✅ Projet mis à jour !");
+    } else {toast("Erreur",3000);}
   });
 }
-function dlProj(){
-  if(!_ePid)return;
-  if(!confirm("Supprimer ce projet ?"))return;
-  apiDel("/api/projet/"+_ePid).then(function(d){
-    if(d.ok){P=P.filter(function(p){return p.id!==_ePid;});delete ST[_ePid];fG();buildCG();buildCharts();renderWidgetMandat();cm();toast("Projet supprime.");}
+
+function dlFicheProj(pid){
+  if(!confirm("Supprimer définitivement ce projet ?"))return;
+  apiDel("/api/projet/"+pid).then(function(d){
+    if(d.ok){P=P.filter(function(p){return p.id!==pid;});delete ST[pid];fG();buildCG();buildCharts();closePanel();toast("Projet supprimé.");}
   });
 }
+
+// Alias legacy
+function svProj(){svFicheProj(_ePid);}
+function dlProj(){dlFicheProj(_ePid);}
+
+
 // ── RESTRICTION MENUS SELON ROLE ─────────────────────────────────────────────
 function applyRoles(){
   var isPriv=ME.role==='Admin'||ME.role==='Maire'||ME.role==='Tete de Liste'||(ME.role&&ME.role.toLowerCase().indexOf('adjoint')>=0)||ME.username==='admin';

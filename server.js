@@ -565,6 +565,18 @@ const server=http.createServer(function(req,res){
   if(p==='/api/agenda'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);d.id=nid(agenda);d.created=ts();agenda.push(d);save('agenda.json',agenda);return J(res,{ok:true,item:d});
   });
+  if(p.match(/^\/api\/agenda\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var id=parseInt(p.split('/').pop());
+    agenda=agenda.map(function(a){return a.id===id?Object.assign({},a,{
+      titre:d.titre||a.titre,date:d.date||a.date,
+      heure:d.heure!==undefined?d.heure:a.heure,
+      lieu:d.lieu!==undefined?d.lieu:a.lieu,
+      type:d.type||a.type,
+      notes:d.notes!==undefined?d.notes:a.notes
+    }):a;});
+    save('agenda.json',agenda);return J(res,{ok:true});
+  });
   if(p.match(/^\/api\/agenda\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());agenda=agenda.filter(a=>a.id!==id);save('agenda.json',agenda);return J(res,{ok:true});}
 
   // DOCUMENTS (liens simples)
@@ -3065,27 +3077,84 @@ function renderAg(){
   var al=(_pb&&_pb.querySelector("#ag-list"))||$("ag-list"); if(!al)return;
   var now=new Date().toISOString().slice(0,10);
   var sorted=AG.slice().sort(function(a,b){return a.date>b.date?1:-1;});
-  al.innerHTML=sorted.map(function(e){
-    var past=e.date<now;
-    return '<div class="agc'+(past?" past":"")+'">'
-      +'<div class="agc-db"><div class="agc-day">'+e.date.slice(8)+'</div><div class="agc-mon">'+MOIS[+e.date.slice(5,7)-1]+'</div></div>'
-      +'<div class="agc-inf">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-      +'<span class="agc-t">'+e.titre+'</span>'
-      +'<span class="atch '+(ATCLS[e.type]||"at-a")+'">'+(ATMAP[e.type]||e.type||"Autre")+'</span>'
-      +'</div>'
-      +'<div class="agc-m">'+(e.heure?"🕐 "+e.heure+"  ":"")+(e.lieu?"📍 "+e.lieu:"")+'</div>'
-      +(e.notes?'<div class="agc-n">'+e.notes+'</div>':'')
-      +'</div>'
-      +'<button class="btn btn-d btn-sm" style="flex-shrink:0;align-self:flex-start" onclick="delAg('+e.id+')">×</button>'
-      +'</div>';
-  }).join("")||'<div class="empty"><div class="empty-ico">📅</div><div class="empty-t">Aucune réunion</div><div class="empty-s">Cliquez sur + Ajouter.</div></div>';
+  var fut=sorted.filter(function(e){return e.date>=now;});
+  var passe=sorted.filter(function(e){return e.date<now;});
+  function card(e,isPast){
+    var col={bureau:"var(--g3)",commission:"#8B5CF6",conseil:"var(--blue)",autre:"var(--i3)"}[e.type]||"var(--i3)";
+    var ico={bureau:"🏢",commission:"👥",conseil:"🏛",autre:"📅"}[e.type]||"📅";
+    var lbl={bureau:"Bureau",commission:"Commission",conseil:"Conseil",autre:"Autre"}[e.type]||e.type;
+    var d=new Date(e.date+"T00:00:00");
+    var daysLeft=Math.round((d-new Date())/86400000);
+    var badge=isPast?"":(daysLeft===0?'<span style="background:#fef9c3;color:#a16207;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:7px">Aujourd\'hui</span>':(daysLeft===1?'<span style="background:#fee2e2;color:#b91c1c;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:7px">Demain</span>':( daysLeft<=7?'<span style="background:var(--g8);color:var(--g2);font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:7px">J-'+daysLeft+'</span>':"" )));
+    return '<div id="agcard-'+e.id+'" style="background:#fff;border-radius:14px;border:1px solid var(--w2);box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;'+(isPast?"opacity:.5;":"")+'">'+
+      '<div style="height:4px;background:'+col+'"></div>'+
+      '<div style="padding:.85rem 1rem">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem">'+
+      '<div style="font-size:1.5rem;font-weight:800;color:'+col+';font-family:var(--fd);line-height:1">'+d.getDate()+'</div>'+
+      '<div style="font-size:.68rem;color:var(--i3);line-height:1.3">'+MOIS[d.getMonth()].substring(0,4)+'<br>'+d.getFullYear()+'</div>'+
+      '<span style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:7px;background:'+col+'18;color:'+col+'">'+ico+' '+lbl+'</span>'+
+      badge+
+      '<div style="margin-left:auto;display:flex;gap:5px">'+
+      '<button onclick="editAgCard('+e.id+')" style="background:var(--w);border:1px solid var(--w2);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center">✏️</button>'+
+      '<button onclick="delAg('+e.id+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:.8rem;display:flex;align-items:center;justify-content:center">×</button>'+
+      '</div></div>'+
+      '<div style="font-size:.86rem;font-weight:700;font-family:var(--fd);margin-bottom:.3rem">'+e.titre+'</div>'+
+      '<div style="font-size:.72rem;color:var(--i3)">'+( e.heure?"🕐 "+e.heure+"  ":"")+( e.lieu?"📍 "+e.lieu:"")+'</div>'+
+      (e.notes?'<div style="font-size:.69rem;color:var(--i4);margin-top:3px">'+e.notes+'</div>':"")+ 
+      '</div></div>';
+  }
+  var html="";
+  if(fut.length){html+='<div style="font-size:.67rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem">À venir ('+fut.length+')</div>';html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:1.25rem">'+fut.map(function(e){return card(e,false);}).join("")+'</div>';}
+  if(passe.length){html+='<div style="font-size:.67rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;border-top:1px solid var(--w2);padding-top:.85rem">Passées ('+passe.length+')</div>';html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">'+passe.map(function(e){return card(e,true);}).join("")+'</div>';}
+  al.innerHTML=html||'<div class="empty"><div class="empty-ico">📅</div><div class="empty-t">Aucune réunion</div><div class="empty-s">Cliquez sur + Ajouter.</div></div>';
 }
+
+function editAgCard(id){
+  var e=AG.find(function(a){return a.id===id;}); if(!e)return;
+  var card=document.getElementById("agcard-"+id); if(!card)return;
+  card.innerHTML='<div style="height:4px;background:var(--g4)"></div>'+
+    '<div style="padding:.85rem 1rem;display:flex;flex-direction:column;gap:8px">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<div><label style="font-size:.63rem;font-weight:700;color:var(--i3);display:block;margin-bottom:2px;text-transform:uppercase">Titre *</label><input id="age-ti-'+id+'" class="fi" value="'+e.titre.replace(/"/g,"&quot;")+'" style="font-size:.75rem;padding:5px 8px"></div>'+
+    '<div><label style="font-size:.63rem;font-weight:700;color:var(--i3);display:block;margin-bottom:2px;text-transform:uppercase">Date</label><input id="age-d-'+id+'" class="fi" type="date" value="'+e.date+'" style="font-size:.75rem;padding:5px 8px"></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+    '<div><label style="font-size:.63rem;font-weight:700;color:var(--i3);display:block;margin-bottom:2px;text-transform:uppercase">Heure</label><input id="age-h-'+id+'" class="fi" value="'+( e.heure||"")+'" placeholder="18h30" style="font-size:.75rem;padding:5px 8px"></div>'+
+    '<div><label style="font-size:.63rem;font-weight:700;color:var(--i3);display:block;margin-bottom:2px;text-transform:uppercase">Lieu</label><input id="age-l-'+id+'" class="fi" value="'+( e.lieu||"").replace(/"/g,"&quot;")+'" style="font-size:.75rem;padding:5px 8px"></div>'+
+    '<div><label style="font-size:.63rem;font-weight:700;color:var(--i3);display:block;margin-bottom:2px;text-transform:uppercase">Type</label><select id="age-ty-'+id+'" class="fi" style="font-size:.75rem;padding:5px 8px"><option value="bureau"'+(e.type==="bureau"?" selected":"")+'>Bureau</option><option value="commission"'+(e.type==="commission"?" selected":"")+'>Commission</option><option value="conseil"'+(e.type==="conseil"?" selected":"")+'>Conseil</option><option value="autre"'+(e.type==="autre"?" selected":"")+'>Autre</option></select></div>'+
+    '</div>'+
+    '<div><label style="font-size:.63rem;font-weight:700;color:var(--i3);display:block;margin-bottom:2px;text-transform:uppercase">Notes</label><input id="age-n-'+id+'" class="fi" value="'+( e.notes||"").replace(/"/g,"&quot;")+'" style="font-size:.75rem;padding:5px 8px"></div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+    '<button onclick="renderAg()" class="btn btn-s btn-sm">Annuler</button>'+
+    '<button onclick="saveAgCard('+id+')" class="btn btn-p btn-sm">💾 Enregistrer</button>'+
+    '</div></div>';
+}
+
+function saveAgCard(id){
+  var titre=(document.getElementById("age-ti-"+id)||{value:""}).value.trim();
+  if(!titre){toast("Titre obligatoire");return;}
+  var d={
+    titre:titre,
+    date:(document.getElementById("age-d-"+id)||{value:""}).value,
+    heure:(document.getElementById("age-h-"+id)||{value:""}).value,
+    lieu:(document.getElementById("age-l-"+id)||{value:""}).value,
+    type:(document.getElementById("age-ty-"+id)||{value:"autre"}).value,
+    notes:(document.getElementById("age-n-"+id)||{value:""}).value
+  };
+  apiPatch("/api/agenda/"+id,d).then(function(r){
+    if(r&&r.ok){
+      AG=AG.map(function(a){return a.id===id?Object.assign({},a,d):a;});
+      renderAg();renderNextMtg();renderWidgetAgenda();toast("Réunion mise à jour !");
+    } else {toast("Erreur",3000);}
+  });
+}
+
 function svAg(){
-  apiPost("/api/agenda",{titre:v("ag-ti"),date:v("ag-d"),heure:v("ag-h"),lieu:v("ag-l"),type:v("ag-ty"),notes:v("ag-n")})
-    .then(function(d){if(d.ok){AG.push(d.item);cm();renderAg();renderNextMtg();toast("Réunion ajoutée");}});
+  var d={titre:v("ag-ti"),date:v("ag-d"),heure:v("ag-h"),lieu:v("ag-l"),type:v("ag-ty"),notes:v("ag-n")};
+  if(!d.titre||!d.date){toast("Titre et date obligatoires");return;}
+  apiPost("/api/agenda",d).then(function(r){if(r.ok){AG.push(r.item);cm();renderAg();renderNextMtg();renderWidgetAgenda();toast("Réunion ajoutée");}});
 }
-function delAg(id){if(!confirm("Supprimer cette réunion ?"))return;apiDel("/api/agenda/"+id).then(function(d){if(d.ok){AG=AG.filter(function(a){return a.id!==id;});renderAg();renderNextMtg();}});}
+function delAg(id){if(!confirm("Supprimer cette réunion ?"))return;apiDel("/api/agenda/"+id).then(function(d){if(d.ok){AG=AG.filter(function(a){return a.id!==id;});renderAg();renderNextMtg();renderWidgetAgenda();}});}
 
 // ── COMPTES RENDUS ───────────────────────────────────────────────────────────
 var CR_COM_COL={"Bureau municipal":"#1d3d2b","Conseil municipal":"#2d5a40","Culture, Patrimoine & Jumelages":"#8B5CF6","Mobilités":"#3B82F6","Transition écologique":"#10B981","Action sociale":"#F59E0B","Concertation citoyenne":"#6366F1","Animations de proximité":"#EC4899","Enfance/Jeunesse":"#F97316","Tranquillité publique":"#EF4444","Travaux & Urbanisme":"#84CC16","Santé":"#06B6D4"};

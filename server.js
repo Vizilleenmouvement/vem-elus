@@ -4410,7 +4410,7 @@ function oProj(pid){
   var col=cols[statut]||'#64748b';
   var panel=_fpPanel(); _fpCss();
   var TABS=['infos','journal','contacts','docs','presse'];
-  var TLBL={infos:'📋 Infos',journal:'📒 Journal',contacts:'🤝 Partenaires & Contacts',docs:'📄 Documents',presse:'📰 Presse'};
+  var TLBL={infos:'📋 Infos',journal:'📒 Journal',contacts:'👥 Contacts',docs:'📄 Documents',presse:'📰 Presse'};
   var th=''; TABS.forEach(function(t){th+='<button class="'+(t===TABS[0]?'fpt on':'fpt')+'" data-tab="'+t+'" onclick="fpTab(this)">'+TLBL[t]+'</button>';});
   panel.innerHTML=
     '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'
@@ -4461,26 +4461,12 @@ function fpRenderInfos(pid,p,statut){
   var ds=(p.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
   var tg=(Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')).replace(/"/g,'&quot;');
   var imp=p.importance||2;
-  // Timeline statuts
-  var steps=['Étude','Planifié','Programmé','En cours','Réalisé'];
-  var curr=steps.indexOf(statut);
-  var tl='';
-  steps.forEach(function(s,i){
-    var done=i<curr,active=i===curr;
-    var bg=active?'var(--g1)':(done?'var(--g4)':'var(--w2)');
-    var tc=active||done?'#fff':'var(--i4)';
-    tl+='<div style="flex:1;text-align:center;position:relative">'
-      +(i>0?'<div style="position:absolute;top:9px;left:0;right:50%;height:2px;background:'+(i<=curr?'var(--g3)':'var(--w2)')+'"></div>':'')
-      +(i<4?'<div style="position:absolute;top:9px;left:50%;right:0;height:2px;background:'+(i<curr?'var(--g3)':'var(--w2)')+'"></div>':'')
-      +'<div style="width:18px;height:18px;border-radius:50%;background:'+bg+';margin:0 auto 3px;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;color:'+tc+';position:relative;z-index:1">'+(done?'✓':(active?'●':''))+'</div>'
-      +'<div style="font-size:.55rem;font-weight:'+(active?'700':'400')+';color:'+(active?'var(--g1)':'var(--i4)')+'">'+s+'</div>'
-      +'</div>';
-  });
+  // Timeline supprimée (version 2)
   pb.innerHTML=
     '<div style="display:flex;flex-direction:column;gap:1rem">'
     // Statut + avancement
     +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.1rem 1.25rem;box-shadow:var(--s1)">'
-    +'<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:.75rem">'+tl+'</div>'
+
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.75rem">'
     +'<select id="fp-st" class="fi" style="font-size:.78rem;padding:6px 9px" onchange="fpStatutChange(this)">'+stO+'</select>'
     +'<select id="fp-rsp" class="fi" style="font-size:.78rem;padding:6px 9px">'+rO+'</select>'
@@ -4555,19 +4541,33 @@ function fpRenderJournal(pid,p,statut,fiche){
       var isNote=(e.action==='note'), isDoc=(e.action==='doc');
       var ico=icoType[e.action]||'📝';
       var bdr=isNote?'border-left:3px solid var(--g4)':'border-left:3px solid var(--w2)';
-      html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);'+bdr+';padding:.8rem 1rem;margin-bottom:.5rem;display:flex;gap:10px;box-shadow:var(--s1)">'
-        +'<span style="font-size:1rem;flex-shrink:0;padding-top:1px">'+ico+'</span>'
+      // Formater la date/heure de façon lisible
+      var dt=''; var dtRaw=e.created_at||'';
+      if(dtRaw){
+        var d=new Date(dtRaw.replace(' ','T'));
+        if(!isNaN(d)){
+          dt=d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric'})
+            +' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+        } else { dt=dtRaw.slice(0,16).replace('T',' '); }
+      }
+      html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);'+bdr+';padding:.85rem 1rem;margin-bottom:.5rem;box-shadow:var(--s1)">'
+        +'<div style="display:flex;align-items:flex-start;gap:10px">'
+        +'<span style="font-size:1rem;flex-shrink:0;padding-top:2px">'+ico+'</span>'
         +'<div style="flex:1;min-width:0">'
-        +'<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:.2rem">'
-        +(e.ancien_val?'<span style="font-size:.77rem;font-weight:700;color:var(--ink)">'+e.ancien_val+'</span>':'')
-        +'<span style="font-size:.65rem;color:var(--i4)">'+(e.auteur_nom||'Système')+' · '+(e.created_at||'').slice(0,16)+'</span>'
+        // En-tête : auteur + date/heure bien visible
+        +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:.2rem">'
+        +'<span style="font-size:.75rem;font-weight:700;color:var(--g2)">'+(e.auteur_nom||'Système')+'</span>'
+        +(dt?'<span style="font-size:.67rem;color:var(--i4);white-space:nowrap">🕐 '+dt+'</span>':'')
         +'</div>'
-        +(e.nouveau_val?'<div style="font-size:.79rem;color:var(--i2);line-height:1.6;white-space:pre-wrap">'+e.nouveau_val+'</div>':'')
+        // Objet en gras si présent
+        +(e.ancien_val?'<div style="font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:.2rem">'+e.ancien_val+'</div>':'')
+        // Texte
+        +(e.nouveau_val?'<div style="font-size:.78rem;color:var(--i2);line-height:1.65;white-space:pre-wrap">'+e.nouveau_val+'</div>':'')
         +'</div>'
         +((e.action==='note'||e.action==='doc')
-          ?'<button onclick="fpDelNote('+e.id+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.85rem;flex-shrink:0;align-self:flex-start;padding:2px 4px" title="Supprimer">×</button>'
+          ?'<button onclick="fpDelNote('+e.id+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.85rem;flex-shrink:0;padding:2px 4px" title="Supprimer">×</button>'
           :'')
-        +'</div>';
+        +'</div></div>';
     });
   } else {
     html+='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune entrée — rédigez la première note ci-dessus.</div></div>';

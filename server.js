@@ -1,6 +1,6 @@
 const http=require('http'),https=require('https'),fs=require('fs'),path=require('path');
 const PORT=process.env.PORT||3000, DIR=__dirname;
-const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db,ProjetJalons,ProjetPartenaires,ProjetContacts,ProjetDocs,ProjetPresse,ProjetJournal} = require('./db.js');
+const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db} = require('./db.js');
 
 // Comptes élus — peuvent être surchargés via ACCOUNTS_JSON env var
 const ACCOUNTS_DEFAULT = {
@@ -515,63 +515,6 @@ const server=http.createServer(function(req,res){
   });
 
   // SUPPRIMER UN PROJET
-  // ── FICHE PROJET ÉTENDUE ──────────────────────────────────────────────────
-  // PATCH avancement + responsable
-  if(p.match(/^\/api\/projet\/\d+\/avancement$/)&&m==='PATCH')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);
-    var pid=parseInt(p.split('/')[3]);
-    try{db.prepare('UPDATE projets SET avancement=?,responsable_id=?,responsable_nom=? WHERE id=?').run(parseInt(d.avancement)||0,d.responsable_id||null,d.responsable_nom||'',pid);}catch(e){}
-    ProjetJournal.log(pid,ME.id,ME.nom,'avancement','',(d.avancement||0)+'%');
-    return J(res,{ok:true});
-  });
-  // GET fiche complète
-  if(p.match(/^\/api\/projet\/\d+\/fiche$/)&&m==='GET'){
-    var pid=parseInt(p.split('/')[3]);
-    return J(res,{
-      jalons:ProjetJalons.get(pid),
-      partenaires:ProjetPartenaires.get(pid),
-      contacts:ProjetContacts.get(pid),
-      docs:ProjetDocs.get(pid),
-      presse:ProjetPresse.get(pid),
-      journal:ProjetJournal.get(pid)
-    });
-  }
-  // JALONS
-  if(p.match(/^\/api\/projet\/\d+\/jalons$/)&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);
-    var item=ProjetJalons.insert(parseInt(p.split('/')[3]),d);
-    return J(res,{ok:true,item:item});
-  });
-  if(p.match(/^\/api\/jalon\/\d+$/)&&m==='DELETE'){ProjetJalons.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
-  if(p.match(/^\/api\/jalon\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);
-    ProjetJalons.patch(parseInt(p.split('/').pop()),d);return J(res,{ok:true});
-  });
-  // PARTENAIRES
-  if(p.match(/^\/api\/projet\/\d+\/partenaires$/)&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);
-    return J(res,{ok:true,item:ProjetPartenaires.insert(parseInt(p.split('/')[3]),d)});
-  });
-  if(p.match(/^\/api\/partenaire\/\d+$/)&&m==='DELETE'){ProjetPartenaires.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
-  // CONTACTS
-  if(p.match(/^\/api\/projet\/\d+\/contacts$/)&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);
-    return J(res,{ok:true,item:ProjetContacts.insert(parseInt(p.split('/')[3]),d)});
-  });
-  if(p.match(/^\/api\/contact\/\d+$/)&&m==='DELETE'){ProjetContacts.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
-  // DOCS
-  if(p.match(/^\/api\/projet\/\d+\/docs$/)&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);
-    return J(res,{ok:true,item:ProjetDocs.insert(parseInt(p.split('/')[3]),d)});
-  });
-  if(p.match(/^\/api\/projdoc\/\d+$/)&&m==='DELETE'){ProjetDocs.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
-  // PRESSE
-  if(p.match(/^\/api\/projet\/\d+\/presse$/)&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);
-    return J(res,{ok:true,item:ProjetPresse.insert(parseInt(p.split('/')[3]),d)});
-  });
-  if(p.match(/^\/api\/presse\/\d+$/)&&m==='DELETE'){ProjetPresse.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
-
   if(p.match(/^\/api\/projet\/\d+$/)&&m==='DELETE'){
     Projets.delete(parseInt(p.split('/').pop()));
     return J(res,{ok:true});
@@ -4100,319 +4043,122 @@ function oProj(pid){
   var p=P.find(function(x){return x.id===pid;}); if(!p)return;
   _ePid=pid;
   var statut=ST[pid]||p.statut||'ND';
-  var av=p.avancement||0;
+  var col={Prioritaire:'var(--red)',Programmé:'var(--blue)','En cours':'var(--amber)',Réalisé:'var(--g4)',Étude:'#8B5CF6',Abandonné:'var(--i4)'}[statut]||'var(--i3)';
+  var imp=['','★ Normale','★★ Importante','★★★ Prioritaire'][p.importance||1]||'★★ Importante';
+  var tags=Array.isArray(p.tags)?p.tags:(p.tags?p.tags.split(','):[]);
+
+  // Construire les options
   var themeOpts=Object.keys(COMM).map(function(k){return COMM[k].map(function(t){return'<option value="'+t+'"'+(p.theme===t?' selected':'')+'>'+k+' — '+t+'</option>';}).join('');}).join('');
   var statutOpts=SLIST.map(function(s){return'<option value="'+s+'"'+(statut===s?' selected':'')+'>'+s+'</option>';}).join('');
-  var respOpts='<option value="">— Aucun référent —</option>'+ELUS_DATA.map(function(e){var n=(e.prenom?e.prenom+' ':'')+e.nom;return'<option value="'+e.id+'"'+(p.responsable_id===e.id?' selected':'')+'>'+n+'</option>';}).join('');
-  var col={Prioritaire:'#dc2626',Programmé:'#2563eb','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#8B5CF6',Abandonné:'#9ca3af'}[statut]||'var(--g3)';
 
-  // Ouvrir panneau
+  // Ouvrir un panneau dédié
   var panel=document.getElementById("main-panel");
-  if(!panel){panel=document.createElement("div");panel.id="main-panel";document.body.appendChild(panel);}
-  panel.style.cssText="position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
+  if(!panel){panel=document.createElement("div");panel.id="main-panel";panel.style.cssText="position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";document.body.appendChild(panel);}
   panel.innerHTML=
-    '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'
-    +'<div style="width:8px;height:8px;border-radius:50%;background:'+col+'"></div>'
-    +'<span style="flex:1;font-size:.78rem;font-weight:700;font-family:var(--fd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.titre+'</span>'
-    +'<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;flex-shrink:0">✕</button>'
+    '<div style="background:var(--g1);color:#fff;padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:.78rem;font-weight:600;font-family:var(--fd);">'
+    +'<span style="flex:1">📋 Fiche projet</span>'
+    +'<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:.9rem;">✕</button>'
     +'</div>'
-    +'<div id="fp-tabs" style="display:flex;background:var(--g8);border-bottom:1px solid var(--w2);flex-shrink:0;overflow-x:auto">'
-    +'<button class="fpt on" onclick="fpTab('infos',this)">📋 Infos</button>'
-    +'<button class="fpt" onclick="fpTab('jalons',this)">🏁 Jalons</button>'
-    +'<button class="fpt" onclick="fpTab('partenaires',this)">🤝 Partenaires</button>'
-    +'<button class="fpt" onclick="fpTab('contacts',this)">👤 Contacts</button>'
-    +'<button class="fpt" onclick="fpTab('docs',this)">📄 Documents</button>'
-    +'<button class="fpt" onclick="fpTab('presse',this)">📰 Presse</button>'
-    +'<button class="fpt" onclick="fpTab('journal',this)">📒 Journal</button>'
+    +'<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
+
+  var pb=document.getElementById("panel-body");
+
+  pb.innerHTML=
+    // En-tête coloré
+    '<div style="background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.5rem">'
+    +'<div style="display:flex;align-items:flex-start;gap:12px">'
+    +'<div style="flex:1">'
+    +'<div style="font-size:.72rem;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem">'+p.theme+'</div>'
+    +'<div style="font-size:1.2rem;font-weight:800;font-family:var(--fd);line-height:1.3;margin-bottom:.4rem">'+p.titre+'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    +'<span style="background:'+col+'33;border:1px solid '+col+'66;color:#fff;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px">'+statut+'</span>'
+    +(p.annee?'<span style="opacity:.6;font-size:.72rem">📅 '+p.annee+'</span>':'')
+    +'<span style="opacity:.6;font-size:.72rem">'+imp+'</span>'
+    +'</div></div>'
+    +'</div></div>'
+
+    // Corps
+    +'<div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1.25rem">'
+
+    // Résumé
+    +(p.resume?'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">'
+      +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Résumé</div>'
+      +'<div style="font-size:.84rem;color:var(--ink);line-height:1.6">'+p.resume+'</div>'
+      +'</div>':"")
+
+    // Description
+    +(p.description?'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">'
+      +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Description détaillée</div>'
+      +'<div style="font-size:.82rem;color:var(--ink);line-height:1.7;white-space:pre-wrap">'+p.description+'</div>'
+      +'</div>':"")
+
+    // Tags
+    +(tags.length?'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +tags.filter(Boolean).map(function(t){return'<span style="background:var(--g8);color:var(--g2);font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--g7)">'+t.trim()+'</span>';}).join('')
+      +'</div>':"")
+
+    // Formulaire de modification
+    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.25rem;box-shadow:var(--s1)">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.85rem">✏️ Modifier ce projet</div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Titre *</label><input id="fp-titre" class="fi" value="'+p.titre.replace(/"/g,'&quot;')+'" style="font-size:.82rem;padding:8px 11px"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-statut" class="fi" style="font-size:.79rem;padding:7px 10px">'+statutOpts+'</select></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Année cible</label><input id="fp-annee" class="fi" type="number" value="'+(p.annee||'')+'" min="2026" max="2032" style="font-size:.79rem;padding:7px 10px"></div>'
     +'</div>'
-    +'<div id="fp-body" style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem"></div>';
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Commission / Thème</label><select id="fp-theme" class="fi" style="font-size:.79rem;padding:7px 10px">'+themeOpts+'</select></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Importance</label><select id="fp-imp" class="fi" style="font-size:.79rem;padding:7px 10px"><option value="1"'+(( p.importance||2)===1?" selected":"")+'>★ Normale</option><option value="2"'+(( p.importance||2)===2?" selected":"")+'>★★ Importante</option><option value="3"'+(( p.importance||2)===3?" selected":"")+'>★★★ Prioritaire</option></select></div>'
+    +'</div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Résumé</label><input id="fp-resume" class="fi" value="'+(p.resume||'').replace(/"/g,'&quot;')+'" style="font-size:.79rem;padding:7px 10px"></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Description</label><textarea id="fp-desc" class="fi" rows="4" style="font-size:.79rem;padding:7px 10px;resize:vertical">'+(p.description||'')+'</textarea></div>'
+    +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Tags</label><input id="fp-tags" class="fi" value="'+( Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')).replace(/"/g,'&quot;')+'" placeholder="tag1, tag2…" style="font-size:.79rem;padding:7px 10px"></div>'
+    +'<div style="display:flex;align-items:center;gap:10px;padding-top:4px">'
+    +'<button onclick="svFicheProj('+pid+')" class="btn btn-p" style="padding:9px 20px;font-size:.82rem">💾 Enregistrer</button>'
+    +'<button onclick="dlFicheProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer ce projet</button>'
+    +'</div>'
+    +'</div></div>'
 
-  // CSS onglets
-  if(!document.getElementById("fp-style")){var s=document.createElement("style");s.id="fp-style";s.textContent=".fpt{background:none;border:none;padding:.55rem 1rem;font-size:.75rem;font-weight:600;color:var(--i3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:var(--fd)}.fpt.on{color:var(--g1);border-bottom-color:var(--g1);background:#fff}";document.head.appendChild(s);}
+    +'</div>'; // fin corps
 
-  // Stocker données projet pour les onglets
-  window._fpPid=pid;
-  window._fpP=p;
-  window._fpStatut=statut;
-  window._fpAv=av;
-  window._fpCol=col;
-  window._fpThemeOpts=themeOpts;
-  window._fpStatutOpts=statutOpts;
-  window._fpRespOpts=respOpts;
+  panel.style.display="flex";
 
-  fpTab('infos', document.querySelector('.fpt'));
-  panel.style.display='flex';
+  // Marquer la sidebar
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
-}
-
-function fpTab(tab, btn){
-  qsa(".fpt").forEach(function(b){b.classList.remove("on");});
-  if(btn) btn.classList.add("on");
-  var pb=document.getElementById("fp-body"); if(!pb)return;
-  var pid=window._fpPid, p=window._fpP||{}, statut=window._fpStatut||'', av=window._fpAv||0, col=window._fpCol||'#333';
-
-  if(tab==='infos'){
-    var tags=Array.isArray(p.tags)?p.tags:(p.tags?(p.tags+'').split(','):[]);
-    pb.innerHTML=
-      // Barre d'avancement
-      '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">'
-      +'<span style="font-size:.72rem;font-weight:700;color:var(--i3);text-transform:uppercase">Avancement</span>'
-      +'<span id="fp-av-pct" style="font-size:1.1rem;font-weight:800;color:var(--g1)">'+av+'%</span>'
-      +'</div>'
-      +'<div style="background:var(--w2);border-radius:20px;height:10px;overflow:hidden;margin-bottom:.75rem">'
-      +'<div id="fp-av-bar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--g3),var(--g1));width:'+av+'%;transition:width .3s"></div>'
-      +'</div>'
-      +'<input type="range" id="fp-av-range" min="0" max="100" value="'+av+'" style="width:100%;accent-color:var(--g2)" oninput="fpAvUpdate(this.value)">'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:.75rem">'
-      +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-statut" class="fi" style="font-size:.79rem;padding:7px 10px">'+window._fpStatutOpts+'</select></div>'
-      +'<div><label style="font-size:.67rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Élu référent</label><select id="fp-resp" class="fi" style="font-size:.79rem;padding:7px 10px">'+window._fpRespOpts+'</select></div>'
-      +'</div>'
-      +'<div style="display:flex;justify-content:flex-end;margin-top:.75rem">'
-      +'<button onclick="svAvancement('+pid+')" class="btn btn-p btn-sm">💾 Enregistrer avancement</button>'
-      +'</div>'
-      +'</div>'
-      // Infos générales
-      +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-      +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.85rem">Modifier le projet</div>'
-      +'<div style="display:flex;flex-direction:column;gap:10px">'
-      +'<input id="fp-titre" class="fi" value="'+(p.titre||'').replace(/"/g,'&quot;')+'" style="font-size:.82rem;padding:8px 11px">'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
-      +'<select id="fp-theme" class="fi" style="font-size:.79rem;padding:7px 10px">'+window._fpThemeOpts+'</select>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-      +'<input id="fp-annee" class="fi" type="number" value="'+(p.annee||'')+'" min="2026" max="2032" placeholder="Année" style="font-size:.79rem;padding:7px 10px">'
-      +'<select id="fp-imp" class="fi" style="font-size:.79rem;padding:7px 10px"><option value="1"'+((p.importance||2)===1?" selected":"")+'>★ Normale</option><option value="2"'+((p.importance||2)===2?" selected":"")+'>★★ Import.</option><option value="3"'+((p.importance||2)===3?" selected":"")+'>★★★ Prio.</option></select>'
-      +'</div></div>'
-      +'<input id="fp-resume" class="fi" value="'+(p.resume||'').replace(/"/g,'&quot;')+'" placeholder="Résumé" style="font-size:.79rem;padding:7px 10px">'
-      +'<textarea id="fp-desc" class="fi" rows="4" style="font-size:.79rem;padding:7px 10px;resize:vertical">'+(p.description||'')+'</textarea>'
-      +'<input id="fp-tags" class="fi" value="'+(Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')).replace(/"/g,'&quot;')+'" placeholder="Tags…" style="font-size:.79rem;padding:7px 10px">'
-      +'<div style="display:flex;align-items:center;gap:10px">'
-      +'<button onclick="svFicheProj('+pid+')" class="btn btn-p">💾 Enregistrer</button>'
-      +'<button onclick="dlFicheProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer</button>'
-      +'</div></div></div>'
-      +(tags.filter(Boolean).length?'<div style="display:flex;gap:6px;flex-wrap:wrap">'+tags.filter(Boolean).map(function(t){return'<span style="background:var(--g8);color:var(--g2);font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--g7)">'+t.trim()+'</span>';}).join('')+'</div>':"");
-
-  } else {
-    pb.innerHTML='<div style="display:flex;align-items:center;justify-content:center;padding:2rem"><div style="font-size:1.5rem">⏳</div></div>';
-    apiGet("/api/projet/"+pid+"/fiche").then(function(fiche){
-      if(tab==='jalons') fpRenderJalons(pid, fiche.jalons||[]);
-      else if(tab==='partenaires') fpRenderPartenaires(pid, fiche.partenaires||[]);
-      else if(tab==='contacts') fpRenderContacts(pid, fiche.contacts||[]);
-      else if(tab==='docs') fpRenderDocs(pid, fiche.docs||[]);
-      else if(tab==='presse') fpRenderPresse(pid, fiche.presse||[]);
-      else if(tab==='journal') fpRenderJournal(pid, fiche.journal||[]);
-    });
-  }
-}
-
-function fpAvUpdate(v){
-  var bar=document.getElementById("fp-av-bar"), pct=document.getElementById("fp-av-pct");
-  if(bar) bar.style.width=v+'%';
-  if(pct) pct.textContent=v+'%';
-}
-
-function svAvancement(pid){
-  var av=parseInt((document.getElementById("fp-av-range")||{value:0}).value)||0;
-  var statut=(document.getElementById("fp-statut")||{value:""}).value;
-  var sel=document.getElementById("fp-resp");
-  var rId=sel?parseInt(sel.value)||null:null;
-  var rNom=sel?(sel.options[sel.selectedIndex]||{text:""}).text:"";
-  if(rNom==="— Aucun référent —") rNom="";
-  apiPatch("/api/projet/"+pid+"/avancement",{avancement:av,responsable_id:rId,responsable_nom:rNom}).then(function(r){
-    if(r&&r.ok){
-      P=P.map(function(p){return p.id===pid?Object.assign({},p,{avancement:av,statut:statut,responsable_id:rId,responsable_nom:rNom}):p;});
-      if(statut) apiPatch("/api/projet/"+pid,{statut:statut}).then(function(){ST[pid]=statut;fG();buildCG();});
-      window._fpAv=av;
-      toast("✅ Avancement mis à jour !");
-    }
-  });
-}
-
-function fpRenderJalons(pid, jalons){
-  var pb=document.getElementById("fp-body"); if(!pb)return;
-  var statutOpts=function(s){return['prevu','en_cours','realise','annule'].map(function(v){return'<option value="'+v+'"'+(s===v?' selected':'')+'>'+{prevu:'Prévu',en_cours:'En cours',realise:'✅ Réalisé',annule:'❌ Annulé'}[v]+'</option>';}).join('');};
-  var ico={prevu:'🔵',en_cours:'🟡',realise:'✅',annule:'❌'};
-  pb.innerHTML=
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">Ajouter un jalon</div>'
-    +'<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end">'
-    +'<input id="jal-ti" class="fi" placeholder="Titre du jalon *" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="jal-dt" class="fi" type="date" style="font-size:.79rem;padding:7px 10px">'
-    +'<button onclick="addJalon('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button>'
-    +'</div></div>'
-    +'<div id="jalons-list">'
-    +(jalons.length?jalons.map(function(j){return(
-      '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1.1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)">'
-      +'<span style="font-size:1.1rem">'+(ico[j.statut]||'🔵')+'</span>'
-      +'<div style="flex:1">'
-      +'<div style="font-size:.82rem;font-weight:700">'+j.titre+'</div>'
-      +(j.date?'<div style="font-size:.7rem;color:var(--i3)">📅 '+j.date+'</div>':'')
-      +(j.notes?'<div style="font-size:.7rem;color:var(--i4)">'+j.notes+'</div>':'')
-      +'</div>'
-      +'<select class="fi" style="font-size:.72rem;padding:4px 6px;width:auto" onchange="patchJalon('+j.id+',{statut:this.value})">'+statutOpts(j.statut)+'</select>'
-      +'<button onclick="delJalon('+j.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.75rem">×</button>'
-      +'</div>';
-    }).join(''):'<div class="empty"><div class="empty-ico">🏁</div><div class="empty-s">Aucun jalon — ajoutez les étapes clés du projet.</div></div>')
-    +'</div>';
-}
-
-function addJalon(pid){
-  var ti=(document.getElementById("jal-ti")||{value:""}).value.trim();
-  if(!ti){toast("Titre obligatoire");return;}
-  var dt=(document.getElementById("jal-dt")||{value:""}).value;
-  apiPost("/api/projet/"+pid+"/jalons",{titre:ti,date:dt,statut:"prevu"}).then(function(r){
-    if(r&&r.ok){toast("✅ Jalon ajouté");fpTab("jalons",document.querySelector(".fpt:nth-child(2)"));}
-  });
-}
-function patchJalon(id,d){apiPatch("/api/jalon/"+id,d).then(function(){toast("✅ Jalon mis à jour");});}
-function delJalon(id,pid){if(!confirm("Supprimer ce jalon ?"))return;apiDel("/api/jalon/"+id).then(function(r){if(r&&r.ok){fpTab("jalons",document.querySelector(".fpt:nth-child(2)"));}});}
-
-function fpRenderPartenaires(pid, items){
-  var pb=document.getElementById("fp-body"); if(!pb)return;
-  pb.innerHTML=
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">Ajouter un partenaire</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +'<input id="pt-nom" class="fi" placeholder="Nom *" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="pt-type" class="fi" placeholder="Type (ex: Métropole, État…)" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="pt-email" class="fi" placeholder="Email" type="email" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="pt-tel" class="fi" placeholder="Téléphone" style="font-size:.79rem;padding:7px 10px">'
-    +'</div>'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:8px"><button onclick="addPartenaire('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div>'
-    +'</div>'
-    +(items.length?items.map(function(p){return(
-      '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1.1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)">'
-      +'<div style="width:36px;height:36px;border-radius:10px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">🤝</div>'
-      +'<div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+p.nom+'</div>'
-      +(p.type?'<div style="font-size:.7rem;color:var(--i3)">'+p.type+'</div>':'')
-      +(p.email?'<a href="mailto:'+p.email+'" style="font-size:.7rem;color:var(--g3)">'+p.email+'</a>':'')+'</div>'
-      +'<button onclick="delPartenaire('+p.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.75rem">×</button>'
-      +'</div>';
-    }).join(''):'<div class="empty"><div class="empty-ico">🤝</div><div class="empty-s">Aucun partenaire.</div></div>');
-}
-function addPartenaire(pid){
-  var nom=(document.getElementById("pt-nom")||{value:""}).value.trim();
-  if(!nom){toast("Nom obligatoire");return;}
-  apiPost("/api/projet/"+pid+"/partenaires",{nom:nom,type:(document.getElementById("pt-type")||{value:""}).value,email:(document.getElementById("pt-email")||{value:""}).value,tel:(document.getElementById("pt-tel")||{value:""}).value}).then(function(r){if(r&&r.ok){fpTab("partenaires",document.querySelector(".fpt:nth-child(3)"));}});
-}
-function delPartenaire(id,pid){apiDel("/api/partenaire/"+id).then(function(){fpTab("partenaires",document.querySelector(".fpt:nth-child(3)"));});}
-
-function fpRenderContacts(pid, items){
-  var pb=document.getElementById("fp-body"); if(!pb)return;
-  pb.innerHTML=
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">Ajouter un contact</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +'<input id="ct-nom" class="fi" placeholder="Nom *" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="ct-role" class="fi" placeholder="Rôle / Fonction" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="ct-org" class="fi" placeholder="Organisation" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="ct-email" class="fi" placeholder="Email" type="email" style="font-size:.79rem;padding:7px 10px">'
-    +'</div>'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:8px"><button onclick="addContact('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div>'
-    +'</div>'
-    +(items.length?items.map(function(c){return(
-      '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1.1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)">'
-      +'<div style="width:36px;height:36px;border-radius:10px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">👤</div>'
-      +'<div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+c.nom+'</div>'
-      +(c.role?'<div style="font-size:.7rem;color:var(--i3)">'+c.role+(c.organisation?' · '+c.organisation:'')+'</div>':'')
-      +(c.email?'<a href="mailto:'+c.email+'" style="font-size:.7rem;color:var(--g3)">'+c.email+'</a>':'')+'</div>'
-      +'<button onclick="delContact('+c.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.75rem">×</button>'
-      +'</div>';
-    }).join(''):'<div class="empty"><div class="empty-ico">👤</div><div class="empty-s">Aucun contact.</div></div>');
-}
-function addContact(pid){
-  var nom=(document.getElementById("ct-nom")||{value:""}).value.trim();
-  if(!nom){toast("Nom obligatoire");return;}
-  apiPost("/api/projet/"+pid+"/contacts",{nom:nom,role:(document.getElementById("ct-role")||{value:""}).value,organisation:(document.getElementById("ct-org")||{value:""}).value,email:(document.getElementById("ct-email")||{value:""}).value}).then(function(r){if(r&&r.ok){fpTab("contacts",document.querySelector(".fpt:nth-child(4)"));}});
-}
-function delContact(id,pid){apiDel("/api/contact/"+id).then(function(){fpTab("contacts",document.querySelector(".fpt:nth-child(4)"));});}
-
-function fpRenderDocs(pid, items){
-  var pb=document.getElementById("fp-body"); if(!pb)return;
-  pb.innerHTML=
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">Ajouter un document</div>'
-    +'<div style="display:flex;flex-direction:column;gap:8px">'
-    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px">'
-    +'<input id="dc-ti" class="fi" placeholder="Titre *" style="font-size:.79rem;padding:7px 10px">'
-    +'<select id="dc-ty" class="fi" style="font-size:.79rem;padding:7px 10px"><option>Délibération</option><option>Étude</option><option>Devis</option><option>Compte rendu</option><option>Courrier</option><option>Autre</option></select>'
-    +'</div>'
-    +'<input id="dc-url" class="fi" placeholder="URL / Lien" style="font-size:.79rem;padding:7px 10px">'
-    +'<div style="display:flex;justify-content:flex-end"><button onclick="addDoc('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div>'
-    +'</div></div>'
-    +(items.length?items.map(function(d){return(
-      '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1.1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)">'
-      +'<div style="font-size:1.3rem">📄</div>'
-      +'<div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+d.titre+'</div>'
-      +(d.type?'<span style="font-size:.68rem;background:var(--g8);color:var(--g2);padding:1px 7px;border-radius:5px">'+d.type+'</span>':'')
-      +(d.url?'<a href="'+d.url+'" target="_blank" style="font-size:.7rem;color:var(--g3);display:block;margin-top:2px">🔗 Ouvrir</a>':'')+'</div>'
-      +'<button onclick="delDoc('+d.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.75rem">×</button>'
-      +'</div>';
-    }).join(''):'<div class="empty"><div class="empty-ico">📄</div><div class="empty-s">Aucun document.</div></div>');
-}
-function addDoc(pid){
-  var ti=(document.getElementById("dc-ti")||{value:""}).value.trim();
-  if(!ti){toast("Titre obligatoire");return;}
-  apiPost("/api/projet/"+pid+"/docs",{titre:ti,type:(document.getElementById("dc-ty")||{value:"Autre"}).value,url:(document.getElementById("dc-url")||{value:""}).value}).then(function(r){if(r&&r.ok){fpTab("docs",document.querySelector(".fpt:nth-child(5)"));}});
-}
-function delDoc(id,pid){apiDel("/api/projdoc/"+id).then(function(){fpTab("docs",document.querySelector(".fpt:nth-child(5)"));});}
-
-function fpRenderPresse(pid, items){
-  var pb=document.getElementById("fp-body"); if(!pb)return;
-  pb.innerHTML=
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">Ajouter un article de presse</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +'<input id="pr-ti" class="fi" placeholder="Titre *" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="pr-me" class="fi" placeholder="Média (ex: Le Dauphiné)" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="pr-url" class="fi" placeholder="URL" style="font-size:.79rem;padding:7px 10px">'
-    +'<input id="pr-dt" class="fi" type="date" style="font-size:.79rem;padding:7px 10px">'
-    +'</div>'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:8px"><button onclick="addPresse('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div>'
-    +'</div>'
-    +(items.length?items.map(function(a){return(
-      '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.85rem 1.1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)">'
-      +'<div style="font-size:1.3rem">📰</div>'
-      +'<div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+a.titre+'</div>'
-      +'<div style="font-size:.7rem;color:var(--i3)">'+(a.media||'')+(a.date_pub?' · '+a.date_pub:'')+'</div>'
-      +(a.url?'<a href="'+a.url+'" target="_blank" style="font-size:.7rem;color:var(--g3)">🔗 Lire l'article</a>':'')+'</div>'
-      +'<button onclick="delPresse('+a.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.75rem">×</button>'
-      +'</div>';
-    }).join(''):'<div class="empty"><div class="empty-ico">📰</div><div class="empty-s">Aucun article.</div></div>');
-}
-function addPresse(pid){
-  var ti=(document.getElementById("pr-ti")||{value:""}).value.trim();
-  if(!ti){toast("Titre obligatoire");return;}
-  apiPost("/api/projet/"+pid+"/presse",{titre:ti,media:(document.getElementById("pr-me")||{value:""}).value,url:(document.getElementById("pr-url")||{value:""}).value,date_pub:(document.getElementById("pr-dt")||{value:""}).value}).then(function(r){if(r&&r.ok){fpTab("presse",document.querySelector(".fpt:nth-child(6)"));}});
-}
-function delPresse(id,pid){apiDel("/api/presse/"+id).then(function(){fpTab("presse",document.querySelector(".fpt:nth-child(6)"));});}
-
-function fpRenderJournal(pid, items){
-  var pb=document.getElementById("fp-body"); if(!pb)return;
-  var ACT={avancement:'📊',statut:'🔄',titre:'✏️',doc:'📄',jalon:'🏁',partenaire:'🤝',default:'📝'};
-  pb.innerHTML=items.length
-    ?items.map(function(j){var ico=ACT[j.action]||ACT.default;return(
-      '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.75rem 1.1rem;margin-bottom:.5rem;display:flex;gap:10px;align-items:flex-start;box-shadow:var(--s1)">'
-      +'<span style="font-size:1.1rem;flex-shrink:0">'+ico+'</span>'
-      +'<div style="flex:1">'
-      +'<div style="font-size:.79rem;font-weight:700;font-family:var(--fd)">'+j.auteur_nom+'</div>'
-      +(j.nouveau_val?'<div style="font-size:.73rem;color:var(--i3)">→ '+j.nouveau_val+'</div>':'')
-      +'<div style="font-size:.68rem;color:var(--i4);margin-top:2px">'+j.created_at+'</div>'
-      +'</div></div>';
-    }).join('')
-    :'<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune modification enregistrée.</div></div>';
 }
 
 function svFicheProj(pid){
   var titre=(document.getElementById("fp-titre")||{value:""}).value.trim();
   if(!titre){toast("Titre obligatoire");return;}
-  var d={titre:titre,theme:(document.getElementById("fp-theme")||{value:""}).value,statut:(document.getElementById("fp-statut")||{value:""}).value,annee:(document.getElementById("fp-annee")||{value:""}).value||null,importance:parseInt((document.getElementById("fp-imp")||{value:"2"}).value)||2,resume:(document.getElementById("fp-resume")||{value:""}).value,description:(document.getElementById("fp-desc")||{value:""}).value,tags:(document.getElementById("fp-tags")||{value:""}).value};
+  var d={
+    titre:titre,
+    theme:(document.getElementById("fp-theme")||{value:""}).value,
+    statut:(document.getElementById("fp-statut")||{value:""}).value,
+    annee:(document.getElementById("fp-annee")||{value:""}).value||null,
+    importance:parseInt((document.getElementById("fp-imp")||{value:"2"}).value)||2,
+    resume:(document.getElementById("fp-resume")||{value:""}).value,
+    description:(document.getElementById("fp-desc")||{value:""}).value,
+    tags:(document.getElementById("fp-tags")||{value:""}).value
+  };
   apiPatch("/api/projet/"+pid,d).then(function(r){
-    if(r&&r.ok){P=P.map(function(p){return p.id===pid?r.projet:p;});ST[pid]=d.statut;fG();buildCG();buildCharts();closePanel();toast("✅ Projet mis à jour !");}
-    else{toast("Erreur",3000);}
+    if(r&&r.ok){
+      P=P.map(function(p){return p.id===pid?r.projet:p;});
+      ST[pid]=d.statut;
+      fG();buildCG();buildCharts();
+      closePanel();
+      toast("✅ Projet mis à jour !");
+    } else {toast("Erreur",3000);}
   });
 }
-function dlFicheProj(pid){if(!confirm("Supprimer définitivement ce projet ?"))return;apiDel("/api/projet/"+pid).then(function(d){if(d.ok){P=P.filter(function(p){return p.id!==pid;});delete ST[pid];fG();buildCG();buildCharts();closePanel();toast("Projet supprimé.");}});}
+
+function dlFicheProj(pid){
+  if(!confirm("Supprimer définitivement ce projet ?"))return;
+  apiDel("/api/projet/"+pid).then(function(d){
+    if(d.ok){P=P.filter(function(p){return p.id!==pid;});delete ST[pid];fG();buildCG();buildCharts();closePanel();toast("Projet supprimé.");}
+  });
+}
+
+// Alias legacy
 function svProj(){svFicheProj(_ePid);}
 function dlProj(){dlFicheProj(_ePid);}
 

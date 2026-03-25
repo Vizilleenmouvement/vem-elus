@@ -1,0 +1,13 @@
+# Données sensibles — ne jamais commiter
+accounts.json
+rep_elus.json
+.env
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Système
+.DS_Store
+node_modules/
+*.log

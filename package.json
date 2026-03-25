@@ -1,0 +1,16 @@
+{
+  "name": "vem-elus",
+  "version": "1.0.0",
+  "description": "Espace privé des élus — Vizille en Mouvement 2026-2032",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && echo 'Syntaxe OK'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Vizille en Mouvement",
+  "license": "UNLICENSED"
+}

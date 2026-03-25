@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "channel": "general",
+    "auteur": "Moi",
+    "avatar": "MT",
+    "texte": "Test message",
+    "ts": "23/03/2026 04:22:11",
+    "date": "2026-03-23T03:22:11.857Z"
+  }
+]

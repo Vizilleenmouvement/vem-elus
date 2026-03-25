@@ -309,6 +309,36 @@ try {
     if(require('fs').existsSync(af)) ACCOUNTS = JSON.parse(require('fs').readFileSync(af,'utf8'));
   }
 } catch(e) { console.log('Comptes par défaut utilisés'); }
+// ── SESSIONS ─────────────────────────────────────────────────────────────────
+const SESSIONS = {}; // token → {username, expires}
+function makeToken(){ return require('crypto').randomBytes(24).toString('hex'); }
+function getSession(req){
+  var cookies = req.headers.cookie||'';
+  var m = cookies.match(/vem_session=([a-f0-9]+)/);
+  if(!m) return null;
+  var s = SESSIONS[m[1]];
+  if(!s) return null;
+  if(s.expires < Date.now()){ delete SESSIONS[m[1]]; return null; }
+  return s;
+}
+function authUser(req){
+  // 1. Cookie session (navigateur)
+  var sess = getSession(req);
+  if(sess) return ACCOUNTS[sess.username]?{username:sess.username,...ACCOUNTS[sess.username]}:null;
+  // 2. Basic Auth (appels API depuis le JS)
+  const a=req.headers['authorization']||'';
+  if(!a.startsWith('Basic '))return null;
+  const dec=Buffer.from(a.slice(6),'base64').toString();
+  const colon=dec.indexOf(':');
+  if(colon<0)return null;
+  const user=dec.slice(0,colon).toLowerCase();
+  const pwd=dec.slice(colon+1);
+  const account=ACCOUNTS[user];
+  if(!account||account.pwd!==pwd)return null;
+  var email=account.email||'';
+  if(!email){var eluMatch=ELUS_DEF.find?ELUS_DEF.find(function(e){return e.id===account.id;}):null;if(eluMatch)email=eluMatch.email||'';}
+  return {username:user,prenom:account.nom?(account.nom.split(' ')[0]):'',photo:account.photo||'',photoPos:account.photoPos||'center center',email:email,...account};
+}
 // Helpers compatibilité
 function nid(table){return db.prepare('SELECT COALESCE(MAX(id),0)+1 as n FROM '+table).get().n;}
 function save(){} // no-op — SQLite gère tout
@@ -321,53 +351,48 @@ const ELUS_DEF = [{"id": 1, "nom": "Troton", "prenom": "Catherine", "role": "Tê
 // Toutes les données viennent de SQLite — pas de variables en mémoire
 console.log('VeM SQLite — '+Projets.getAll().length+' projets, '+Elus.getAll().length+' élus');
 
-function authUser(req){
-  const a=req.headers['authorization']||'';
-  if(!a.startsWith('Basic '))return null;
-  const dec=Buffer.from(a.slice(6),'base64').toString();
-  const colon=dec.indexOf(':');
-  if(colon<0)return null;
-  const user=dec.slice(0,colon).toLowerCase();
-  const pwd=dec.slice(colon+1);
-  const account=ACCOUNTS[user];
-  if(!account||account.pwd!==pwd)return null;
-  // Enrichir avec email depuis ELUS_DEF si non présent dans account
-  var email = account.email || '';
-  if(!email){
-    var eluMatch = ELUS_DEF.find ? ELUS_DEF.find(function(e){
-      return e.id === account.id;
-    }) : null;
-    if(eluMatch) email = eluMatch.email || '';
-  }
-  return {username:user,prenom:account.nom?(account.nom.split(' ')[0]):'',photo:account.photo||'',photoPos:account.photoPos||'center center',email:email,...account};
-}
 function auth(req){return !!authUser(req);}
-function deny(res){
-  res.writeHead(401,{'WWW-Authenticate':'Basic realm="VeM Elus - Identifiez-vous"','Content-Type':'text/html;charset=utf-8'});
+function deny(res,msg){
+  var errHtml = msg ? '<div style="background:#fee2e2;color:#b91c1c;border-radius:10px;padding:.75rem 1rem;font-size:.78rem;margin-bottom:1rem;font-weight:600">'+msg+'</div>' : '';
+  res.writeHead(200,{'Content-Type':'text/html;charset=utf-8'});
   res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connexion — VeM Espace élus</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:-apple-system,"Inter",sans-serif;background:#f4faf5;display:flex;align-items:center;justify-content:center;min-height:100vh;}
-  .box{background:#fff;border-radius:20px;padding:2.5rem 2.75rem;width:min(420px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.12);border-top:4px solid #2d5a40;text-align:center;}
-  .ico{font-size:2.75rem;margin-bottom:1rem;}
-  h2{font-size:1.1rem;font-weight:700;color:#1a3a2a;margin-bottom:.4rem;}
-  p{font-size:.8rem;color:#6a7870;line-height:1.6;margin-bottom:1.5rem;}
-  .hint{background:#e6f4ea;border-radius:12px;padding:.85rem 1rem;font-size:.76rem;color:#2d5a40;text-align:left;margin-bottom:1.25rem;}
-  .hint b{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;opacity:.7;}
-  code{background:#fff;padding:1px 6px;border-radius:4px;border:1px solid #b8d9c4;font-family:monospace;}
-  a.back{display:inline-block;margin-top:.85rem;font-size:.75rem;color:#6a7870;text-decoration:none;}
-  a.back:hover{color:#2d5a40;}
+  body{font-family:-apple-system,"Inter",sans-serif;background:linear-gradient(135deg,#0a2015 0%,#1a3a2a 50%,#2d5a40 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  .box{background:#fff;border-radius:20px;padding:2.5rem 2.75rem;width:min(400px,90vw);box-shadow:0 24px 80px rgba(0,0,0,.35);}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:1.75rem;justify-content:center;}
+  .logo-ico{width:44px;height:44px;border-radius:12px;background:#1a3a2a;display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+  .logo-txt{font-size:.85rem;font-weight:700;color:#1a3a2a;line-height:1.3;}
+  .logo-sub{font-size:.7rem;color:#6a7870;font-weight:400;}
+  label{display:block;font-size:.68rem;font-weight:700;color:#4a6858;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;}
+  input{width:100%;border:1.5px solid #d1fae5;border-radius:10px;padding:.65rem .9rem;font-size:.88rem;outline:none;transition:.15s;background:#f8fdf9;}
+  input:focus{border-color:#2d5a40;background:#fff;box-shadow:0 0 0 3px rgba(45,90,64,.12);}
+  .field{margin-bottom:1rem;}
+  button{width:100%;background:#1a3a2a;color:#fff;border:none;border-radius:12px;padding:.8rem;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:.5rem;transition:.15s;}
+  button:hover{background:#2d5a40;}
+  .hint{font-size:.7rem;color:#9aada6;text-align:center;margin-top:1.25rem;line-height:1.6;}
+  code{background:#f0fdf4;padding:1px 5px;border-radius:4px;border:1px solid #b8d9c4;font-family:monospace;color:#2d5a40;}
 </style></head>
 <body><div class="box">
-  <div class="ico">🔑</div>
-  <h2>Vizille en Mouvement — Espace élus</h2>
-  <p>Espace réservé aux 27 conseillers municipaux de Vizille.</p>
-  <div class="hint">
-    <b>Vos identifiants :</b>
-    Login : <code>prenom.nom</code><br>
-    Mot de passe transmis par l'administrateur
+  <div class="logo">
+    <div class="logo-ico">🌿</div>
+    <div class="logo-txt">Vizille en Mouvement<br><span class="logo-sub">Espace des conseillers municipaux</span></div>
   </div>
-  <a href="/" class="back">← Retour à la page publique</a>
+  ${errHtml}
+  <form method="POST" action="/login">
+    <div class="field">
+      <label>Identifiant</label>
+      <input type="text" name="username" placeholder="prenom.nom" autocomplete="username" autocorrect="off" autocapitalize="none" required>
+    </div>
+    <div class="field">
+      <label>Mot de passe</label>
+      <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+    </div>
+    <button type="submit">Se connecter →</button>
+  </form>
+  <p class="hint">Identifiant : <code>prenom.nom</code> · Mot de passe communiqué par l'administrateur<br>En cas de problème : <a href="mailto:thuilliermichel@mac.com" style="color:#2d5a40">contacter l'admin</a></p>
 </div></body></html>`);
 }
 
@@ -464,7 +489,33 @@ const server=http.createServer(function(req,res){
     }catch(e){return J(res,{ok:false,error:'Fichier non trouvé'},404);}
   }
 
-  if(!auth(req))return deny(res);
+  // ── LOGIN POST ──────────────────────────────────────────────────────────
+  if(p==='/login'&&m==='POST'){
+    let chunks=[];
+    req.on('data',c=>chunks.push(c));
+    req.on('end',()=>{
+      try{
+        var qs2=new URLSearchParams(Buffer.concat(chunks).toString());
+        var user=(qs2.get('username')||'').toLowerCase().trim();
+        var pwd=qs2.get('password')||'';
+        var account=ACCOUNTS[user];
+        if(!account||account.pwd!==pwd){
+          deny(res,'Identifiant ou mot de passe incorrect. Réessayez.');
+          return;
+        }
+        var token=makeToken();
+        SESSIONS[token]={username:user,expires:Date.now()+7*24*3600*1000}; // 7 jours
+        res.writeHead(302,{
+          'Location':'/espace',
+          'Set-Cookie':'vem_session='+token+'; Path=/; HttpOnly; Max-Age=604800; SameSite=Lax'
+        });
+        res.end();
+      }catch(e){deny(res,'Erreur serveur');}
+    });
+    return;
+  }
+
+  if(!auth(req)){res.writeHead(302,{"Location":"/login"});return res.end();}
 
   const ME=authUser(req);
   if(p==='/api/all'){
@@ -763,8 +814,21 @@ const server=http.createServer(function(req,res){
   });
 
   // ── ESPACE PRIVÉ (avec authentification) ───────────────────────────────────
-  if(p==='/logout'){res.writeHead(401,{'WWW-Authenticate':'Basic realm="VeM-logout"','Content-Type':'text/html;charset=utf-8'});return res.end('<html><body><script>window.location="/espace";<\/script></body></html>');}
-  if(p==='/espace'||p==='/dashboard'){res.writeHead(200,{'Content-Type':'text/html;charset=utf-8'});return res.end(buildPage());}
+  // ── LOGOUT ────────────────────────────────────────────────────────────────
+  if(p==='/logout'){
+    var cookies3=req.headers.cookie||'';
+    var m3=cookies3.match(/vem_session=([a-f0-9]+)/);
+    if(m3)delete SESSIONS[m3[1]];
+    res.writeHead(302,{'Location':'/login','Set-Cookie':'vem_session=; Path=/; Max-Age=0'});
+    return res.end();
+  }
+  if(p==='/espace'||p==='/dashboard'){
+    var ME2=authUser(req);
+    if(!ME2){res.writeHead(302,{'Location':'/login'});return res.end();}
+    res.writeHead(200,{'Content-Type':'text/html;charset=utf-8'});
+    return res.end(buildPage());
+  }
+  if(p==='/login'&&m==='GET'){deny(res,null);return;}
   res.writeHead(404);res.end('404');
 });
 

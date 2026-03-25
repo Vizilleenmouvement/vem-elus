@@ -4172,7 +4172,7 @@ function oProj(pid){
   var col=cols[statut]||'#64748b';
   var panel=_fpPanel(); _fpCss();
   var TABS=['infos','jalons','partenaires','contacts','docs','presse','journal'];
-  var TLBL={infos:'📋 Infos',jalons:'🏁 Jalons',partenaires:'🤝 Partenaires',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
+  var TLBL={infos:'📋 Infos',jalons:'🏁 Étapes clés',partenaires:'🤝 Partenaires',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
   var th=''; TABS.forEach(function(t){th+='<button class="'+(t==='infos'?'fpt on':'fpt')+'" data-tab="'+t+'" onclick="fpTab(this)">'+TLBL[t]+'</button>';});
   panel.innerHTML=
     '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'
@@ -4314,7 +4314,7 @@ function fpRenderJalons(pid,items){
   var lbl={prevu:'Prévu',en_cours:'En cours',realise:'Réalisé',annule:'Annulé'};
   var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
     +'<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end">'
-    +'<input id="jl-ti" class="fi" placeholder="Titre du jalon *" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="jl-ti" class="fi" placeholder="Titre de l'étape *" style="font-size:.79rem;padding:6px 9px">'
     +'<input id="jl-dt" class="fi" type="date" style="font-size:.79rem;padding:6px 9px">'
     +'<button onclick="fpAddJalon('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button>'
     +'</div></div>';
@@ -4328,13 +4328,13 @@ function fpRenderJalons(pid,items){
       +'<button onclick="fpDelJalon('+j.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button>'
       +'</div>';
   });
-  if(!items.length)html+='<div class="empty"><div class="empty-ico">🏁</div><div class="empty-s">Aucun jalon.</div></div>';
+  if(!items.length)html+='<div class="empty"><div class="empty-ico">🏁</div><div class="empty-s">Aucune étape clé.</div></div>';
   pb.innerHTML=html;
 }
 function fpAddJalon(pid){var ti=document.getElementById('jl-ti'),dt=document.getElementById('jl-dt');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/jalons',{titre:ti.value.trim(),date:dt?dt.value:'',statut:'prevu'}).then(function(r){if(r&&r.ok)fpReload('jalons');});}
 function fpPatchJalon(id,s){
   apiPatch('/api/jalon/'+id,{statut:s}).then(function(r){
-    toast('✅ Jalon mis à jour');
+    toast('✅ Étape mise à jour');
     if(r&&r.avancement!==undefined){
       var pid=window._fpPid;
       P=P.map(function(p){return p.id===pid?Object.assign({},p,{avancement:r.avancement}):p;});

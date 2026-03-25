@@ -337,4 +337,4 @@ const ProjetJournal = {
   }
 };
 
-module.exports = {db, Elus, Agenda, Projets, Statuts, CR, Biblio, Signalements, Evenements, Chat, Annonces, Tasks, Notifs, RepElus, stats:dbStats, ts, nid, ProjetJalons, ProjetPartenaires, ProjetContacts, ProjetDocs, ProjetPresse, ProjetJournal};
+module.exports = {db, Elus, Agenda, Projets, Statuts, CR, Biblio, Signalements, Evenements, Chat, Annonces, Tasks, Notifs, RepElus, stats:stats, ts, nid, ProjetJalons, ProjetPartenaires, ProjetContacts, ProjetDocs, ProjetPresse, ProjetJournal};

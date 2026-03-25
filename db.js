@@ -171,7 +171,23 @@ const Biblio = {
     );
     return db.prepare('SELECT * FROM biblio WHERE id=?').get(r.lastInsertRowid);
   },
-  delete(id) { db.prepare('DELETE FROM biblio WHERE id=?').run(id); }
+  delete(id) { db.prepare('DELETE FROM biblio WHERE id=?').run(id); },
+  patch(id, d) {
+    const b = db.prepare('SELECT * FROM biblio WHERE id=?').get(id);
+    if (!b) return null;
+    db.prepare('UPDATE biblio SET titre=?,type=?,commission=?,dossier_id=?,description=?,tags=?,visibilite=?,date_doc=? WHERE id=?').run(
+      d.titre!==undefined?d.titre:b.titre,
+      d.type!==undefined?d.type:b.type,
+      d.commission!==undefined?d.commission:b.commission,
+      d.dossier_id!==undefined?d.dossier_id:b.dossier_id,
+      d.description!==undefined?d.description:b.description,
+      d.tags!==undefined?d.tags:b.tags,
+      d.visibilite!==undefined?d.visibilite:b.visibilite,
+      d.date_doc!==undefined?d.date_doc:b.date_doc,
+      id
+    );
+    return db.prepare('SELECT * FROM biblio WHERE id=?').get(id);
+  }
 };
 
 // ── SIGNALEMENTS ──────────────────────────────────────────────────────────────
@@ -296,6 +312,45 @@ function stats() {
 }
 
 
+// ── DOSSIERS BIBLIOTHÈQUE ─────────────────────────────────────────────────────
+try { db.exec("ALTER TABLE biblio ADD COLUMN dossier_id INTEGER DEFAULT NULL;"); } catch(e) {}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS biblio_dossiers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    couleur TEXT DEFAULT '#6d28d9',
+    icone TEXT DEFAULT '📁',
+    ordre INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+const BiblioDoc = {
+  getDossiers() { return db.prepare('SELECT * FROM biblio_dossiers ORDER BY ordre,nom').all(); },
+  insertDossier(d) {
+    const r = db.prepare('INSERT INTO biblio_dossiers (nom,couleur,icone,ordre) VALUES (?,?,?,?)').run(
+      d.nom||'Nouveau dossier', d.couleur||'#6d28d9', d.icone||'📁', d.ordre||0
+    );
+    return db.prepare('SELECT * FROM biblio_dossiers WHERE id=?').get(r.lastInsertRowid);
+  },
+  patchDossier(id, d) {
+    const dos = db.prepare('SELECT * FROM biblio_dossiers WHERE id=?').get(id);
+    if (!dos) return null;
+    db.prepare('UPDATE biblio_dossiers SET nom=?,couleur=?,icone=?,ordre=? WHERE id=?').run(
+      d.nom!==undefined?d.nom:dos.nom,
+      d.couleur!==undefined?d.couleur:dos.couleur,
+      d.icone!==undefined?d.icone:dos.icone,
+      d.ordre!==undefined?d.ordre:dos.ordre,
+      id
+    );
+    return db.prepare('SELECT * FROM biblio_dossiers WHERE id=?').get(id);
+  },
+  deleteDossier(id) {
+    // Mettre les docs du dossier à NULL
+    db.prepare('UPDATE biblio SET dossier_id=NULL WHERE dossier_id=?').run(id);
+    db.prepare('DELETE FROM biblio_dossiers WHERE id=?').run(id);
+  }
+};
+
 // ── TABLES SUIVI PROJET ───────────────────────────────────────────────────────
 try { db.exec("ALTER TABLE projets ADD COLUMN avancement INTEGER DEFAULT 0;"); } catch(e) {}
 try { db.exec("ALTER TABLE projets ADD COLUMN responsable_id INTEGER;"); } catch(e) {}
@@ -390,4 +445,4 @@ const ProjetJournal = {
   log(pid, auteurId, auteurNom, action, ancien, nouveau) { db.prepare('INSERT INTO projet_journal (projet_id,auteur_id,auteur_nom,action,ancien_val,nouveau_val) VALUES (?,?,?,?,?,?)').run(pid,auteurId||0,auteurNom||'',action||'',ancien||'',nouveau||''); }
 };
 
-module.exports = {db, Elus, Agenda, Projets, Statuts, CR, Biblio, Signalements, Evenements, Chat, Annonces, Tasks, Notifs, RepElus, stats, ts, nid, ProjetJalons, ProjetPartenaires, ProjetContacts, ProjetDocs, ProjetPresse, ProjetJournal};
+module.exports = {db, Elus, Agenda, Projets, Statuts, CR, Biblio, Signalements, Evenements, Chat, Annonces, Tasks, Notifs, RepElus, stats, ts, nid, ProjetJalons, ProjetPartenaires, ProjetContacts, ProjetDocs, ProjetPresse, ProjetJournal, BiblioDoc};

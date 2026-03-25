@@ -1,6 +1,6 @@
 const http=require('http'),https=require('https'),fs=require('fs'),path=require('path');
 const PORT=process.env.PORT||3000, DIR=__dirname;
-const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db,ProjetJalons,ProjetPartenaires,ProjetContacts,ProjetDocs,ProjetPresse,ProjetJournal} = require('./db.js');
+const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db,ProjetJalons,ProjetPartenaires,ProjetContacts,ProjetDocs,ProjetPresse,ProjetJournal,BiblioDoc} = require('./db.js');
 
 // Comptes élus — peuvent être surchargés via ACCOUNTS_JSON env var
 const ACCOUNTS_DEFAULT = {
@@ -711,6 +711,23 @@ const server=http.createServer(function(req,res){
     return J(res,{ok:true,item:item});
   });
   if(p.match(/^\/api\/biblio\/\d+$/)&&m==='DELETE'){Biblio.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+  if(p.match(/^\/api\/biblio\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var item=Biblio.patch(parseInt(p.split('/').pop()),d);
+    return J(res,{ok:!!item,item:item});
+  });
+  // ── DOSSIERS BIBLIO ────────────────────────────────────────────────────────
+  if(p==='/api/biblio/dossiers'&&m==='GET')return J(res,BiblioDoc.getDossiers());
+  if(p==='/api/biblio/dossiers'&&m==='POST')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    return J(res,{ok:true,item:BiblioDoc.insertDossier(d)});
+  });
+  if(p.match(/^\/api\/biblio\/dossiers\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var item=BiblioDoc.patchDossier(parseInt(p.split('/').pop()),d);
+    return J(res,{ok:!!item,item:item});
+  });
+  if(p.match(/^\/api\/biblio\/dossiers\/\d+$/)&&m==='DELETE'){BiblioDoc.deleteDossier(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p==='/api/biblio'&&m==='GET'){
     // Filtrer: publics + les privés de l'utilisateur connecté
     // visible déjà filtré par Biblio.getAll
@@ -1930,21 +1947,25 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <!-- BIBLIOTHÈQUE -->
 <div class="page" id="p-biblio">
-  <div class="ph"><div class="ph-ico" style="background:var(--g8)">&#x1F4DA;</div><div><div class="ph-t">Biblioth&#xe8;que documentaire</div><div class="ph-s">Tous les documents &#x2014; classement par type, th&#xe8;me, commission</div></div>
+  <div class="ph"><div class="ph-ico" style="background:var(--g8)">&#x1F4DA;</div><div><div class="ph-t">Biblioth&#xe8;que documentaire</div><div class="ph-s">Classement par dossier, type, commission</div></div>
     <div class="ph-a"><button class="btn btn-p btn-sm" onclick="om('biblio')">+ Ajouter</button></div>
   </div>
-  <div class="scr" style="padding:0">
-    <div class="fb">
-      <input class="fsrch" id="bib-q" placeholder="&#x1F50D;  Rechercher titre, description, tags&#x2026;" oninput="renderBiblio()" style="flex:2">
-      <select class="fsel" id="bib-type" onchange="renderBiblio()"><option value="">Tous types</option>
-        <option>D&#xe9;lib&#xe9;ration</option><option>Arr&#xea;t&#xe9;</option><option>Rapport</option>
-        <option>Compte-rendu</option><option>Budget</option><option>Plan</option>
-        <option>Convention</option><option>Courrier</option><option>Autre</option>
-      </select>
-      <select class="fsel" id="bib-comm" onchange="renderBiblio()"><option value="">Toutes commissions</option></select>
-      <span class="fcnt" id="bib-cnt"></span>
+  <div style="display:flex;height:calc(100% - 70px)">
+    <!-- Sidebar dossiers -->
+    <div style="width:190px;flex-shrink:0;border-right:1px solid var(--w2);padding:.75rem .5rem;overflow-y:auto;background:var(--g8)" id="bib-dossiers"></div>
+    <!-- Contenu -->
+    <div style="flex:1;overflow-y:auto">
+      <div class="fb" style="padding:.75rem 1rem .5rem">
+        <input class="fsrch" id="bib-q" placeholder="&#x1F50D;  Rechercher&#x2026;" oninput="renderBiblio()" style="flex:2;font-size:.79rem">
+        <select class="fsel" id="bib-type" onchange="renderBiblio()" style="font-size:.78rem"><option value="">Tous types</option>
+          <option>CR de commission</option><option>D&#xe9;lib&#xe9;ration</option><option>Rapport</option>
+          <option>Avis</option><option>Courrier</option><option>Email</option><option>Devis</option>
+          <option>&#xc9;tude</option><option>Proc&#xe8;s-verbal</option><option>Autre</option>
+        </select>
+        <span class="fcnt" id="bib-cnt"></span>
+      </div>
+      <div style="padding:.25rem 1rem 1rem" id="bib-list"></div>
     </div>
-    <div style="padding:1rem 1.4rem" id="bib-list"></div>
   </div>
 </div>
 
@@ -2576,7 +2597,7 @@ function gp(id,ni){
   if(id==="today"){renderHeroAccueil();renderWidgetAgenda();renderWidgetSig();renderCRHome();}
   else if(id==="agenda")renderAg();
   else if(id==="cr")renderCR();
-  else if(id==="biblio")renderBiblio();
+  else if(id==="biblio"){bibLoadDossiers(renderBiblio);}
   else if(id==="repelus")renderRepElus();
   else if(id==="elus")renderElus();
   else if(id==="signal"){fSig();updSig();}
@@ -3358,132 +3379,204 @@ function delCR(){
 // ── BIBLIOTHÈQUE ─────────────────────────────────────────────────────────────
 var BIB_ICONS={"Délibération":"⚖️","Arrêté":"🔏","Rapport":"📊","Compte-rendu":"📝","Budget":"💰","Plan":"🗺","Convention":"🤝","Courrier":"✉️","Autre":"📄"};
 
-function renderBiblio(){
-  var q=v("bib-q").toLowerCase(), type=v("bib-type"), comm=v("bib-comm");
-  // Peupler le select commission
-  var bc=$("bib-comm");
-  if(bc&&bc.options.length<=1){
-    ["Bureau municipal","Conseil municipal"].concat(Object.keys(COMM)).forEach(function(c){
-      var o=document.createElement("option");o.value=c;o.textContent=c;bc.appendChild(o);
-    });
-  }
-  var r=BIBLIO.filter(function(b){
-    return (!q||(b.titre||"").toLowerCase().indexOf(q)>=0||(b.description||"").toLowerCase().indexOf(q)>=0||(b.tags||"").toLowerCase().indexOf(q)>=0)
-      &&(!type||b.type===type)&&(!comm||b.commission===comm);
+// ── BIBLIOTHÈQUE DOCUMENTAIRE avec DOSSIERS ──────────────────────────────────
+var BIBLIO_DOSSIERS = [];
+var _bibDosActif = null; // null = tous, 0 = sans dossier, N = dossier N
+
+function bibLoadDossiers(cb){
+  apiGet('/api/biblio/dossiers').then(function(d){
+    BIBLIO_DOSSIERS = d||[];
+    if(cb)cb();
   });
-  el("bib-cnt",r.length+" document(s)");
-  el("sb-bib",BIBLIO.length);
-  var bl=$("bib-list"); if(!bl)return;
-  bl.innerHTML=r.length?r.map(function(b){
-    var ico=BIB_ICONS[b.type]||"📄";
-    return '<div class="bib-card">'
+}
+
+function renderBiblio(){
+  var bl = $("bib-list"); if(!bl)return;
+  var q = v("bib-q").toLowerCase();
+  var type = v("bib-type");
+
+  // Filtre dossier actif
+  var r = BIBLIO.filter(function(b){
+    var matchQ = !q || (b.titre||"").toLowerCase().indexOf(q)>=0 || (b.description||"").toLowerCase().indexOf(q)>=0 || (b.tags||"").toLowerCase().indexOf(q)>=0;
+    var matchType = !type || b.type===type;
+    var matchDos;
+    if(_bibDosActif===null) matchDos=true;
+    else if(_bibDosActif===0) matchDos=!b.dossier_id;
+    else matchDos=b.dossier_id===_bibDosActif;
+    return matchQ && matchType && matchDos;
+  });
+
+  el("bib-cnt", r.length+" document(s)");
+  el("sb-bib", BIBLIO.length);
+
+  // Construire la sidebar dossiers
+  var sideEl = $("bib-dossiers");
+  if(sideEl){
+    var shtml = '<div style="margin-bottom:.5rem">'
+      +'<div onclick="bibSetDos(null)" style="padding:.4rem .6rem;border-radius:7px;cursor:pointer;font-size:.76rem;font-weight:600;display:flex;align-items:center;gap:6px;background:'+(_bibDosActif===null?"var(--g8)":"none")+';color:'+(_bibDosActif===null?"var(--g1)":"var(--i2)")+'">'
+      +'<span>📚</span> Tous les documents <span style="margin-left:auto;font-size:.68rem;color:var(--i4)">'+BIBLIO.length+'</span></div>'
+      +'<div onclick="bibSetDos(0)" style="padding:.4rem .6rem;border-radius:7px;cursor:pointer;font-size:.76rem;display:flex;align-items:center;gap:6px;background:'+(_bibDosActif===0?"var(--g8)":"none")+';color:'+(_bibDosActif===0?"var(--g1)":"var(--i3)")+'">'
+      +'<span>📄</span> Non classé <span style="margin-left:auto;font-size:.68rem;color:var(--i4)">'+BIBLIO.filter(function(b){return !b.dossier_id;}).length+'</span></div>'
+      +'</div>'
+      +'<div style="font-size:.62rem;font-weight:700;color:var(--i4);text-transform:uppercase;letter-spacing:.07em;padding:.2rem .6rem .4rem">Dossiers</div>';
+    BIBLIO_DOSSIERS.forEach(function(d){
+      var cnt = BIBLIO.filter(function(b){return b.dossier_id===d.id;}).length;
+      shtml += '<div style="display:flex;align-items:center;gap:4px;padding:.35rem .6rem;border-radius:7px;cursor:pointer;background:'+(_bibDosActif===d.id?"var(--g8)":"none")+'" onclick="bibSetDos('+d.id+')">'
+        +'<span style="font-size:.85rem">'+d.icone+'</span>'
+        +'<span style="flex:1;font-size:.76rem;font-weight:'+(_bibDosActif===d.id?700:400)+';color:'+(_bibDosActif===d.id?"var(--g1)":"var(--i2)")+'">'+d.nom+'</span>'
+        +'<span style="font-size:.65rem;color:var(--i4)">'+cnt+'</span>'
+        +'<button onclick="event.stopPropagation();bibRenameDos('+d.id+',this)" style="background:none;border:none;cursor:pointer;color:var(--i4);font-size:.7rem;padding:0 2px" title="Renommer">✏️</button>'
+        +'<button onclick="event.stopPropagation();bibDelDos('+d.id+')" style="background:none;border:none;cursor:pointer;color:var(--i4);font-size:.7rem;padding:0 2px" title="Supprimer">×</button>'
+        +'</div>';
+    });
+    shtml += '<div style="margin-top:.5rem;padding:.35rem .6rem">'
+      +'<button onclick="bibNewDos()" class="btn btn-s btn-sm" style="font-size:.68rem;width:100%">+ Nouveau dossier</button>'
+      +'</div>';
+    sideEl.innerHTML = shtml;
+  }
+
+  // Liste des documents
+  if(!r.length){
+    bl.innerHTML='<div class="empty"><div class="empty-ico">📚</div><div class="empty-t">Aucun document</div><div class="empty-s">'
+      +(_bibDosActif&&_bibDosActif!==null?"Ce dossier est vide.":"Ajoutez des documents via le bouton + Ajouter.")+'</div></div>';
+    return;
+  }
+
+  // Options dossiers pour le select de déplacement
+  var dosOpts = '<option value="">— Sans dossier —</option>'
+    + BIBLIO_DOSSIERS.map(function(d){return '<option value="'+d.id+'">'+d.icone+' '+d.nom+'</option>';}).join('');
+
+  bl.innerHTML = r.map(function(b){
+    var ico = BIB_ICONS[b.type]||"📄";
+    var dos = BIBLIO_DOSSIERS.find(function(d){return d.id===b.dossier_id;});
+    var isLocal = b.url && b.url.startsWith('/uploads/');
+    return '<div class="bib-card" id="bib-item-'+b.id+'">'
       +'<div class="bib-ico" style="background:var(--g8);border:1px solid var(--g7)">'+ico+'</div>'
       +'<div style="flex:1">'
-      +'<a href="'+b.url+'" target="_blank" style="font-size:.84rem;font-weight:700;font-family:var(--fd);color:var(--g2);text-decoration:none">'+b.titre+'</a>'
+      +'<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">'
+      +(b.url
+        ?'<a href="'+b.url+'" target="_blank" style="font-size:.84rem;font-weight:700;font-family:var(--fd);color:var(--g2);text-decoration:none">'+b.titre+'</a>'
+        :'<span style="font-size:.84rem;font-weight:700;font-family:var(--fd);color:var(--g2)">'+b.titre+'</span>')
+      +(isLocal?'<span style="font-size:.65rem;background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px">local</span>':'')
+      +'</div>'
       +'<div class="bib-m">'
-      +(b.visibilite==="prive"?'<span class="bib-tag" style="background:#fef3c7;color:#92400e">&#x1F512; Privé</span>':"")
+      +(b.visibilite==="prive"?'<span class="bib-tag" style="background:#fef3c7;color:#92400e">🔒 Privé</span>':"")
       +(b.type?'<span class="bib-tag type">'+b.type+'</span>':"")
-      +(b.commission?'<span class="bib-tag comm">'+b.commission+'</span>':"")
+      +(dos?'<span class="bib-tag" style="background:'+dos.couleur+'18;color:'+dos.couleur+'">'+dos.icone+' '+dos.nom+'</span>':"")
       +(b.date_doc?'<span class="bib-tag" style="font-family:var(--fm)">'+b.date_doc+'</span>':"")
       +(b.tags?b.tags.split(",").map(function(t){return '<span class="bib-tag">'+t.trim()+'</span>';}).join(""):"")
       +'</div>'
       +(b.description?'<div style="font-size:.71rem;color:var(--i3);margin-top:4px;line-height:1.4">'+b.description+'</div>':"")
+      // Select déplacer + type inline
+      +'<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">'
+      +'<select onchange="bibMoveTo('+b.id+',this.value)" style="font-size:.68rem;background:var(--g8);border:1px solid var(--w2);border-radius:6px;padding:2px 6px;cursor:pointer;color:var(--i3)">'
+      +'<option value="">'+( dos?dos.icone+' '+dos.nom:'📂 Déplacer')+'</option>'
+      +BIBLIO_DOSSIERS.filter(function(d){return d.id!==b.dossier_id;}).map(function(d){return '<option value="'+d.id+'">'+d.icone+' '+d.nom+'</option>';}).join('')
+      +(b.dossier_id?'<option value="0">📄 Sans dossier</option>':'')
+      +'</select>'
+      +'<select onchange="bibChangeType('+b.id+',this.value)" style="font-size:.68rem;background:var(--g8);border:1px solid var(--w2);border-radius:6px;padding:2px 6px;cursor:pointer;color:var(--i3)">'
+      +'<option value="">🏷 '+( b.type||"Changer type")+'</option>'
+      +["CR de commission","Délibération","Rapport","Avis","Courrier","Email","Devis","Étude","Procès-verbal","Autre"].map(function(t){return '<option value="'+t+'"'+(b.type===t?" selected":"")+'>'+t+'</option>';}).join('')
+      +'</select>'
       +'</div>'
-      +'<button class="btn btn-d btn-sm" style="flex-shrink:0;align-self:flex-start" onclick="delBiblio('+b.id+')">×</button>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-self:flex-start">'
+      +(b.url?'<a href="'+b.url+'" target="_blank" class="btn btn-s btn-sm" style="font-size:.68rem;white-space:nowrap">'+(isLocal?"⬇️":"🔗")+'</a>':"")
+      +'<button class="btn btn-d btn-sm" style="font-size:.68rem" onclick="delBiblio('+b.id+')">×</button>'
+      +'</div>'
       +'</div>';
-  }).join(""):'<div class="empty"><div class="empty-ico">📚</div><div class="empty-t">Bibliothèque vide</div><div class="empty-s">Ajoutez des documents via le bouton + Ajouter.</div></div>';
+  }).join('');
 }
 
-
-/* ── BIBLIO : UPLOAD FICHIER ─────────────────────────────────────────────── */
-function bibSwitchTab(tab){
-  var urlSec  = $("bib-url-section");
-  var fileSec = $("bib-file-section");
-  var tabUrl  = $("bib-tab-url");
-  var tabFile = $("bib-tab-file");
-  if(tab==='url'){
-    if(urlSec)  urlSec.style.display='block';
-    if(fileSec) fileSec.style.display='none';
-    if(tabUrl)  {tabUrl.style.background='var(--g3)'; tabUrl.style.color='#fff';}
-    if(tabFile) {tabFile.style.background='var(--w2)'; tabFile.style.color='var(--i2)';}
-  } else {
-    if(urlSec)  urlSec.style.display='none';
-    if(fileSec) fileSec.style.display='block';
-    if(tabUrl)  {tabUrl.style.background='var(--w2)'; tabUrl.style.color='var(--i2)';}
-    if(tabFile) {tabFile.style.background='var(--g3)'; tabFile.style.color='#fff';}
-  }
+function bibSetDos(id){
+  _bibDosActif = id;
+  renderBiblio();
 }
 
-function bibFileChosen(input){
-  var file = input.files[0]; if(!file) return;
-  var label = $("bib-file-label");
-  if(label) label.textContent = file.name + ' (' + Math.round(file.size/1024) + ' ko)';
+function bibNewDos(){
+  var nom = prompt("Nom du nouveau dossier :");
+  if(!nom||!nom.trim()) return;
+  var icones = ["📁","📂","🗂","📋","🏛","⚖️","🌿","🚲","🤝","🏗","🎭","👶","🛡","💼","🏥"];
+  var icone = prompt("Icône (emoji) :", "📁") || "📁";
+  var couleurs = ["#6d28d9","#2563eb","#16a34a","#d97706","#dc2626","#0891b2","#7c3aed","#be185d"];
+  var couleur = couleurs[Math.floor(Math.random()*couleurs.length)];
+  apiPost('/api/biblio/dossiers',{nom:nom.trim(),icone:icone,couleur:couleur}).then(function(r){
+    if(r&&r.ok){
+      BIBLIO_DOSSIERS.push(r.item);
+      _bibDosActif = r.item.id;
+      renderBiblio();
+      toast("Dossier créé ✓");
+    }
+  });
 }
 
-function svBiblio(){
-  var vis = document.querySelector('input[name="bib-vis"]:checked');
-  var urlSec = $("bib-url-section");
-  var isFileMode = urlSec && urlSec.style.display === 'none';
-  var fileInput = $("bib-file");
-
-  if(isFileMode && fileInput && fileInput.files[0]){
-    // Mode upload fichier
-    var file = fileInput.files[0];
-    var titre = v("bib-ti");
-    if(!titre){ toast("Titre obligatoire"); return; }
-
-    var formData = new FormData();
-    formData.append('file', file);
-
-    // Afficher la progression
-    var prog = $("bib-upload-progress");
-    var bar  = $("bib-upload-bar");
-    var msg  = $("bib-upload-msg");
-    if(prog) prog.style.display='block';
-
-    // XHR pour suivre la progression
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload');
-    xhr.setRequestHeader('Authorization', _auth || '');
-    xhr.upload.onprogress = function(e){
-      if(e.lengthComputable && bar){
-        bar.style.width = Math.round(e.loaded/e.total*100) + '%';
-      }
-    };
-    xhr.onload = function(){
-      if(prog) prog.style.display='none';
-      if(bar)  bar.style.width='0%';
-      var r = JSON.parse(xhr.responseText);
-      if(r.ok){
-        var d={titre:titre,type:v("bib-ty"),commission:v("bib-co"),
-               url:r.url,nom_fichier:r.nom,taille:r.taille,
-               description:v("bib-desc"),tags:v("bib-tags"),
-               date_doc:v("bib-date"),annee:v("bib-year"),
-               visibilite:vis?vis.value:"public",source:"upload"};
-        apiPost("/api/biblio",d).then(function(res){
-          if(res.ok){BIBLIO.unshift(res.item);renderBiblio();cm();
-            toast(d.visibilite==="prive"?"Fichier privé ajouté 🔒":"Fichier ajouté !");}
-          else toast("Erreur d'enregistrement");
-        });
-      } else {
-        toast("Erreur upload: " + (r.error||"inconnue"), 4000);
-      }
-    };
-    xhr.onerror = function(){
-      if(prog) prog.style.display='none';
-      toast("Erreur réseau", 3000);
-    };
-    xhr.send(formData);
-  } else {
-    // Mode URL (comportement original)
-    var d={titre:v("bib-ti"),type:v("bib-ty"),commission:v("bib-co"),url:v("bib-url"),description:v("bib-desc"),tags:v("bib-tags"),date_doc:v("bib-date"),annee:v("bib-year"),visibilite:vis?vis.value:"public"};
-    if(!d.titre||!d.url){toast("Titre et lien obligatoires");return;}
-    apiPost("/api/biblio",d).then(function(r){if(r.ok){BIBLIO.unshift(r.item);renderBiblio();cm();toast(d.visibilite==="prive"?"Document privé ajouté 🔒":"Document ajouté !");}});
-  }
+function bibRenameDos(id, btn){
+  var dos = BIBLIO_DOSSIERS.find(function(d){return d.id===id;});
+  if(!dos) return;
+  var nom = prompt("Nouveau nom :", dos.nom);
+  if(!nom||!nom.trim()) return;
+  var icone = prompt("Icône :", dos.icone) || dos.icone;
+  apiPatch('/api/biblio/dossiers/'+id,{nom:nom.trim(),icone:icone}).then(function(r){
+    if(r&&r.ok){
+      var idx = BIBLIO_DOSSIERS.findIndex(function(d){return d.id===id;});
+      if(idx>=0) BIBLIO_DOSSIERS[idx] = r.item;
+      renderBiblio();
+      toast("Dossier renommé ✓");
+    }
+  });
 }
 
+function bibDelDos(id){
+  var dos = BIBLIO_DOSSIERS.find(function(d){return d.id===id;});
+  if(!dos) return;
+  var cnt = BIBLIO.filter(function(b){return b.dossier_id===id;}).length;
+  var msg = cnt > 0
+    ? "Supprimer le dossier « "+dos.nom+" » ? Les "+cnt+" document(s) seront déplacés dans « Non classé »."
+    : "Supprimer le dossier « "+dos.nom+" » ?";
+  if(!confirm(msg)) return;
+  apiDel('/api/biblio/dossiers/'+id).then(function(r){
+    if(r&&r.ok){
+      BIBLIO_DOSSIERS = BIBLIO_DOSSIERS.filter(function(d){return d.id!==id;});
+      BIBLIO.forEach(function(b){if(b.dossier_id===id)b.dossier_id=null;});
+      if(_bibDosActif===id)_bibDosActif=null;
+      renderBiblio();
+      toast("Dossier supprimé");
+    }
+  });
+}
 
-function delBiblio(id){if(!confirm("Supprimer ?"))return;apiDel("/api/biblio/"+id).then(function(d){if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});renderBiblio();}});}
+function bibMoveTo(docId, dosId){
+  var did = dosId==="0"?null:(parseInt(dosId)||null);
+  apiPatch('/api/biblio/'+docId,{dossier_id:did}).then(function(r){
+    if(r&&r.ok){
+      var idx = BIBLIO.findIndex(function(b){return b.id===docId;});
+      if(idx>=0) BIBLIO[idx].dossier_id = did;
+      renderBiblio();
+      var dos = BIBLIO_DOSSIERS.find(function(d){return d.id===did;});
+      toast(dos?"📁 Déplacé dans « "+dos.nom+" »":"📄 Sorti du dossier");
+    }
+  });
+}
+
+function bibChangeType(docId, type){
+  if(!type) return;
+  apiPatch('/api/biblio/'+docId,{type:type}).then(function(r){
+    if(r&&r.ok){
+      var idx = BIBLIO.findIndex(function(b){return b.id===docId;});
+      if(idx>=0) BIBLIO[idx].type = type;
+      renderBiblio();
+      toast("🏷 Type mis à jour ✓");
+    }
+  });
+}
+
+function delBiblio(id){
+  if(!confirm("Supprimer ce document ?")) return;
+  apiDel("/api/biblio/"+id).then(function(d){
+    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});renderBiblio();}
+  });
+}
+
 
 function saveCR(){
   var texte=v("cr-gen"); if(!texte.trim()){toast("Aucun document généré");return;}

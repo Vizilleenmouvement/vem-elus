@@ -12,5 +12,8 @@
     "node": ">=18.0.0"
   },
   "author": "Vizille en Mouvement",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  }
 }

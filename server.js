@@ -1,5 +1,6 @@
 const http=require('http'),https=require('https'),fs=require('fs'),path=require('path');
 const PORT=process.env.PORT||3000, DIR=__dirname;
+const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db} = require('./db.js');
 
 // Comptes élus — peuvent être surchargés via ACCOUNTS_JSON env var
 const ACCOUNTS_DEFAULT = {
@@ -308,32 +309,17 @@ try {
     if(require('fs').existsSync(af)) ACCOUNTS = JSON.parse(require('fs').readFileSync(af,'utf8'));
   }
 } catch(e) { console.log('Comptes par défaut utilisés'); }
-function load(f,d){try{return JSON.parse(fs.readFileSync(path.join(DIR,f),'utf8'));}catch(e){return d;}}
-function save(f,d){try{fs.writeFileSync(path.join(DIR,f),JSON.stringify(d,null,2),'utf8');}catch(e){}}
-function nid(a){return a.length?Math.max(...a.map(i=>i.id||0))+1:1;}
-function ts(){return new Date().toLocaleString('fr-FR');}
-function stats(){
-  let pr=0,n26=0,re=0,ec=0,et=0;
-  projets.forEach(p=>{const s=statuts[p.id]||p.statut||'';
-    if(s==='Prioritaire')pr++;if(p.annee===2026)n26++;
-    if(s.includes('alis'))re++;if(s.includes('cours'))ec++;if(s.includes('tude'))et++;});
-  return{total:projets.length,prioritaires:pr,annee2026:n26,realises:re,en_cours:ec,etude:et,
-    sig_new:signalements.filter(s=>s.statut==='Nouveau').length,
-    sig_ec:signalements.filter(s=>s.statut==='En cours').length};
-}
+// Helpers compatibilité
+function nid(table){return db.prepare('SELECT COALESCE(MAX(id),0)+1 as n FROM '+table).get().n;}
+function save(){} // no-op — SQLite gère tout
+function load(){return [];} // no-op
 
-let projets=load('projets.json',[]),agenda=load('agenda.json',[]),documents=load('documents.json',[]);
-let statuts=load('statuts.json',{}),notifs=load('notifs.json',[]),chat=load('chat.json',[]);
+let documents=[]; // table documents non critique
+
 
 const ELUS_DEF = [{"id": 1, "nom": "Troton", "prenom": "Catherine", "role": "Tête de Liste", "delegation": "", "avatar": "CT", "color": "#1a3a2a", "photo": "https://vizilleenmouvement.fr/images/catherine-troton.jpg", "photoPos": "center 40%", "tel": "", "email": "catherine.troton@ville-vizille.fr", "commission": ""}, {"id": 2, "nom": "Ughetto-Monfrin", "prenom": "Bernard", "role": "Adjoint", "delegation": "", "avatar": "BU", "color": "#2d5a40", "photo": "https://vizilleenmouvement.fr/images/bernard-ughetto-monfrin.jpg", "photoPos": "center 30%", "tel": "", "email": "bernard.UGHETTO-MONFRIN@ville-vizille.fr", "commission": ""}, {"id": 3, "nom": "Berriche", "prenom": "Saïda", "role": "Adjointe", "delegation": "", "avatar": "SB", "color": "#3d7a5a", "photo": "https://vizilleenmouvement.fr/images/saida-berriche.jpg", "photoPos": "center 25%", "tel": "", "email": "saida.berriche@ville-vizille.fr", "commission": ""}, {"id": 4, "nom": "Faure", "prenom": "Gilles", "role": "Adjoint", "delegation": "", "avatar": "GF", "color": "#8B5CF6", "photo": "https://vizilleenmouvement.fr/images/gilles-faure.jpg", "photoPos": "center center", "tel": "", "email": "gilles.FAURE@ville-vizille.fr", "commission": ""}, {"id": 5, "nom": "Hermitte", "prenom": "Angélique", "role": "Conseillère déléguée", "delegation": "", "avatar": "AH", "color": "#F97316", "photo": "https://vizilleenmouvement.fr/images/angelique-hermitte.jpg", "photoPos": "center center", "tel": "", "email": "angelique.HERMITTE@ville-vizille.fr", "commission": ""}, {"id": 6, "nom": "Forestier", "prenom": "Gérard", "role": "Adjoint", "delegation": "", "avatar": "GF", "color": "#EC4899", "photo": "https://vizilleenmouvement.fr/images/gerard-forestier.jpg", "photoPos": "center 40%", "tel": "", "email": "gerard.FORESTIER@ville-vizille.fr", "commission": ""}, {"id": 7, "nom": "ARGOUD", "prenom": "Marie-Claude", "role": "Première Adjointe", "delegation": "", "avatar": "MA", "color": "#F59E0B", "photo": "https://vizilleenmouvement.fr/images/marie-claude-argoud.jpg", "photoPos": "center center", "tel": "", "email": "marie-claude.ARGOUD@ville-vizille.fr", "commission": ""}, {"id": 8, "nom": "Lamarca", "prenom": "Louis", "role": "Adjoint", "delegation": "", "avatar": "LL", "color": "#3B82F6", "photo": "https://vizilleenmouvement.fr/images/louis-lamarca.jpg", "photoPos": "center 40%", "tel": "", "email": "Louis.Lamarca@ville-vizille.fr", "commission": ""}, {"id": 9, "nom": "Pasquiou", "prenom": "Muriel", "role": "", "delegation": "", "avatar": "MP", "color": "#10B981", "photo": "https://vizilleenmouvement.fr/images/muriel-pasquiou.jpg", "photoPos": "center center", "tel": "", "email": "muriel.pasquiou@gmail.com", "commission": ""}, {"id": 10, "nom": "Pichon", "prenom": "Laurent", "role": "", "delegation": "", "avatar": "LP", "color": "#EF4444", "photo": "https://vizilleenmouvement.fr/images/laurent-pichon.jpg", "photoPos": "center center", "tel": "", "email": "pichon.laurent@wanadoo.fr", "commission": ""}, {"id": 11, "nom": "YAHIAOUI", "prenom": "Sakina", "role": "conseillère déléguée", "delegation": "", "avatar": "SY", "color": "#14B8A6", "photo": "https://vizilleenmouvement.fr/images/sakina-yahiaoui.jpg", "photoPos": "center 40%", "tel": "", "email": "sakina.YAHIAOUI@ville-vizille.fr", "commission": ""}, {"id": 12, "nom": "CHERIGUI", "prenom": "Mohamed", "role": "", "delegation": "", "avatar": "MC", "color": "#6366F1", "photo": "https://vizilleenmouvement.fr/images/mohamed-cherigui.jpg", "photoPos": "center 25%", "tel": "", "email": "mohamed.cherigui@sdis38.fr", "commission": ""}, {"id": 13, "nom": "REIJASSE", "prenom": "Christelle", "role": "", "delegation": "", "avatar": "CR", "color": "#db2777", "photo": "https://vizilleenmouvement.fr/images/christelle-reijasse.jpg", "photoPos": "center center", "tel": "", "email": "reijassechristelle28@gmail.com", "commission": ""}, {"id": 14, "nom": "MENDESS", "prenom": "Ahmed", "role": "Conseillé délégué", "delegation": "", "avatar": "AM", "color": "#0891b2", "photo": "https://vizilleenmouvement.fr/images/ahmed-mendess.jpg", "photoPos": "center center", "tel": "", "email": "ahmed.MENDESS@ville-vizille.fr", "commission": ""}, {"id": 15, "nom": "Sanchez", "prenom": "Christine", "role": "", "delegation": "", "avatar": "CS", "color": "#65a30d", "photo": "https://vizilleenmouvement.fr/images/christine-sanchez.jpg", "photoPos": "center center", "tel": "", "email": "sanchez7.christine@gmail.com", "commission": ""}, {"id": 16, "nom": "Pasquiou", "prenom": "Fabrice", "role": "Conseiller délégué", "delegation": "", "avatar": "FP", "color": "#7c3aed", "photo": "https://vizilleenmouvement.fr/images/fabrice-pasquiou.jpg", "photoPos": "center center", "tel": "", "email": "fabrice.PASQUIOU@ville-vizille.fr", "commission": ""}, {"id": 17, "nom": "El-Kebir", "prenom": "Meriem", "role": "", "delegation": "", "avatar": "ME", "color": "#9333ea", "photo": "https://vizilleenmouvement.fr/images/meriem-el-kebir.jpg", "photoPos": "center center", "tel": "", "email": "Meriem.El-Kebir@ville-vizille.fr", "commission": ""}, {"id": 18, "nom": "Garcia", "prenom": "Jean-Christophe", "role": "", "delegation": "", "avatar": "JG", "color": "#c2410c", "photo": "https://vizilleenmouvement.fr/images/jean-christophe-garcia.jpg", "photoPos": "center center", "tel": "", "email": "jeanchristophe.garcia38@gmail.com", "commission": ""}, {"id": 19, "nom": "PICCA", "prenom": "Muriel", "role": "", "delegation": "", "avatar": "MP", "color": "#b45309", "photo": "https://vizilleenmouvement.fr/images/muriel-picca.jpg", "photoPos": "center center", "tel": "", "email": "piccamumu@hotmail.fr", "commission": ""}, {"id": 20, "nom": "Thuillier", "prenom": "Michel", "role": "", "delegation": "", "avatar": "MT", "color": "#0f766e", "photo": "https://vizilleenmouvement.fr/images/michel-thuillier.jpg", "photoPos": "center center", "tel": "", "email": "thuilliermichel@mac.com", "commission": ""}, {"id": 21, "nom": "Nifenecker", "prenom": "Isabelle", "role": "", "delegation": "", "avatar": "IN", "color": "#1d4ed8", "photo": "https://vizilleenmouvement.fr/images/isabelle-nifenecker.jpg", "photoPos": "center 40%", "tel": "", "email": "isabelle_nifenecker@hotmail.fr", "commission": ""}, {"id": 22, "nom": "Venans", "prenom": "André-Paul", "role": "Conseiller", "delegation": "", "avatar": "AV", "color": "#be185d", "photo": "https://vizilleenmouvement.fr/images/andre-paul-venans.jpg", "photoPos": "center center", "tel": "", "email": "Andre-Paul.Venans@ville-vizille.fr", "commission": ""}, {"id": 23, "nom": "Jacolin", "prenom": "Nathalie", "role": "", "delegation": "", "avatar": "NJ", "color": "#15803d", "photo": "https://vizilleenmouvement.fr/images/nathalie-jacolin.jpg", "photoPos": "center 40%", "tel": "", "email": "jacolin.nathalie@hotmail.fr", "commission": ""}, {"id": 24, "nom": "Cosentino", "prenom": "Ignazio", "role": "", "delegation": "", "avatar": "IC", "color": "#b91c1c", "photo": "https://vizilleenmouvement.fr/images/ignazio-consentino.jpg", "photoPos": "center center", "tel": "", "email": "ignazio.cosentino@free.fr", "commission": ""}, {"id": 25, "nom": "Germain-Vey", "prenom": "Nathalie", "role": "conseillère déléguée", "delegation": "", "avatar": "NG", "color": "#6d28d9", "photo": "https://vizilleenmouvement.fr/images/nathalie-germain-vey.jpg", "photoPos": "center center", "tel": "", "email": "Nathalie.Germain-Vey@ville-vizille.fr", "commission": ""}, {"id": 26, "nom": "Lasserre", "prenom": "Stéphane", "role": "Conseiller", "delegation": "", "avatar": "SL", "color": "#0369a1", "photo": "https://vizilleenmouvement.fr/images/stephane-lasserre.jpg", "photoPos": "center center", "tel": "", "email": "stephane.LASSERRE@ville-vizille.fr", "commission": ""}];
-let elus=load('elus.json',ELUS_DEF);
-let annonces=load('annonces.json',[]),tasks=load('tasks.json',[]);
-let signalements=load('signalements.json',[]),evenements=load('evenements.json',[]);
-let comptes_rendus=load('comptes_rendus.json',[]);
-let biblio=load('biblio.json',[]); // bibliothèque documents
-let rep_elus=load('rep_elus.json',{}); // {eluId: [{id,nom,url,date,notes}]}
-
-console.log('VeM v7 — projets:'+projets.length);
+// Toutes les données viennent de SQLite — pas de variables en mémoire
+console.log('VeM SQLite — '+Projets.getAll().length+' projets, '+Elus.getAll().length+' élus');
 
 function authUser(req){
   const a=req.headers['authorization']||'';
@@ -397,11 +383,13 @@ const server=http.createServer(function(req,res){
 
   // ── API PUBLIQUE (lecture seule, pas d'auth) ────────────────────────────────
   if(p==='/api/public'){
+    var now2=new Date().toISOString().slice(0,10);
+    var _ev2=Evenements.getAll(),_ag2=Agenda.getAll(),_ann2=Annonces.getAll(),_el2=Elus.getAll(),_pr2=Projets.getAll();
     var pub={
-      evenements:evenements.filter(function(e){return e.date>=new Date().toISOString().slice(0,10)&&e.visibilite!=='prive';}).slice(0,20),
-      agenda:agenda.filter(function(a){return a.date>=new Date().toISOString().slice(0,10)&&a.type==='conseil';}).slice(0,10),
-      annonces:annonces.filter(function(a){return a.visibilite==='public';}).slice(0,5),
-      stats:{projets:projets.length,elus:elus.length}
+      evenements:_ev2.filter(function(e){return e.date>=now2&&e.visibilite!=='prive';}).slice(0,20),
+      agenda:_ag2.filter(function(a){return a.date>=now2&&a.type==='conseil';}).slice(0,10),
+      annonces:_ann2.filter(function(a){return a.visibilite==='public';}).slice(0,5),
+      stats:{projets:_pr2.length,elus:_el2.length}
     };
     res.writeHead(200,{'Content-Type':'application/json;charset=utf-8','Access-Control-Allow-Origin':'*'});
     return res.end(JSON.stringify(pub));
@@ -479,14 +467,19 @@ const server=http.createServer(function(req,res){
   if(!auth(req))return deny(res);
 
   const ME=authUser(req);
-  if(p==='/api/all')return J(res,{
-    n_projets:projets.length,statuts,agenda,documents,
-    notifs:notifs.slice(0,20),annonces,tasks,
-    signalements:signalements.slice(0,15),evenements:evenements.slice(0,15),comptes_rendus:comptes_rendus.slice(0,10),stats:stats(),
-    biblio_count:biblio.length,
-    chat:chat.slice(-50),
-    me:{id:ME.id,nom:ME.nom,prenom:ME.prenom||'',role:ME.role,avatar:ME.avatar,color:ME.color,username:ME.username,delegation:ME.delegation||'',photo:ME.photo||'',photoPos:ME.photoPos||'center center',email:ME.email||''}
-  });
+  if(p==='/api/all'){
+    var _elus=Elus.getAll(),_proj=Projets.getAll(),_ag=Agenda.getAll(),_evts=Evenements.getAll();
+    var _sign=Signalements.getAll().slice(0,15),_crs=CR.getAll().slice(0,10);
+    var _ann=Annonces.getAll(),_tasks=Tasks.getAll(),_notifs=Notifs.getAll();
+    return J(res,{
+      n_projets:_proj.length,statuts:Statuts.getAll(),agenda:_ag,documents:[],
+      notifs:_notifs,elus:_elus,annonces:_ann,tasks:_tasks,
+      signalements:_sign,evenements:_evts,comptes_rendus:_crs,stats:dbStats(),
+      biblio_count:Biblio.getAll(ME.id,ME.id===0).length,
+      chat:Chat.get('general',0).messages.slice(-50),
+      me:{id:ME.id,nom:ME.nom,prenom:ME.prenom||'',role:ME.role,avatar:ME.avatar,color:ME.color,username:ME.username,delegation:'',photo:ME.photo||'',photoPos:ME.photoPos||'center center',email:ME.email||''}
+    });
+  }
 
   // IDENTITÉ CONNECTÉE
   if(p==='/api/me')return J(res,{id:ME.id,nom:ME.nom,prenom:ME.prenom||'',role:ME.role,avatar:ME.avatar,color:ME.color,username:ME.username,delegation:ME.delegation||'',photo:ME.photo||'',photoPos:ME.photoPos||'center center',email:ME.email||''});
@@ -502,70 +495,47 @@ const server=http.createServer(function(req,res){
   });
 
   // PROJETS
-  if(p==='/api/projets')return J(res,projets);
+  if(p==='/api/projets')return J(res,Projets.getAll());
 
   // NOUVEAU PROJET
   if(p==='/api/projet'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
-    var newId=projets.length?Math.max.apply(null,projets.map(function(x){return x.id||0;}))+1:9000;
-    var projet={id:newId,titre:d.titre||'',theme:d.theme||'Autre',statut:d.statut||'Programmé',
-      annee:d.annee?parseInt(d.annee):null,budget:0,resume:d.resume||'',
-      description:d.description||'',importance:parseInt(d.importance)||2,
-      chiffres:[],tags:d.tags?d.tags.split(',').map(function(t){return t.trim();}).filter(Boolean):[],
-      created:new Date().toISOString()};
-    projets.push(projet);save('projets.json',projets);
-    var n={id:Date.now(),titre:projet.titre,statut:'CRÉÉ',ancien:'',ts:ts(),new:true,type:'projet'};
-    notifs.unshift(n);if(notifs.length>200)notifs=notifs.slice(0,200);save('notifs.json',notifs);
+    var projet=Projets.insert(d);
+    Notifs.insert('Créé : '+projet.titre,'CRÉÉ','','projet');
     return J(res,{ok:true,projet:projet});
   });
 
   // MODIFIER UN PROJET
   if(p.match(/^\/api\/projet\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
-    var pid=parseInt(p.split('/').pop()),found=false;
-    projets=projets.map(function(pr){
-      if(pr.id!==pid)return pr;
-      found=true;
-      return Object.assign({},pr,{
-        titre:d.titre!==undefined?d.titre:pr.titre,
-        theme:d.theme!==undefined?d.theme:pr.theme,
-        statut:d.statut!==undefined?d.statut:pr.statut,
-        annee:d.annee!==undefined?(d.annee?parseInt(d.annee):null):pr.annee,
-        importance:d.importance!==undefined?parseInt(d.importance)||1:pr.importance,
-        resume:d.resume!==undefined?d.resume:pr.resume,
-        description:d.description!==undefined?d.description:pr.description,
-        tags:d.tags!==undefined?d.tags:pr.tags,
-        modified:new Date().toISOString()
-      });
-    });
-    if(!found)return J(res,{ok:false,error:'Projet non trouve'},404);
-    save('projets.json',projets);
-    if(d.statut!==undefined){statuts[pid]=d.statut;save('statuts.json',statuts);}
-    return J(res,{ok:true,projet:projets.find(function(pr){return pr.id===pid;})});
+    var pid=parseInt(p.split('/').pop());
+    var projet=Projets.patch(pid,d);
+    if(!projet)return J(res,{ok:false,error:'Projet non trouvé'},404);
+    return J(res,{ok:true,projet:projet});
   });
 
   // SUPPRIMER UN PROJET
   if(p.match(/^\/api\/projet\/\d+$/)&&m==='DELETE'){
-    var pid=parseInt(p.split('/').pop()),before=projets.length;
-    projets=projets.filter(function(pr){return pr.id!==pid;});
-    if(projets.length<before){save('projets.json',projets);delete statuts[pid];save('statuts.json',statuts);}
-    return J(res,{ok:projets.length<before});
+    Projets.delete(parseInt(p.split('/').pop()));
+    return J(res,{ok:true});
   }
 
   // STATUT PROJET
   if(p==='/api/statut'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
-    const old=statuts[d.id]||'ND';statuts[d.id]=d.statut;save('statuts.json',statuts);
-    const n={id:Date.now(),titre:d.titre,statut:d.statut,ancien:old,ts:ts(),new:true,type:'statut'};
-    notifs.unshift(n);if(notifs.length>200)notifs=notifs.slice(0,200);save('notifs.json',notifs);
+    var oldSt=Statuts.getAll()[d.id]||'ND';
+    Statuts.set(d.id,d.statut);
+    var n=Notifs.insert(d.titre,d.statut,oldSt,'statut');
     return J(res,{ok:true,notif:n});
   });
 
   // AGENDA
+  if(p==='/api/agenda'&&m==='GET')return J(res,Agenda.getAll());
   if(p==='/api/agenda'&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);d.id=nid(agenda);d.created=ts();agenda.push(d);save('agenda.json',agenda);return J(res,{ok:true,item:d});
+    if(err)return J(res,{ok:false},400);
+    var item=Agenda.insert(d);return J(res,{ok:true,item:item});
   });
-  if(p.match(/^\/api\/agenda\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());agenda=agenda.filter(a=>a.id!==id);save('agenda.json',agenda);return J(res,{ok:true});}
+  if(p.match(/^\/api\/agenda\/\d+$/)&&m==='DELETE'){Agenda.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
 
   // DOCUMENTS (liens simples)
   if(p==='/api/document'&&m==='POST')return body(req,function(err,d){
@@ -574,144 +544,102 @@ const server=http.createServer(function(req,res){
   if(p.match(/^\/api\/document\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());documents=documents.filter(d=>d.id!==id);save('documents.json',documents);return J(res,{ok:true});}
 
   // BIBLIOTHÈQUE DOCUMENTAIRE
-  if(p==='/api/biblio'&&m==='GET')return J(res,biblio);
+  if(p==='/api/biblio'&&m==='GET')return J(res,Biblio.getAll(ME.id,ME.id===0));
   if(p==='/api/biblio'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
-    d.id=nid(biblio);d.created=ts();d.date_doc=d.date_doc||ts().split(' ')[0];
-    d.auteur_id=ME.id;d.auteur_nom=ME.nom;
-    // public = visible par tous, prive = seulement l'auteur
-    d.visibilite=d.visibilite||'public';
-    biblio.unshift(d);save('biblio.json',biblio);
-    const n={id:Date.now(),titre:'Document ajouté : '+d.titre,statut:'',ancien:'',ts:ts(),new:true,type:'doc'};
-    notifs.unshift(n);if(notifs.length>200)notifs=notifs.slice(0,200);save('notifs.json',notifs);
-    return J(res,{ok:true,item:d});
+    var item=Biblio.insert(d,ME.id,ME.nom);
+    Notifs.insert('Document ajouté : '+d.titre,'','','doc');
+    return J(res,{ok:true,item:item});
   });
-  if(p.match(/^\/api\/biblio\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());biblio=biblio.filter(b=>b.id!==id);save('biblio.json',biblio);return J(res,{ok:true});}
+  if(p.match(/^\/api\/biblio\/\d+$/)&&m==='DELETE'){Biblio.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p==='/api/biblio'&&m==='GET'){
     // Filtrer: publics + les privés de l'utilisateur connecté
-    const visible=biblio.filter(b=>b.visibilite!=='prive'||b.auteur_id===ME.id||ME.id===0);
+    // visible déjà filtré par Biblio.getAll
     return J(res,visible);
   }
   if(p==='/api/biblio/search'&&m==='GET'){
-    const q=(qs.q||'').toLowerCase(),type=qs.type||'',comm=qs.commission||'';
-    const visible=biblio.filter(b=>b.visibilite!=='prive'||b.auteur_id===ME.id||ME.id===0);
-    const r=visible.filter(b=>
-      (!q||(b.titre||'').toLowerCase().includes(q)||(b.description||'').toLowerCase().includes(q)||(b.tags||'').toLowerCase().includes(q))
-      &&(!type||b.type===type)&&(!comm||b.commission===comm)
-    );
-    return J(res,r);
+    return J(res,Biblio.search(qs.q||'',qs.type||'',qs.commission||'',ME.id,ME.id===0));
   }
 
   // RÉPERTOIRE ÉLUS — privé par utilisateur
   if(p==='/api/rep_elus'&&m==='GET'){
-    // Admin voit tout, élu voit seulement son propre répertoire
-    if(ME.id===0){const id=qs.elu_id;return J(res,id?rep_elus[id]||[]:rep_elus);}
-    return J(res,rep_elus[String(ME.id)]||[]);
+    if(ME.id===0){const id=qs.elu_id;return J(res,id?RepElus.get(id):RepElus.getAll());}
+    return J(res,RepElus.get(ME.id));
   }
   if(p==='/api/rep_elus'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
-    // Forcer l'ID de l'utilisateur connecté (impossible de poster pour quelqu'un d'autre)
-    const eid=String(ME.id);
-    if(!rep_elus[eid])rep_elus[eid]=[];
-    d.elu_id=ME.id;d.id=Date.now();d.created=ts();d.auteur=ME.nom;
-    rep_elus[eid].unshift(d);save('rep_elus.json',rep_elus);
-    return J(res,{ok:true,item:d});
+    var item=RepElus.insert(ME.id,d,ME.nom);return J(res,{ok:true,item:item});
   });
   if(p.match(/^\/api\/rep_elus\/\d+$/)&&m==='DELETE'){
-    const docId=parseInt(p.split('/').pop());
-    const eid=String(ME.id);
-    // Un élu ne peut supprimer que ses propres docs
-    if(rep_elus[eid])rep_elus[eid]=rep_elus[eid].filter(d=>d.id!==docId);
-    save('rep_elus.json',rep_elus);return J(res,{ok:true});
+    RepElus.delete(parseInt(p.split('/').pop()),ME.id);return J(res,{ok:true});
   }
 
   // COMPTES RENDUS
-  if(p==='/api/cr'&&m==='GET')return J(res,comptes_rendus);
+  if(p==='/api/cr'&&m==='GET')return J(res,CR.getAll());
   if(p==='/api/cr'&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);d.id=nid(comptes_rendus);d.created=ts();d.redige_par=d.redige_par||'Élu';
-    comptes_rendus.unshift(d);save('comptes_rendus.json',comptes_rendus);
-    const n={id:Date.now(),titre:'CR : '+d.titre,statut:'',ancien:'',ts:ts(),new:true,type:'cr'};
-    notifs.unshift(n);if(notifs.length>200)notifs=notifs.slice(0,200);save('notifs.json',notifs);
-    return J(res,{ok:true,item:d});
+    if(err)return J(res,{ok:false},400);
+    var item=CR.insert(d);
+    Notifs.insert('CR : '+d.titre,'','','cr');
+    return J(res,{ok:true,item:item});
   });
-  if(p.match(/^\/api\/cr\/\d+$/)&&m==='GET'){const id=parseInt(p.split('/').pop());return J(res,comptes_rendus.find(c=>c.id===id)||{});}
+  if(p.match(/^\/api\/cr\/\d+$/)&&m==='GET'){return J(res,CR.getById(parseInt(p.split('/').pop()))||{});}
   if(p.match(/^\/api\/cr\/\d+$/)&&m==='PUT')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);const id=parseInt(p.split('/').pop());
-    comptes_rendus=comptes_rendus.map(c=>c.id===id?Object.assign({},c,d,{updated:ts()}):c);
-    save('comptes_rendus.json',comptes_rendus);return J(res,{ok:true});
+    if(err)return J(res,{ok:false},400);
+    CR.update(parseInt(p.split('/').pop()),d);return J(res,{ok:true});
   });
-  if(p.match(/^\/api\/cr\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());comptes_rendus=comptes_rendus.filter(c=>c.id!==id);save('comptes_rendus.json',comptes_rendus);return J(res,{ok:true});}
+  if(p.match(/^\/api\/cr\/\d+$/)&&m==='DELETE'){CR.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
 
   // CHAT
-  if(p==='/api/chat'&&m==='GET'){const since=parseInt(qs.since||0),ch=qs.channel||'general';const msgs=chat.filter(m=>m.channel===ch&&m.id>since);return J(res,{ok:true,messages:msgs,lastId:chat.length?Math.max(...chat.map(m=>m.id)):0});}
+  if(p==='/api/chat'&&m==='GET'){var ch2=Chat.get(qs.channel||'general',parseInt(qs.since||0));return J(res,{ok:true,messages:ch2.messages,lastId:ch2.lastId});}
   if(p==='/api/chat'&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);const msg={id:nid(chat),channel:d.channel||'general',auteur:d.auteur||'Élu',avatar:d.avatar||'?',texte:d.texte||'',ts:ts(),date:new Date().toISOString()};
-    chat.push(msg);if(chat.length>500)chat=chat.slice(-400);save('chat.json',chat);return J(res,{ok:true,message:msg});
+    if(err)return J(res,{ok:false},400);
+    var msg=Chat.insert(d);return J(res,{ok:true,message:{...msg,ts:ts()}});
   });
 
   // ANNONCES
   if(p==='/api/annonces'&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);d.id=nid(annonces);d.ts=ts();d.date=new Date().toISOString();annonces.unshift(d);if(annonces.length>50)annonces=annonces.slice(0,50);save('annonces.json',annonces);return J(res,{ok:true,item:d});
+    if(err)return J(res,{ok:false},400);
+    var item=Annonces.insert(d);return J(res,{ok:true,item:{...item,ts:ts()}});
   });
-  if(p.match(/^\/api\/annonces\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());annonces=annonces.filter(a=>a.id!==id);save('annonces.json',annonces);return J(res,{ok:true});}
+  if(p.match(/^\/api\/annonces\/\d+$/)&&m==='DELETE'){Annonces.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
 
   // TÂCHES
   if(p==='/api/tasks'&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);d.id=nid(tasks);d.created=ts();d.done=false;tasks.push(d);save('tasks.json',tasks);return J(res,{ok:true,item:d});
+    if(err)return J(res,{ok:false},400);
+    var item=Tasks.insert({texte:d.texte,elu_id:ME.id});return J(res,{ok:true,item:item});
   });
-  if(p.match(/^\/api\/tasks\/\d+\/done$/)&&m==='PUT'){const id=parseInt(p.split('/')[3]);tasks=tasks.map(t=>t.id===id?Object.assign({},t,{done:!t.done}):t);save('tasks.json',tasks);return J(res,{ok:true});}
-  if(p.match(/^\/api\/tasks\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());tasks=tasks.filter(t=>t.id!==id);save('tasks.json',tasks);return J(res,{ok:true});}
+  if(p.match(/^\/api\/tasks\/\d+\/done$/)&&m==='PUT'){Tasks.toggle(parseInt(p.split('/')[3]));return J(res,{ok:true});}
+  if(p.match(/^\/api\/tasks\/\d+$/)&&m==='DELETE'){Tasks.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
 
   // SIGNALEMENTS
-  if(p==='/api/signalements'&&m==='GET')return J(res,signalements);
+  if(p==='/api/signalements'&&m==='GET')return J(res,Signalements.getAll());
   if(p==='/api/signalements'&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);d.id=nid(signalements);d.created=ts();d.statut=d.statut||'Nouveau';
-    d.historique=[{statut:'Nouveau',ts:ts(),auteur:d.signale_par||'Inconnu'}];
-    signalements.unshift(d);if(signalements.length>300)signalements=signalements.slice(0,300);save('signalements.json',signalements);
-    const n={id:Date.now(),titre:'Signalement : '+d.titre,statut:'Nouveau',ancien:'',ts:ts(),new:true,type:'signalement'};
-    notifs.unshift(n);if(notifs.length>200)notifs=notifs.slice(0,200);save('notifs.json',notifs);
-    return J(res,{ok:true,item:d});
+    if(err)return J(res,{ok:false},400);
+    var item=Signalements.insert(d);
+    Notifs.insert('Signalement : '+d.titre,'Nouveau','','signalement');
+    return J(res,{ok:true,item:item});
   });
   if(p.match(/^\/api\/signalements\/\d+\/statut$/)&&m==='PUT')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);const id=parseInt(p.split('/')[3]);
-    signalements=signalements.map(s=>{if(s.id!==id)return s;const h=(s.historique||[]).concat([{statut:d.statut,ts:ts(),auteur:d.auteur||'Elu',commentaire:d.commentaire||''}]);return Object.assign({},s,{statut:d.statut,historique:h,updated:ts()});});
-    save('signalements.json',signalements);return J(res,{ok:true});
-  });
-  if(p.match(/^\/api\/signalements\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());signalements=signalements.filter(s=>s.id!==id);save('signalements.json',signalements);return J(res,{ok:true});}
-
-  // ÉVÉNEMENTS
-  if(p==='/api/evenements'&&m==='GET')return J(res,evenements);
-  if(p==='/api/evenements'&&m==='POST')return body(req,function(err,d){
-    if(err)return J(res,{ok:false},400);d.id=nid(evenements);d.created=ts();evenements.push(d);evenements.sort((a,b)=>a.date>b.date?1:-1);save('evenements.json',evenements);return J(res,{ok:true,item:d});
-  });
-  if(p.match(/^\/api\/evenements\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());evenements=evenements.filter(e=>e.id!==id);save('evenements.json',evenements);return J(res,{ok:true});}
-
-  // ÉLUS
-  if(p==='/api/elus'&&m==='GET'){var el2=elus.map(function(e){return{id:e.id,nom:e.nom,prenom:e.prenom||'',role:e.role||'',avatar:e.avatar||'',color:e.color||'#2d5a40',photo:e.photo||'',photoPos:e.photoPos||'center center',tel:e.tel||'',email:e.email||'',commission:e.commission||''};});return J(res,el2);}
-  if(p==='/api/elus'&&m==='PUT')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
-    elus=d;save('elus.json',elus);
+    Signalements.updateStatut(parseInt(p.split('/')[3]),d.statut,d.auteur,d.commentaire);
     return J(res,{ok:true});
   });
-  // Mettre à jour un seul élu (tel, email, delegation)
+  if(p.match(/^\/api\/signalements\/\d+$/)&&m==='DELETE'){Signalements.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+
+  // ÉVÉNEMENTS
+  if(p==='/api/evenements'&&m==='GET')return J(res,Evenements.getAll());
+  if(p==='/api/evenements'&&m==='POST')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var item=Evenements.insert(d);return J(res,{ok:true,item:item});
+  });
+  if(p.match(/^\/api\/evenements\/\d+$/)&&m==='DELETE'){Evenements.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+
+  // ÉLUS
+  if(p==='/api/elus'&&m==='GET')return J(res,Elus.getAll());
+  if(p==='/api/elus'&&m==='PUT')return J(res,{ok:true}); // deprecated
   if(p.match(/^\/api\/elus\/\d+$/)&&m==='PATCH')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
-    var id=parseInt(p.split('/').pop());
-    var updated=false;
-    elus=elus.map(function(e){
-      if(e.id!==id)return e;
-      updated=true;
-      return Object.assign({},e,{
-        prenom:d.prenom!==undefined?d.prenom:e.prenom,
-        nom:d.nom!==undefined?d.nom:e.nom,
-        role:d.role!==undefined?d.role:e.role,
-        tel:d.tel!==undefined?d.tel:e.tel,
-        email:d.email!==undefined?d.email:e.email,
-        delegation:e.delegation,
-        commission:d.commission!==undefined?d.commission:e.commission
-      });
-    });
-    if(updated)save('elus.json',elus);
+    var updated=Elus.patch(parseInt(p.split('/').pop()),d);
     return J(res,{ok:true,updated:updated});
   });
 
@@ -733,11 +661,15 @@ const server=http.createServer(function(req,res){
   res.writeHead(404);res.end('404');
 });
 
-server.listen(PORT,()=>console.log('VeM v7 port '+PORT+' projets:'+projets.length));
+server.listen(PORT,()=>console.log('VeM SQLite port '+PORT));
 
 
 
 function buildPublicPage(){
+  var evenements=Evenements.getAll();
+  var agenda=Agenda.getAll();
+  var elus=Elus.getAll();
+  var projets=Projets.getAll();
   var now = new Date();
   var MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
   var MOIS_C = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
@@ -1067,6 +999,8 @@ pubCalRender();
 }
 
 function buildPage(){
+  var projets=Projets.getAll();
+  var elus=Elus.getAll();
 const today=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 const COMM={"Culture, Patrimoine & Jumelages": ["Culture", "Patrimoine", "Jumelages"], "Mobilités": ["Mobilités"], "Transition écologique": ["Transition écologique"], "Action sociale": ["Action sociale"], "Concertation citoyenne": ["Concertation citoyenne"], "Animations de proximité": ["Animations de proximité"], "Économie": ["Économie"], "Métropole": ["Métropole"], "Enfance/Jeunesse": ["Enfance/Jeunesse"], "Tranquillité publique": ["Tranquillité publique"], "Travaux & Urbanisme": ["Travaux", "Urbanisme"], "Santé": ["Santé"]};
 const COLORS={"Culture, Patrimoine & Jumelages": "#8B5CF6", "Mobilités": "#3B82F6", "Transition écologique": "#10B981", "Action sociale": "#F59E0B", "Concertation citoyenne": "#6366F1", "Animations de proximité": "#EC4899", "Économie": "#14B8A6", "Métropole": "#6B7280", "Enfance/Jeunesse": "#F97316", "Tranquillité publique": "#EF4444", "Travaux & Urbanisme": "#84CC16", "Santé": "#06B6D4"};

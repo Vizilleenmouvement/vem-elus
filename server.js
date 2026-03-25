@@ -515,6 +515,7 @@ const server=http.createServer(function(req,res){
     return;
   }
 
+  if(p==="/login"&&m==="GET"){deny(res,null);return;}
   if(!auth(req)){res.writeHead(302,{"Location":"/login"});return res.end();}
 
   const ME=authUser(req);
@@ -4430,6 +4431,7 @@ function fpRenderJournal(pid,p,statut,fiche){
     +'</div></div>';
 
   pb.innerHTML=html;
+  fpAttachDrafts(pid);
 }
 
 function fpJTab(i){
@@ -4443,12 +4445,21 @@ function fpAddNote(pid){
   var tx=document.getElementById('jn-tx'); if(!tx||!tx.value.trim()){toast('Note vide');return;}
   apiPost('/api/projet/'+pid+'/notes',{type:'note',texte:tx.value.trim()}).then(function(r){
     if(r&&r.ok){
+      draftClearOnSubmit('note_'+pid,tx);
       tx.value='';
       fpReload('journal');
       var d=new Date();
       toast('📝 Note publiée — '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
     } else{toast('Erreur',3000);}
   });
+}
+
+function fpAttachDrafts(pid){
+  // Attacher les brouillons après rendu
+  setTimeout(function(){
+    draftAttach(document.getElementById('jn-tx'),'note_'+pid);
+    draftAttach(document.getElementById('je-ti'),'etape_ti_'+pid);
+  },50);
 }
 
 function fpDelNote(id){
@@ -4714,6 +4725,44 @@ function idleWarn(){
     if(--_idleR<0){clearInterval(_idleC); window.location.href='/logout';}
   }
   tick(); _idleC=setInterval(tick,1000);
+}
+
+// ── BROUILLONS AUTO-SAUVEGARDÉS ──────────────────────────────────────────────
+function draftKey(ctx){ return 'vem_draft_'+ctx; }
+
+function draftSave(ctx, val){
+  try{ localStorage.setItem(draftKey(ctx), JSON.stringify({val:val,ts:Date.now()})); }catch(e){}
+}
+
+function draftLoad(ctx){
+  try{
+    var d=localStorage.getItem(draftKey(ctx));
+    if(!d)return null;
+    var o=JSON.parse(d);
+    // Expirer après 7 jours
+    if(Date.now()-o.ts>7*86400000){localStorage.removeItem(draftKey(ctx));return null;}
+    return o.val;
+  }catch(e){return null;}
+}
+
+function draftClear(ctx){ try{localStorage.removeItem(draftKey(ctx));}catch(e){} }
+
+function draftAttach(el, ctx){
+  if(!el)return;
+  // Restaurer brouillon existant
+  var saved=draftLoad(ctx);
+  if(saved&&!el.value){
+    el.value=saved;
+    el.style.background='#fffbeb';
+    el.title='Brouillon restauré — modifié le '+new Date(JSON.parse(localStorage.getItem(draftKey(ctx))||'{}').ts||0).toLocaleString('fr-FR');
+  }
+  // Sauvegarder à chaque frappe
+  el.addEventListener('input',function(){ draftSave(ctx,el.value); el.style.background=''; });
+}
+
+function draftClearOnSubmit(ctx, el){
+  draftClear(ctx);
+  if(el)el.style.background='';
 }
 
 ['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(e){

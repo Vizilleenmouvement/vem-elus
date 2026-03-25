@@ -4373,7 +4373,7 @@ function fpRenderJournal(pid,p,statut,fiche){
            +'<option value="annule"'+(it.statut==='annule'?' selected':'')+'>❌ Annulé</option>'
            +'</select>'
           :'<div style="font-size:.82rem;color:var(--ink)">'+it.titre+'</div>'
-           +(it.auteur?'<div style="font-size:.67rem;color:var(--i4)">'+it.auteur+' · '+( it.date||'').slice(0,16)+'</div>':''))
+           +(it.auteur||it.date?'<div style="font-size:.67rem;color:var(--i4)">'+(it.auteur||'')+( it.auteur&&it.date?' · ':'')+( it.date?it.date.slice(0,16):'')+'</div>':''))
         +'</div>'
         +(it.src==='jalon'
           ?'<button onclick="fpDelJalon('+it.id+','+pid+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.8rem;flex-shrink:0;padding:2px 4px;line-height:1" title="Supprimer">×</button>'
@@ -4388,50 +4388,66 @@ function fpRenderJournal(pid,p,statut,fiche){
   }
 
   // ── Formulaire d'ajout ──
+  // Date/heure courante pour affichage
+  var nowFmt=(function(){var d=new Date();return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});})();
   html+=
     '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-top:1rem;box-shadow:var(--s1)">'
-    +'<div style="display:flex;gap:8px;margin-bottom:.6rem">'
-    +'<button onclick="fpJTab(0)" id="jt-note" class="btn btn-p btn-sm" style="font-size:.72rem">📝 Note</button>'
-    +'<button onclick="fpJTab(1)" id="jt-etape" class="btn btn-s btn-sm" style="font-size:.72rem">🏁 Étape clé</button>'
+    +'<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap">'
+    +'<button onclick="fpJTab(0)" id="jt-note" class="btn btn-p btn-sm" style="font-size:.71rem">📝 Note</button>'
+    +'<button onclick="fpJTab(1)" id="jt-etape" class="btn btn-s btn-sm" style="font-size:.71rem">🏁 Étape clé</button>'
+    +'<button onclick="fpJTab(2)" id="jt-doc" class="btn btn-s btn-sm" style="font-size:.71rem">📎 Document</button>'
+    +'<span style="margin-left:auto;font-size:.65rem;color:var(--i4);align-self:center">🕐 '+nowFmt+'</span>'
     +'</div>'
     // Zone note
     +'<div id="jp-note">'
-    +'<textarea id="jn-tx" class="fi" rows="2" placeholder="Rédigez une note, observation, compte rendu informel…" style="font-size:.79rem;padding:7px 10px;resize:vertical;width:100%;box-sizing:border-box"></textarea>'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:6px"><button onclick="fpAddNote('+pid+')" class="btn btn-p btn-sm">💾 Ajouter la note</button></div>'
+    +'<textarea id="jn-tx" class="fi" rows="2" placeholder="Note, observation, compte rendu informel, décision…" style="font-size:.79rem;padding:7px 10px;resize:vertical;width:100%;box-sizing:border-box"></textarea>'
+    +'<div style="display:flex;justify-content:flex-end;margin-top:6px"><button onclick="fpAddNote('+pid+')" class="btn btn-p btn-sm">💾 Publier</button></div>'
     +'</div>'
-    // Zone étape clé (masquée par défaut)
+    // Zone étape clé
     +'<div id="jp-etape" style="display:none">'
     +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:6px">'
     +'<input id="je-ti" class="fi" placeholder="Titre de l&#39;étape *" style="font-size:.79rem;padding:6px 9px">'
     +'<input id="je-dt" class="fi" type="date" style="font-size:.79rem;padding:6px 9px">'
     +'</div>'
     +'<div style="display:flex;justify-content:flex-end"><button onclick="fpAddJalon('+pid+')" class="btn btn-p btn-sm">💾 Ajouter</button></div>'
+    +'</div>'
+    // Zone document
+    +'<div id="jp-doc" style="display:none">'
+    +'<div style="border:2px dashed var(--w2);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--g8);margin-bottom:8px" onclick="fpOpenFile('+pid+')">'
+    +'<div style="font-size:1.3rem;margin-bottom:.2rem">📂</div>'
+    +'<div style="font-size:.75rem;color:var(--i3)">Cliquer pour choisir un fichier</div>'
+    +'<div style="font-size:.65rem;color:var(--i4)">PDF · Word · Excel · Email · Image…</div>'
+    +'<input type="file" id="dc-file-'+pid+'" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.eml,.msg,.txt,.jpg,.jpeg,.png,.odt,.ods" onchange="fpPreviewDoc(this,'+pid+')">'
+    +'</div>'
+    +'<div id="dc-preview-'+pid+'" style="display:none;margin-bottom:8px;padding:.6rem .8rem;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.74rem;font-weight:700;color:var(--g1)" id="dc-fname-'+pid+'"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:6px">'
+    +'<input id="dc-ti-'+pid+'" class="fi" placeholder="Titre du document" style="font-size:.79rem;padding:6px 9px">'
+    +'<select id="dc-ty-'+pid+'" class="fi" style="font-size:.79rem;padding:6px 9px">'
+    +'<option>CR de commission</option><option>Délibération</option><option>Rapport</option>'
+    +'<option>Avis</option><option>Courrier</option><option>Email</option><option>Devis</option><option>Autre</option>'
+    +'</select></div>'
+    +'<div style="display:flex;justify-content:flex-end"><button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">💾 Joindre au journal</button></div>'
     +'</div></div>';
 
   pb.innerHTML=html;
 }
 
 function fpJTab(i){
-  var note=document.getElementById('jp-note');
-  var etape=document.getElementById('jp-etape');
-  var btnN=document.getElementById('jt-note');
-  var btnE=document.getElementById('jt-etape');
-  if(i===0){
-    if(note)note.style.display=''; if(etape)etape.style.display='none';
-    if(btnN){btnN.className='btn btn-p btn-sm';btnN.style.fontSize='.72rem';}
-    if(btnE){btnE.className='btn btn-s btn-sm';btnE.style.fontSize='.72rem';}
-  } else {
-    if(note)note.style.display='none'; if(etape)etape.style.display='';
-    if(btnN){btnN.className='btn btn-s btn-sm';btnN.style.fontSize='.72rem';}
-    if(btnE){btnE.className='btn btn-p btn-sm';btnE.style.fontSize='.72rem';}
-  }
+  var zones=['jp-note','jp-etape','jp-doc'];
+  var btns=['jt-note','jt-etape','jt-doc'];
+  zones.forEach(function(id,j){var el=document.getElementById(id);if(el)el.style.display=(j===i?'':'none');});
+  btns.forEach(function(id,j){var b=document.getElementById(id);if(b){b.className=j===i?'btn btn-p btn-sm':'btn btn-s btn-sm';b.style.fontSize='.71rem';}});
 }
 
 function fpAddNote(pid){
   var tx=document.getElementById('jn-tx'); if(!tx||!tx.value.trim()){toast('Note vide');return;}
   apiPost('/api/projet/'+pid+'/notes',{type:'note',texte:tx.value.trim()}).then(function(r){
-    if(r&&r.ok){tx.value='';fpReload('journal');toast('Note ajoutée ✓');}
-    else{toast('Erreur',3000);}
+    if(r&&r.ok){
+      tx.value='';
+      fpReload('journal');
+      var d=new Date();
+      toast('📝 Note publiée — '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+    } else{toast('Erreur',3000);}
   });
 }
 
@@ -4639,13 +4655,6 @@ function fpRenderJournal(pid,items){
     html+='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune entrée — commencez par publier une note.</div></div>';
   }
   pb.innerHTML=html;
-}
-function fpAddNote(pid){
-  var txt=document.getElementById('jr-txt');
-  if(!txt||!txt.value.trim()){toast('Saisissez une note');return;}
-  apiPost('/api/projet/'+pid+'/journal',{texte:txt.value.trim()}).then(function(r){
-    if(r&&r.ok){fpReload('journal');}else{toast('Erreur',3000);}
-  });
 }
 
 function svFicheProj(pid){fpSvProj(pid);}

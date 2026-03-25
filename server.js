@@ -595,6 +595,12 @@ const server=http.createServer(function(req,res){
   if(p.match(/^\/api\/projdoc\/\d+$/)&&m==='DELETE'){ProjetDocs.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
   if(p.match(/^\/api\/projet\/\d+\/presse$/)&&m==='POST')return body(req,function(err,d){if(err)return J(res,{ok:false},400);return J(res,{ok:true,item:ProjetPresse.insert(parseInt(p.split('/')[3]),d)});});
   if(p.match(/^\/api\/presse\/\d+$/)&&m==='DELETE'){ProjetPresse.delete(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+  if(p.match(/^\/api\/projet\/\d+\/journal$/)&&m==='POST')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var pid4=parseInt(p.split('/')[3]);
+    try{ProjetJournal.log(pid4,ME.id,ME.nom,'note','',d.texte||'');}catch(e){return J(res,{ok:false,error:e.message},500);}
+    return J(res,{ok:true});
+  });
   if(p.match(/^\/api\/projet\/\d+$/)&&m==='DELETE'){
     Projets.delete(parseInt(p.split('/').pop()));
     return J(res,{ok:true});
@@ -4451,10 +4457,41 @@ function fpDelPresse(id,pid){apiDel('/api/presse/'+id).then(function(){fpReload(
 
 function fpRenderJournal(pid,items){
   var pb=document.getElementById('fp-body'); if(!pb)return;
-  if(!items.length){pb.innerHTML='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune modification.</div></div>';return;}
-  var html='';
-  items.forEach(function(j){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.75rem 1rem;margin-bottom:.5rem;display:flex;gap:10px;box-shadow:var(--s1)"><span style="font-size:1rem;flex-shrink:0">📝</span><div><div style="font-size:.79rem;font-weight:700">'+(j.auteur_nom||'Système')+'</div>'+(j.nouveau_val?'<div style="font-size:.73rem;color:var(--i3)">→ '+j.nouveau_val+'</div>':'')+'<div style="font-size:.68rem;color:var(--i4)">'+(j.created_at||'')+'</div></div></div>';});
+  var icoMap={avancement:'📊',statut:'🔄',titre:'✏️',doc:'📄',note:'💬'};
+  var html=
+    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;margin-bottom:.75rem">✍️ Ajouter une note</div>'
+    +'<textarea id="jr-txt" class="fi" rows="3" placeholder="Observation, compte rendu oral, décision prise, point de situation…" style="font-size:.79rem;padding:8px 10px;resize:vertical;width:100%;box-sizing:border-box"></textarea>'
+    +'<div style="display:flex;justify-content:flex-end;margin-top:8px">'
+    +'<button onclick="fpAddNote('+pid+')" class="btn btn-p btn-sm">💬 Publier la note</button>'
+    +'</div></div>';
+  if(items.length){
+    items.forEach(function(j){
+      var ico=icoMap[j.action]||'📝';
+      var isNote=j.action==='note';
+      html+='<div style="background:#fff;border-radius:var(--R);border:1px solid '+(isNote?'var(--g7)':'var(--w2)')+';padding:.85rem 1rem;margin-bottom:.5rem;display:flex;gap:10px;box-shadow:var(--s1)">'
+        +'<span style="font-size:1.1rem;flex-shrink:0">'+ico+'</span>'
+        +'<div style="flex:1">'
+        +'<div style="display:flex;align-items:baseline;gap:8px">'
+        +'<span style="font-size:.79rem;font-weight:700">'+(j.auteur_nom||'Système')+'</span>'
+        +'<span style="font-size:.65rem;color:var(--i4)">'+(j.created_at||'')+'</span>'
+        +'</div>'
+        +(isNote
+          ?'<div style="font-size:.8rem;color:var(--ink);margin-top:3px;line-height:1.5;white-space:pre-wrap">'+j.nouveau_val+'</div>'
+          :(j.nouveau_val?'<div style="font-size:.73rem;color:var(--i3);margin-top:2px">→ '+j.nouveau_val+'</div>':''))
+        +'</div></div>';
+    });
+  } else {
+    html+='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune entrée — commencez par publier une note.</div></div>';
+  }
   pb.innerHTML=html;
+}
+function fpAddNote(pid){
+  var txt=document.getElementById('jr-txt');
+  if(!txt||!txt.value.trim()){toast('Saisissez une note');return;}
+  apiPost('/api/projet/'+pid+'/journal',{texte:txt.value.trim()}).then(function(r){
+    if(r&&r.ok){fpReload('journal');}else{toast('Erreur',3000);}
+  });
 }
 
 function svFicheProj(pid){fpSvProj(pid);}

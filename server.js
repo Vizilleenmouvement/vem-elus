@@ -2291,7 +2291,16 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div class="ff"><label>Ordre du jour</label><input class="fi" id="cr-odj" placeholder="1. Budget 2026  2. Projets voirie  3. Questions diverses"></div>
   <div class="ff"><label>Contenu / D&#xe9;lib&#xe9;rations *</label><textarea class="fi" id="cr-content" style="height:220px" placeholder="R&#xe9;sum&#xe9; des d&#xe9;bats, d&#xe9;cisions prises, votes&#x2026;"></textarea></div>
   <div class="ff"><label>Prochaines &#xe9;tapes / Actions</label><textarea class="fi" id="cr-next" style="height:80px" placeholder="Qui fait quoi, &#xe9;ch&#xe9;ances&#x2026;"></textarea></div>
-  <div class="ff"><label>Lien vers document (optionnel)</label><input class="fi" type="url" id="cr-url" placeholder="https://kdrive.infomaniak.com/&#x2026;"></div>
+  <div class="ff"><label>Document joint (optionnel)</label>
+    <div style="border:2px dashed var(--w2);border-radius:10px;padding:.75rem;text-align:center;cursor:pointer;background:var(--g8);margin-bottom:8px" onclick="document.getElementById('cr-file').click()">
+      <div style="font-size:1.1rem;margin-bottom:.2rem">📂</div>
+      <div style="font-size:.75rem;color:var(--i3)">Cliquer pour joindre un fichier</div>
+      <div style="font-size:.65rem;color:var(--i4)">PDF · Word · Image…</div>
+      <input type="file" id="cr-file" style="display:none" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.odt" onchange="crPreviewFile(this)">
+    </div>
+    <div id="cr-file-preview" style="display:none;padding:.5rem .75rem;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.74rem;font-weight:700;color:var(--g1);margin-bottom:6px"></div>
+    <input class="fi" type="url" id="cr-url" placeholder="Ou coller un lien (kDrive, Google Drive, URL…)">
+  </div>
   <div class="mft"><button class="btn btn-g" onclick="cm()">Annuler</button><button class="btn btn-p" onclick="svCR()">Enregistrer le CR</button></div>
 </div></div>
 
@@ -3278,7 +3287,41 @@ function renderCR(){
 function svCR(){
   var d={titre:v("cr-ti"),commission:v("cr-comm"),date:v("cr-date"),redige_par:v("cr-par"),participants:v("cr-part"),odj:v("cr-odj"),content:v("cr-content"),next_steps:v("cr-next"),url:v("cr-url")};
   if(!d.titre||!d.content){toast("Titre et contenu obligatoires");return;}
-  apiPost("/api/cr",d).then(function(r){if(r.ok){CRS.unshift(r.item);cm();renderCR();toast("CR enregistré");}});
+  var fi=document.getElementById("cr-file");
+  var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null;
+  function doSave(url){
+    d.url=url||d.url;
+    apiPost("/api/cr",d).then(function(r){if(r.ok){
+        draftClear("cr_content"); draftClear("cr_next");
+        var inp=document.getElementById("cr-content"); if(inp)inp.style.background="";
+        var inp2=document.getElementById("cr-next"); if(inp2)inp2.style.background="";
+        CRS.unshift(r.item);cm();renderCR();toast("CR enregistré ✓");}});
+  }
+  if(file){
+    var btn=document.querySelector('[onclick="svCR()"]');
+    if(btn){btn.disabled=true;btn.textContent="⏳ Upload…";}
+    var form=new FormData();
+    form.append("file",file,file.name);
+    form.append("titre",d.titre);
+    form.append("type","Compte rendu");
+    var xhr=new XMLHttpRequest();
+    xhr.open("POST","/api/upload");
+    xhr.withCredentials=true;
+    xhr.onload=function(){
+      var r=JSON.parse(xhr.responseText||"{}");
+      doSave(r.ok?r.url:d.url);
+    };
+    xhr.onerror=function(){doSave(d.url);};
+    xhr.send(form);
+  } else {
+    doSave(d.url);
+  }
+}
+
+function crPreviewFile(input){
+  var file=input.files[0]; if(!file)return;
+  var prev=document.getElementById("cr-file-preview");
+  if(prev){prev.style.display="block";prev.textContent="📎 "+file.name+" ("+Math.round(file.size/1024)+" Ko)";}
 }
 
 function openCR(id){
@@ -3294,7 +3337,7 @@ function openCR(id){
     +(cr.odj?'<div style="font-size:.75rem;color:var(--i2);margin-bottom:.75rem"><strong>Ordre du jour :</strong> '+cr.odj+'</div>':"")
     +'<div style="font-size:.78rem;color:var(--i2);line-height:1.72;margin-bottom:.85rem;white-space:pre-wrap">'+cr.content+'</div>'
     +(cr.next_steps?'<div style="background:var(--g8);border-radius:var(--r);padding:.75rem;font-size:.76rem;color:var(--g2)"><strong>Prochaines étapes :</strong><br>'+cr.next_steps+'</div>':"")
-    +(cr.url?'<div style="margin-top:.85rem"><a href="'+cr.url+'" target="_blank" class="btn btn-s">📄 Voir le document</a></div>':"");
+    +(cr.url?'<div style="margin-top:.85rem;display:flex;gap:8px"><a href="'+cr.url+'" target="_blank" class="btn btn-s" style="font-size:.75rem">'+(cr.url.startsWith('/uploads/')?"⬇️ Télécharger":"🔗 Voir le document")+'</a></div>':"");
   om("cr-view");
 }
 function delCR(){

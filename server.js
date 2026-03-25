@@ -4316,8 +4316,8 @@ function oProj(pid){
   var cols={Prioritaire:'#dc2626',Programmé:'#2563eb','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#8B5CF6',Abandonné:'#9ca3af'};
   var col=cols[statut]||'#64748b';
   var panel=_fpPanel(); _fpCss();
-  var TABS=['journal','contacts','docs','presse'];
-  var TLBL={journal:'📒 Journal de bord',contacts:'🤝 Partenaires & Contacts',docs:'📄 Documents',presse:'📰 Presse'};
+  var TABS=['infos','journal','contacts','docs','presse'];
+  var TLBL={infos:'📋 Infos',journal:'📒 Journal',contacts:'🤝 Partenaires & Contacts',docs:'📄 Documents',presse:'📰 Presse'};
   var th=''; TABS.forEach(function(t){th+='<button class="'+(t===TABS[0]?'fpt on':'fpt')+'" data-tab="'+t+'" onclick="fpTab(this)">'+TLBL[t]+'</button>';});
   panel.innerHTML=
     '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'

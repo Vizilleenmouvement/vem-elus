@@ -2571,6 +2571,19 @@ function init(){
   var now=new Date();
   $("tdate").textContent=now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 
+  // Charger agenda et événements EN PRIORITÉ pour le widget accueil
+  apiGet("/api/agenda").then(function(data){
+    AG=data;
+    renderWidgetAgenda();
+    renderNextMtg();
+    initCal();
+  });
+  apiGet("/api/evenements").then(function(data){
+    EVTS=data;
+    renderWidgetAgenda();
+    renderEvHome();
+  });
+
   apiGet("/api/all").then(function(d){
     ST=d.statuts; AG=d.agenda; DC=d.documents; NF=d.notifs;
     ANN=d.annonces||[]; TASKS=d.tasks||[];

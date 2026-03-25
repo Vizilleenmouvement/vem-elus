@@ -4194,11 +4194,29 @@ function fpRenderInfos(pid,p,statut){
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">'
     +'<span style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase">Avancement</span>'
     +'<span id="fp-av-pct" style="font-size:1.1rem;font-weight:800;color:var(--g1)">'+av+'%</span></div>'
+    +'<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:.85rem;position:relative">'
+    +(function(){
+      var steps=['Étude','Planifié','Programmé','En cours','Réalisé'];
+      var curr=steps.indexOf(statut);
+      var res='';
+      steps.forEach(function(s,i){
+        var done=i<curr, active=i===curr;
+        var bg=active?'var(--g1)':(done?'var(--g4)':'var(--w2)');
+        var tc=active||done?'#fff':'var(--i4)';
+        res+='<div style="flex:1;text-align:center;position:relative">'
+          +(i>0?'<div style="position:absolute;top:10px;left:0;right:50%;height:2px;background:'+(i<=curr?'var(--g3)':'var(--w2)')+'"></div>':'')
+          +(i<steps.length-1?'<div style="position:absolute;top:10px;left:50%;right:0;height:2px;background:'+(i<curr?'var(--g3)':'var(--w2)')+'"></div>':'')
+          +'<div style="width:20px;height:20px;border-radius:50%;background:'+bg+';margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:'+tc+';position:relative;z-index:1">'+(done?'✓':(active?'●':''))+'</div>'
+          +'<div style="font-size:.58rem;font-weight:'+(active?'700':'500')+';color:'+(active?'var(--g1)':'var(--i4)')+'">'+s+'</div>'
+          +'</div>';
+      }); return res;
+    })()
+    +'</div>'
     +'<div style="background:var(--w2);border-radius:20px;height:10px;overflow:hidden;margin-bottom:.75rem">'
     +'<div id="fp-av-bar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--g3),var(--g1));width:'+av+'%;transition:width .3s"></div></div>'
     +'<input type="range" id="fp-av-rng" min="0" max="100" value="'+av+'" style="width:100%;accent-color:var(--g2)" oninput="fpAvInput(this)">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">'
-    +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-st" class="fi" style="font-size:.78rem;padding:6px 9px">'+stO+'</select></div>'
+    +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-st" class="fi" style="font-size:.78rem;padding:6px 9px" onchange="fpStatutChange(this)">'+stO+'</select></div>'
     +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Élu référent</label><select id="fp-rsp" class="fi" style="font-size:.78rem;padding:6px 9px">'+rO+'</select></div>'
     +'</div><div style="display:flex;justify-content:flex-end;margin-top:.75rem">'
     +'<button onclick="fpSvAv('+pid+')" class="btn btn-p btn-sm">💾 Enregistrer avancement</button></div></div>'
@@ -4222,6 +4240,13 @@ function fpRenderInfos(pid,p,statut){
     +'<button onclick="fpSvProj('+pid+')" class="btn btn-p">💾 Enregistrer</button>'
     +'<button onclick="fpDlProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer</button>'
     +'</div></div></div>';
+}
+function fpStatutChange(sel){
+  var avMap={};avMap["Étude"]=10;avMap["Planifié"]=25;avMap["Programmé"]=45;avMap["En cours"]=70;avMap["Réalisé"]=100;
+  var av=avMap[sel.value];
+  if(av===undefined)return;
+  var rng=document.getElementById("fp-av-rng"),bar=document.getElementById("fp-av-bar"),pct=document.getElementById("fp-av-pct");
+  if(rng)rng.value=av; if(bar)bar.style.width=av+"%"; if(pct)pct.textContent=av+"%";
 }
 function fpAvInput(el){
   var b=document.getElementById('fp-av-bar'),p=document.getElementById('fp-av-pct');

@@ -483,6 +483,7 @@ const server=http.createServer(function(req,res){
     n_projets:projets.length,statuts,agenda,documents,
     notifs:notifs.slice(0,20),annonces,tasks,
     signalements:signalements.slice(0,15),evenements:evenements.slice(0,15),comptes_rendus:comptes_rendus.slice(0,10),stats:stats(),
+    elus:elus,
     biblio_count:biblio.length,
     chat:chat.slice(-50),
     me:{id:ME.id,nom:ME.nom,prenom:ME.prenom||'',role:ME.role,avatar:ME.avatar,color:ME.color,username:ME.username,delegation:ME.delegation||'',photo:ME.photo||'',photoPos:ME.photoPos||'center center',email:ME.email||''}

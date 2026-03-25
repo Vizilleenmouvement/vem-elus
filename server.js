@@ -3940,7 +3940,7 @@ function renderAgendaWeek(){
   renderAgendaDay(_selDay);
 }
 
-function selADay(el){selectAgendaDay(el.dataset.day||el.getAttribute("data-day"));}
+function selADay(el){var ds=el.dataset.day||el.getAttribute("data-day");selectAgendaDay(ds);renderWidgetDay(ds);}
 function selectAgendaDay(ds){
   _selDay=ds;
   renderAgendaWeek();

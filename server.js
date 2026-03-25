@@ -1620,7 +1620,7 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div style="display:flex;align-items:center;gap:8px">
     <button class="tbtn tbtn-v" onclick="openVisio()">&#x1F4F9; Visio</button>
     <button class="tbtn tbtn-c" onclick="toggleChat()">&#x1F4AC; Tchat<span class="cbdg" id="cbdg"></span></button>
-    <a href="/logout" style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);font-size:.7rem;font-weight:600;text-decoration:none;margin-right:4px">&#x21BA; Changer</a>
+    <button onclick="vemLogout()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);font-size:.7rem;font-weight:600;cursor:pointer;margin-right:4px" title="Se déconnecter">&#x23FB; Déconnexion</button>
     <div class="top-av" id="top-av-btn" onclick="om('profile')" title="Mon profil">MT</div>
   </div>
 </div>
@@ -4680,6 +4680,46 @@ function applyRoles(){
 }
 
 init();
+
+// ── DÉCONNEXION + AUTO-LOGOUT ─────────────────────────────────────────────────
+var _idleT=null, _idleW=null, _idleC=null, _idleR=0;
+var IDLE_MIN=30, WARN_MIN=25;
+
+function vemLogout(){
+  if(confirm('Déconnexion ?')) window.location.href='/logout';
+}
+
+function idleReset(){
+  clearTimeout(_idleT); clearTimeout(_idleW); clearInterval(_idleC);
+  var w=document.getElementById('idle-warn'); if(w)w.style.display='none';
+  _idleW=setTimeout(idleWarn, WARN_MIN*60000);
+  _idleT=setTimeout(function(){window.location.href='/logout';}, IDLE_MIN*60000);
+}
+
+function idleWarn(){
+  var w=document.getElementById('idle-warn');
+  if(!w){w=document.createElement('div');w.id='idle-warn';document.body.appendChild(w);}
+  w.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;background:#1a3a2a;color:#fff;border-radius:14px;padding:1.1rem 1.4rem;box-shadow:0 8px 32px rgba(0,0,0,.3);min-width:280px;font-family:var(--fd)';
+  _idleR=(IDLE_MIN-WARN_MIN)*60;
+  function tick(){
+    var m=Math.floor(_idleR/60),s=_idleR%60;
+    var mStr=m>0?m+'min ':'';
+    w.style.display='block';
+    w.innerHTML='<div style="font-size:.78rem;font-weight:700;margin-bottom:.5rem">⏱ Déconnexion dans</div>'
+      +'<div style="font-size:1.4rem;font-weight:800;text-align:center;letter-spacing:.05em;margin-bottom:.75rem">'+mStr+s+'s</div>'
+      +'<div style="display:flex;gap:8px">'
+      +'<button onclick="idleReset()" style="flex:1;background:var(--g4);border:none;color:#fff;border-radius:8px;padding:.5rem;font-weight:700;cursor:pointer;font-size:.78rem">Je suis là ✓</button>'
+      +'<button onclick="vemLogout()" style="flex:1;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:.5rem;font-weight:600;cursor:pointer;font-size:.78rem">Déconnecter</button>'
+      +'</div>';
+    if(--_idleR<0){clearInterval(_idleC); window.location.href='/logout';}
+  }
+  tick(); _idleC=setInterval(tick,1000);
+}
+
+['mousedown','mousemove','keydown','touchstart','scroll','click'].forEach(function(e){
+  document.addEventListener(e,idleReset,{passive:true});
+});
+idleReset();
 
 </script>
 </body>

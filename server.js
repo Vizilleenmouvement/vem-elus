@@ -1950,7 +1950,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <!-- RÉPERTOIRE ÉLUS -->
 <div class="page" id="p-repelus">
-  <div class="ph"><div class="ph-ico" style="background:var(--g8)">&#x1F4C2;</div><div><div class="ph-t">Mon r&#xe9;pertoire personnel</div><div class="ph-s">Vos documents priv&#xe9;s &#x2014; visibles uniquement par vous</div></div><div class="ph-a"><button class="btn btn-p btn-sm" onclick="om(&#x27;repelu&#x27;)">+ Ajouter un lien</button></div></div>
+  <div class="ph"><div class="ph-ico" style="background:var(--g8)">&#x1F4C2;</div><div><div class="ph-t">Mon r&#xe9;pertoire personnel</div><div class="ph-s">Vos documents priv&#xe9;s &#x2014; visibles uniquement par vous</div></div><div class="ph-a"><button class="btn btn-p btn-sm" onclick="om(&#x27;repelu&#x27;)">+ Ajouter</button></div></div>
   <div class="scr">
     <div id="rep-elus-grid"></div>
     <div id="rep-elus-files">
@@ -2379,11 +2379,21 @@ textarea.fi{resize:vertical;min-height:90px;}
 </div></div>
 
 <div class="ov" id="ov-repelu"><div class="modal">
-  <div class="mhd"><h3>&#x1F4C2; Ajouter un lien</h3><button class="mcl" onclick="cm()">&#xd7;</button></div>
-  <div class="ff"><label>Titre *</label><input class="fi" id="re-ti" placeholder="Nom du document ou lien"></div>
-  <div class="ff"><label>Lien (URL)</label><input class="fi" type="url" id="re-url" placeholder="https://&#x2026;"></div>
-  <div class="ff"><label>Notes</label><textarea class="fi" id="re-notes" placeholder="Contexte, date, description&#x2026;"></textarea></div>
-  <div class="mft"><button class="btn btn-g" onclick="cm()">Annuler</button><button class="btn btn-p" onclick="svRepElu()">Enregistrer</button></div>
+  <div class="mhd"><h3>&#x1F4C2; Ajouter un document</h3><button class="mcl" onclick="cm()">&#xd7;</button></div>
+  <div class="ff">
+    <label>Fichier</label>
+    <div style="border:2px dashed var(--w2);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--g8)" onclick="document.getElementById('re-file').click()">
+      <div style="font-size:1.2rem;margin-bottom:.2rem">📂</div>
+      <div style="font-size:.78rem;color:var(--i3)">Cliquer pour choisir un fichier</div>
+      <div style="font-size:.67rem;color:var(--i4)">PDF · Word · Excel · Image…</div>
+      <input type="file" id="re-file" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.odt,.eml,.msg" onchange="rePreviewFile(this)">
+    </div>
+    <div id="re-file-preview" style="display:none;margin-top:6px;padding:.5rem .75rem;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.74rem;font-weight:700;color:var(--g1)"></div>
+  </div>
+  <div class="ff"><label>Titre</label><input class="fi" id="re-ti" placeholder="Nom du document (auto si vide)"></div>
+  <div class="ff"><label>Ou coller un lien (URL)</label><input class="fi" type="url" id="re-url" placeholder="https://kdrive.infomaniak.com/…"></div>
+  <div class="ff"><label>Notes</label><textarea class="fi" id="re-notes" placeholder="Contexte, date, description…" rows="2"></textarea></div>
+  <div class="mft"><button class="btn btn-g" onclick="cm()">Annuler</button><button class="btn btn-p" onclick="svRepElu()">💾 Enregistrer</button></div>
 </div></div>
 
 <div class="ov" id="ov-annonce"><div class="modal">
@@ -3518,28 +3528,63 @@ function renderRepEluFiles(){
     return '<div class="bib-card">'
       +'<div class="bib-ico" style="background:var(--g8);border:1px solid var(--g7)">📂</div>'
       +'<div style="flex:1">'
-      +(f.url?'<a href="'+f.url+'" target="_blank" style="font-size:.84rem;font-weight:700;font-family:var(--fd);color:var(--g2);text-decoration:none">'+f.titre+'</a>'
+      +(f.url?'<a href="'+f.url+'" target="_blank" style="font-size:.84rem;font-weight:700;font-family:var(--fd);color:var(--g2);text-decoration:none">'+(f.url.startsWith('/uploads/')? '⬇️ ': '🔗 ')+f.titre+'</a>'
              :'<div style="font-size:.84rem;font-weight:700;font-family:var(--fd);color:var(--ink)">'+f.titre+'</div>')
       +(f.notes?'<div style="font-size:.71rem;color:var(--i3);margin-top:4px">'+f.notes+'</div>':"")
       +'<div style="font-size:.63rem;color:var(--i4);margin-top:3px;font-family:var(--fm)">'+f.created+'</div>'
       +'</div>'
       +'<button class="btn btn-d btn-sm" style="flex-shrink:0;align-self:flex-start" onclick="delRepFile('+f.id+')">×</button>'
       +'</div>';
-  }).join(""):'<div class="empty"><div class="empty-ico">📁</div><div class="empty-t">Répertoire vide</div><div class="empty-s">Cliquez sur "+ Ajouter un lien" pour archiver.</div></div>';
+  }).join(""):'<div class="empty"><div class="empty-ico">📁</div><div class="empty-t">Répertoire vide</div><div class="empty-s">Cliquez sur "+ Ajouter" pour déposer un document.</div></div>';
 }
 
+function rePreviewFile(input){
+  var file=input.files[0]; if(!file)return;
+  var prev=document.getElementById("re-file-preview");
+  var ti=document.getElementById("re-ti");
+  if(prev){prev.style.display="block";prev.textContent="📎 "+file.name+" ("+Math.round(file.size/1024)+" Ko)";}
+  if(ti&&!ti.value)ti.value=file.name.replace(/\.[^.]+$/,"");
+}
 function svRepElu(){
-  var d={titre:v("re-ti"),url:v("re-url"),notes:v("re-notes")};
-  if(!d.titre){toast("Titre obligatoire");return;}
-  apiPost("/api/rep_elus",d).then(function(r){
-    if(r.ok){
-      if(!REP_ELUS[ME.id])REP_ELUS[ME.id]=[];
-      REP_ELUS[ME.id].unshift(r.item);
-      _repEluId=ME.id;
-      renderRepEluFiles();cm();toast("Lien ajouté");
-      ["re-ti","re-url","re-notes"].forEach(function(i){var e=$(i);if(e)e.value="";});
-    }
-  });
+  var fi=document.getElementById("re-file");
+  var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null;
+  var titre=v("re-ti");
+  if(file&&!titre)titre=file.name.replace(/\.[^.]+$/,"");
+  var d={titre:titre,url:v("re-url"),notes:v("re-notes")};
+  if(!d.titre&&!file&&!d.url){toast("Fichier, titre ou lien requis");return;}
+  function doSaveRep(url){
+    if(url)d.url=url;
+    if(!d.titre)d.titre=d.url?d.url.split("/").pop():"Document";
+    apiPost("/api/rep_elus",d).then(function(r){
+      if(r.ok){
+        if(!REP_ELUS[ME.id])REP_ELUS[ME.id]=[];
+        REP_ELUS[ME.id].unshift(r.item);
+        _repEluId=ME.id;
+        renderRepEluFiles();cm();toast("Document ajouté ✓");
+        ["re-ti","re-url","re-notes"].forEach(function(i){var e=$(i);if(e)e.value="";});
+        var prev=document.getElementById("re-file-preview");
+        if(prev){prev.style.display="none";}
+        if(fi)fi.value="";
+        var btn=document.querySelector('[onclick="svRepElu()"]');
+        if(btn){btn.disabled=false;btn.textContent="💾 Enregistrer";}
+      }
+    });
+  }
+  if(file){
+    var btn=document.querySelector('[onclick="svRepElu()"]');
+    if(btn){btn.disabled=true;btn.textContent="⏳ Upload…";}
+    var form=new FormData();
+    form.append("file",file,file.name);
+    form.append("titre",d.titre||file.name);
+    var xhr=new XMLHttpRequest();
+    xhr.open("POST","/api/upload");
+    xhr.withCredentials=true;
+    xhr.onload=function(){var r=JSON.parse(xhr.responseText||"{}");doSaveRep(r.ok?r.url:"");};
+    xhr.onerror=function(){doSaveRep("");};
+    xhr.send(form);
+  } else {
+    doSaveRep(d.url);
+  }
 }
 function delRepFile(id){
   if(!confirm("Supprimer ?"))return;
@@ -4455,23 +4500,33 @@ function fpRenderJournal(pid,p,statut,fiche){
     +'</div>'
     +'<div style="display:flex;justify-content:flex-end"><button onclick="fpAddJalon('+pid+')" class="btn btn-p btn-sm">💾 Ajouter</button></div>'
     +'</div>'
-    // Zone document
+    // Zone document — UX simplifiée
     +'<div id="jp-doc" style="display:none">'
-    +'<div style="border:2px dashed var(--w2);border-radius:10px;padding:.85rem;text-align:center;cursor:pointer;background:var(--g8);margin-bottom:8px" onclick="fpOpenFile('+pid+')">'
-    +'<div style="font-size:1.3rem;margin-bottom:.2rem">📂</div>'
-    +'<div style="font-size:.75rem;color:var(--i3)">Cliquer pour choisir un fichier</div>'
-    +'<div style="font-size:.65rem;color:var(--i4)">PDF · Word · Excel · Email · Image…</div>'
-    +'<input type="file" id="dc-file-'+pid+'" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.eml,.msg,.txt,.jpg,.jpeg,.png,.odt,.ods" onchange="fpPreviewDoc(this,'+pid+')">'
+    // Cible drop cliquable
+    +'<div style="border:2px dashed var(--g7);border-radius:12px;padding:1.1rem;text-align:center;cursor:pointer;background:var(--g8);margin-bottom:8px;transition:.15s" onclick="fpOpenFile('+pid+')">'
+    +'<div style="font-size:1.6rem;margin-bottom:.3rem">📂</div>'
+    +'<div style="font-size:.78rem;font-weight:600;color:var(--g2)">Cliquer pour choisir un fichier</div>'
+    +'<div style="font-size:.67rem;color:var(--i4);margin-top:2px">PDF · Word · Excel · Email (.eml) · Image…</div>'
+    +'<input type="file" id="dc-file-'+pid+'" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.eml,.msg,.txt,.jpg,.jpeg,.png,.odt,.ods,.ppt,.pptx" onchange="fpPreviewDoc(this,'+pid+')">'
     +'</div>'
-    +'<div id="dc-preview-'+pid+'" style="display:none;margin-bottom:8px;padding:.6rem .8rem;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.74rem;font-weight:700;color:var(--g1)" id="dc-fname-'+pid+'"></div>'
+    // Aperçu fichier choisi
+    +'<div id="dc-preview-'+pid+'" style="display:none;margin-bottom:8px;padding:.5rem .8rem;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.74rem;font-weight:700;color:var(--g1)"></div>'
+    // Titre auto + type sur une ligne
     +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:6px">'
-    +'<input id="dc-ti-'+pid+'" class="fi" placeholder="Titre du document" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="dc-ti-'+pid+'" class="fi" placeholder="Titre (auto depuis le nom du fichier)" style="font-size:.79rem;padding:6px 9px">'
     +'<select id="dc-ty-'+pid+'" class="fi" style="font-size:.79rem;padding:6px 9px">'
-    +'<option>CR de commission</option><option>Délibération</option><option>Rapport</option>'
-    +'<option>Avis</option><option>Courrier</option><option>Email</option><option>Devis</option><option>Autre</option>'
+    +'<option value="CR de commission">CR commission</option>'
+    +'<option value="Délibération">Délibération</option>'
+    +'<option value="Rapport">Rapport</option>'
+    +'<option value="Avis">Avis</option>'
+    +'<option value="Courrier">Courrier</option>'
+    +'<option value="Email">Email</option>'
+    +'<option value="Devis">Devis</option>'
+    +'<option value="Autre">Autre</option>'
     +'</select></div>'
-    +'<input id="dc-ul-'+pid+'" class="fi" placeholder="Ou coller un lien URL" style="font-size:.79rem;padding:6px 9px;margin-top:6px;width:100%;box-sizing:border-box">'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:6px"><button onclick="fpAddDoc('+pid+')" class="btn btn-p btn-sm">💾 Joindre au journal</button></div>'
+    // Lien URL alternatif
+    +'<input id="dc-ul-'+pid+'" class="fi" placeholder="Ou coller un lien (kDrive, Google Drive, URL…)" style="font-size:.79rem;padding:6px 9px;margin-bottom:8px;width:100%;box-sizing:border-box">'
+    +'<button onclick="fpAddDoc('+pid+')" class="btn btn-p" style="width:100%;font-size:.82rem">💾 Joindre ce document</button>'
     +'</div></div>';
 
   pb.innerHTML=html;

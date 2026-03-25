@@ -3571,52 +3571,21 @@ function fG(){
 
 function rTb(bid,rows,showC){
   var tb=$(bid);if(!tb)return;
-  // Couleurs statuts
-  var stCols={Prioritaire:'#dc2626',Programmé:'#2563eb',Planifié:'#7c3aed','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#6b7280',Suspendu:'#9ca3af',ND:'#9ca3af'};
-  // Options responsables
-  var respOpts='<option value="">—</option>'+ELUS_DATA.map(function(e){return'<option value="'+e.id+'">'+(e.prenom?e.prenom.charAt(0)+'. ':'')+e.nom+'</option>';}).join('');
   tb.innerHTML=rows.map(function(p){
-    var st=ST[p.id]||p.statut||'ND';
-    var av=p.avancement||0;
-    var col=stCols[st]||'#9ca3af';
-    var stOpts=SLIST.map(function(sv){return'<option value="'+sv+'"'+(st===sv?' selected':'')+'>'+sv+'</option>';}).join('');
+    var st=ST[p.id]||p.statut||"ND";
+    var opts=SLIST.map(function(sv){return '<option value="'+sv+'"'+(st===sv?" selected":"")+'>'+sv+'</option>';}).join("");
     var c1=showC
-      ?'<td style="padding:0 .5rem"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+(COLORS[t2c(p.theme||'')]||'var(--g3)')+';margin-right:4px"></span><span style="font-size:.68rem;color:var(--i3)">'+(p.theme||'—')+'</span></td>'
-      :'<td style="font-size:.68rem;color:var(--i3);padding:0 .5rem">'+(p.theme||'—')+'</td>';
-    // Badge statut cliquable → select inline
-    var stBadge='<div style="display:inline-flex;align-items:center;position:relative">'
-      +'<select class="ssel" data-pid="'+p.id+'" data-t="'+p.titre.replace(/"/g,'&quot;')+'" onchange="uSt(+this.dataset.pid,this.value,this.dataset.t)" style="appearance:none;-webkit-appearance:none;background:'+col+'18;color:'+col+';border:1.5px solid '+col+'44;border-radius:20px;padding:3px 22px 3px 10px;font-size:.7rem;font-weight:700;cursor:pointer;outline:none">'+stOpts+'</select>'
-      +'<span style="position:absolute;right:7px;pointer-events:none;font-size:.5rem;color:'+col+'">▼</span>'
-      +'</div>';
-    // Barre avancement
-    var avBar='<div style="display:flex;align-items:center;gap:6px">'
-      +'<div style="flex:1;background:var(--w2);border-radius:4px;height:6px;overflow:hidden;min-width:50px">'
-      +'<div style="height:100%;border-radius:4px;background:'+col+';width:'+av+'%"></div>'
-      +'</div>'
-      +'<span style="font-size:.65rem;color:var(--i3);font-weight:600;white-space:nowrap">'+av+'%</span>'
-      +'</div>';
-    // Responsable inline
-    var respSel='<select onchange="uResp('+p.id+',this)" style="background:none;border:1px solid var(--w2);border-radius:6px;font-size:.68rem;color:var(--i3);padding:2px 5px;cursor:pointer;max-width:100px">'+respOpts+'</select>';
-    // Passer la valeur sélectionnée au bon état
-    var respSelFull='<select onchange="uResp('+p.id+',this)" style="background:none;border:1px solid var(--w2);border-radius:6px;font-size:.68rem;color:var(--i3);padding:2px 5px;cursor:pointer;max-width:110px"><option value="">—</option>'+ELUS_DATA.map(function(e){return'<option value="'+e.id+'"'+(p.responsable_id===e.id?' selected':'')+'>'+( e.prenom?e.prenom.charAt(0)+'. ':'')+e.nom+'</option>';}).join('')+'</select>';
-    return '<tr style="border-left:3px solid '+col+'">'+c1
-      +'<td><div class="pn" style="cursor:pointer" onclick="oProj('+p.id+')">'+(p.titre||'—')+'</div><div class="pr">'+(p.resume||'')+'</div></td>'
-      +'<td>'+stBadge+'</td>'
-      +'<td>'+avBar+'</td>'
-      +'<td>'+respSelFull+'</td>'
-      +'<td style="color:var(--i3);font-family:var(--fm);font-size:.72rem">'+(p.annee||'—')+'</td>'
-      +'<td><button onclick="oProj('+p.id+')" style="padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;background:var(--g2);color:#fff;border:none;border-radius:7px;white-space:nowrap">✏️ Ouvrir</button></td>'
+      ?'<td><span class="chip">'+t2c(p.theme||"")+'</span><br><span style="font-size:.63rem;color:var(--i4)">'+(p.theme||"—")+'</span></td>'
+      :'<td style="font-size:.72rem;color:var(--i3)">'+(p.theme||"—")+'</td>';
+    return '<tr>'+c1
+      +'<td><div class="pn">'+(p.titre||"—")+'</div><div class="pr">'+(p.resume||"")+'</div></td>'
+      +'<td><span class="b '+bc(st)+'">'+st+'</span></td>'
+      +'<td style="color:var(--i3);font-family:var(--fm);font-size:.72rem">'+(p.annee||"—")+'</td>'
+      +'<td>'+imp(p.importance)+'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:5px"><select class="ssel" data-pid="'+p.id+'" data-t="'+p.titre.replace(/"/g,"&quot;")+'" onchange="uSt(+this.dataset.pid,this.value,this.dataset.t)">'+opts+'</select>'
+      +'<button onclick="oProj('+p.id+')" title="Modifier" style="padding:8px 16px;font-size:.82rem;font-weight:700;cursor:pointer;background:var(--g2);color:#fff;border:none;border-radius:8px;flex-shrink:0;font-family:var(--fd);display:flex;align-items:center;gap:5px;white-space:nowrap">&#x270F;&#xFE0F; Modifier</button></div></td>'
       +'</tr>';
-  }).join('');
-}
-
-function uResp(pid,sel){
-  var rid=parseInt(sel.value)||null;
-  var opt=sel.options[sel.selectedIndex];
-  var rnom=rid&&opt?opt.text:'';
-  apiPatch('/api/projet/'+pid+'/avancement',{responsable_id:rid,responsable_nom:rnom,avancement:(P.find(function(p){return p.id===pid;})||{}).avancement||0}).then(function(r){
-    if(r&&r.ok){P=P.map(function(p){return p.id===pid?Object.assign({},p,{responsable_id:rid,responsable_nom:rnom}):p;});}
-  });
+  }).join("");
 }
 
 function uSt(id,nst,titre){
@@ -3681,7 +3650,7 @@ function showCD(idx){
     +'<span class="fcnt" id="cd-cnt-p"></span>'
     +'</div>'
     +'<div class="tbw" style="border-radius:0;border-left:none;border-right:none;border-bottom:none">'
-    +'<table><thead><tr><th>Thème</th><th>Projet</th><th>Statut</th><th>Avancement</th><th>Référent</th><th>Année</th><th>Action</th></tr></thead>'
+    +'<table><thead><tr><th>Thème</th><th>Projet</th><th>Statut</th><th>Année</th><th>Imp.</th><th>Modifier</th></tr></thead>'
     +'<tbody id="cd-tb-p"></tbody></table></div>';
   fCDP();
 }
@@ -4172,7 +4141,7 @@ function oProj(pid){
   var col=cols[statut]||'#64748b';
   var panel=_fpPanel(); _fpCss();
   var TABS=['infos','jalons','partenaires','contacts','docs','presse','journal'];
-  var TLBL={infos:'📋 Infos',jalons:'🏁 Étapes clés',partenaires:'🤝 Partenaires',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
+  var TLBL={infos:'📋 Infos',jalons:'🏁 Jalons',partenaires:'🤝 Partenaires',contacts:'👤 Contacts',docs:'📄 Documents',presse:'📰 Presse',journal:'📒 Journal'};
   var th=''; TABS.forEach(function(t){th+='<button class="'+(t==='infos'?'fpt on':'fpt')+'" data-tab="'+t+'" onclick="fpTab(this)">'+TLBL[t]+'</button>';});
   panel.innerHTML=
     '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'
@@ -4225,29 +4194,11 @@ function fpRenderInfos(pid,p,statut){
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">'
     +'<span style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase">Avancement</span>'
     +'<span id="fp-av-pct" style="font-size:1.1rem;font-weight:800;color:var(--g1)">'+av+'%</span></div>'
-    +'<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:.85rem;position:relative">'
-    +(function(){
-      var steps=['Étude','Planifié','Programmé','En cours','Réalisé'];
-      var curr=steps.indexOf(statut);
-      var res='';
-      steps.forEach(function(s,i){
-        var done=i<curr, active=i===curr;
-        var bg=active?'var(--g1)':(done?'var(--g4)':'var(--w2)');
-        var tc=active||done?'#fff':'var(--i4)';
-        res+='<div style="flex:1;text-align:center;position:relative">'
-          +(i>0?'<div style="position:absolute;top:10px;left:0;right:50%;height:2px;background:'+(i<=curr?'var(--g3)':'var(--w2)')+'"></div>':'')
-          +(i<steps.length-1?'<div style="position:absolute;top:10px;left:50%;right:0;height:2px;background:'+(i<curr?'var(--g3)':'var(--w2)')+'"></div>':'')
-          +'<div style="width:20px;height:20px;border-radius:50%;background:'+bg+';margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:'+tc+';position:relative;z-index:1">'+(done?'✓':(active?'●':''))+'</div>'
-          +'<div style="font-size:.58rem;font-weight:'+(active?'700':'500')+';color:'+(active?'var(--g1)':'var(--i4)')+'">'+s+'</div>'
-          +'</div>';
-      }); return res;
-    })()
-    +'</div>'
     +'<div style="background:var(--w2);border-radius:20px;height:10px;overflow:hidden;margin-bottom:.75rem">'
     +'<div id="fp-av-bar" style="height:100%;border-radius:20px;background:linear-gradient(90deg,var(--g3),var(--g1));width:'+av+'%;transition:width .3s"></div></div>'
     +'<input type="range" id="fp-av-rng" min="0" max="100" value="'+av+'" style="width:100%;accent-color:var(--g2)" oninput="fpAvInput(this)">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">'
-    +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-st" class="fi" style="font-size:.78rem;padding:6px 9px" onchange="fpStatutChange(this)">'+stO+'</select></div>'
+    +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Statut</label><select id="fp-st" class="fi" style="font-size:.78rem;padding:6px 9px">'+stO+'</select></div>'
     +'<div><label style="font-size:.65rem;font-weight:700;color:var(--i3);display:block;margin-bottom:3px;text-transform:uppercase">Élu référent</label><select id="fp-rsp" class="fi" style="font-size:.78rem;padding:6px 9px">'+rO+'</select></div>'
     +'</div><div style="display:flex;justify-content:flex-end;margin-top:.75rem">'
     +'<button onclick="fpSvAv('+pid+')" class="btn btn-p btn-sm">💾 Enregistrer avancement</button></div></div>'
@@ -4271,13 +4222,6 @@ function fpRenderInfos(pid,p,statut){
     +'<button onclick="fpSvProj('+pid+')" class="btn btn-p">💾 Enregistrer</button>'
     +'<button onclick="fpDlProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer</button>'
     +'</div></div></div>';
-}
-function fpStatutChange(sel){
-  var avMap={};avMap["Étude"]=10;avMap["Planifié"]=25;avMap["Programmé"]=45;avMap["En cours"]=70;avMap["Réalisé"]=100;
-  var av=avMap[sel.value];
-  if(av===undefined)return;
-  var rng=document.getElementById("fp-av-rng"),bar=document.getElementById("fp-av-bar"),pct=document.getElementById("fp-av-pct");
-  if(rng)rng.value=av; if(bar)bar.style.width=av+"%"; if(pct)pct.textContent=av+"%";
 }
 function fpAvInput(el){
   var b=document.getElementById('fp-av-bar'),p=document.getElementById('fp-av-pct');
@@ -4314,7 +4258,7 @@ function fpRenderJalons(pid,items){
   var lbl={prevu:'Prévu',en_cours:'En cours',realise:'Réalisé',annule:'Annulé'};
   var html='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
     +'<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end">'
-    +'<input id="jl-ti" class="fi" placeholder="Titre de l'étape *" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="jl-ti" class="fi" placeholder="Titre du jalon *" style="font-size:.79rem;padding:6px 9px">'
     +'<input id="jl-dt" class="fi" type="date" style="font-size:.79rem;padding:6px 9px">'
     +'<button onclick="fpAddJalon('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button>'
     +'</div></div>';
@@ -4328,13 +4272,13 @@ function fpRenderJalons(pid,items){
       +'<button onclick="fpDelJalon('+j.id+','+pid+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;width:24px;height:24px;cursor:pointer">×</button>'
       +'</div>';
   });
-  if(!items.length)html+='<div class="empty"><div class="empty-ico">🏁</div><div class="empty-s">Aucune étape clé.</div></div>';
+  if(!items.length)html+='<div class="empty"><div class="empty-ico">🏁</div><div class="empty-s">Aucun jalon.</div></div>';
   pb.innerHTML=html;
 }
 function fpAddJalon(pid){var ti=document.getElementById('jl-ti'),dt=document.getElementById('jl-dt');if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}apiPost('/api/projet/'+pid+'/jalons',{titre:ti.value.trim(),date:dt?dt.value:'',statut:'prevu'}).then(function(r){if(r&&r.ok)fpReload('jalons');});}
 function fpPatchJalon(id,s){
   apiPatch('/api/jalon/'+id,{statut:s}).then(function(r){
-    toast('✅ Étape mise à jour');
+    toast('✅ Jalon mis à jour');
     if(r&&r.avancement!==undefined){
       var pid=window._fpPid;
       P=P.map(function(p){return p.id===pid?Object.assign({},p,{avancement:r.avancement}):p;});

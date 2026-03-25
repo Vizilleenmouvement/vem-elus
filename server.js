@@ -652,11 +652,11 @@ const server=http.createServer(function(req,res){
     if(err)return J(res,{ok:false},400);
     var pid4=parseInt(p.split('/')[3]);
     var texte=(d.texte||'').trim();
-    var type4=d.type||'note'; // note | etape
-    var date4=d.date||'';
-    if(!texte)return J(res,{ok:false,error:'Texte vide'},400);
-    // Stocker dans projet_journal avec action=type4
-    ProjetJournal.log(pid4,ME.id,ME.nom,type4,date4,texte);
+    var type4=d.type||'note';
+    var objet4=(d.objet||'').trim();
+    if(!texte&&!objet4)return J(res,{ok:false,error:'Vide'},400);
+    // ancien_val = objet, nouveau_val = texte
+    ProjetJournal.log(pid4,ME.id,ME.nom,type4,objet4,texte||objet4);
     return J(res,{ok:true});
   });
   if(p.match(/^\/api\/projnote\/\d+$/)&&m==='DELETE'){
@@ -4339,10 +4339,11 @@ function fpTab(btn){
   var pid=window._fpPid;
   var p=P.find(function(x){return x.id===pid;})||{};
   var statut=ST[pid]||p.statut||'ND';
+  if(tab==='infos'){fpRenderInfos(pid,p,statut);return;}
   pb.innerHTML='<div style="text-align:center;padding:3rem;color:var(--i3)">⏳ Chargement…</div>';
   apiGet('/api/projet/'+pid+'/fiche').then(function(f){
     if(!f){pb.innerHTML='<div style="text-align:center;padding:2rem;color:var(--red)">Erreur</div>';return;}
-    if(tab==='journal')     fpRenderJournal(pid,p,statut,f);
+    if(tab==='journal')          fpRenderJournal(pid,p,statut,f);
     else if(tab==='contacts')    fpRenderPartContacts(pid,f.partenaires||[],f.contacts||[]);
     else if(tab==='docs')        fpRenderDocs(pid,f.docs||[]);
     else if(tab==='presse')      fpRenderPresse(pid,f.presse||[]);
@@ -4352,233 +4353,204 @@ function fpReload(tab){var b=document.querySelector('.fpt[data-tab="'+tab+'"]');
 
 // ── JOURNAL DE BORD (fusion Infos + Étapes + Notes) ─────────────────────────
 
-function fpRenderJournal(pid,p,statut,fiche){
+// ── INFOS PROJET (pleine page) ───────────────────────────────────────────────
+function fpRenderInfos(pid,p,statut){
   var pb=document.getElementById('fp-body'); if(!pb)return;
   var av=p.avancement||0;
-  var stCols={Prioritaire:'#dc2626',Programmé:'#2563eb',Planifié:'#7c3aed','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#6b7280',Suspendu:'#9ca3af'};
+  var stCols={Prioritaire:'#dc2626',Programmé:'#2563eb',Planifié:'#7c3aed','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#6b7280',Suspendu:'#9ca3af',ND:'#9ca3af'};
   var col=stCols[statut]||'#64748b';
   var thO=''; Object.keys(COMM).forEach(function(k){COMM[k].forEach(function(t){thO+='<option value="'+t+'"'+(p.theme===t?' selected':'')+'>'+k+' — '+t+'</option>';});});
   var stO=''; SLIST.forEach(function(s){stO+='<option value="'+s+'"'+(statut===s?' selected':'')+'>'+s+'</option>';});
   var rO='<option value="">— Aucun référent —</option>';
   ELUS_DATA.forEach(function(e){var n=(e.prenom?e.prenom+' ':'')+e.nom;rO+='<option value="'+e.id+'"'+(p.responsable_id===e.id?' selected':'')+'>'+n+'</option>';});
-
-  // ── En-tête projet éditable ──
   var ti=(p.titre||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
   var rs=(p.resume||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
   var ds=(p.description||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
   var tg=(Array.isArray(p.tags)?p.tags.join(', '):(p.tags||'')).replace(/"/g,'&quot;');
   var imp=p.importance||2;
-
-  var html=
-    // ── Bloc statut + avancement ──
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:.85rem">'
-    +'<div style="flex:1">'
-    // Timeline statuts
-    +'<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:.6rem;position:relative">'
-    +(function(){
-      var steps=['Étude','Planifié','Programmé','En cours','Réalisé'];
-      var curr=steps.indexOf(statut);
-      var res='';
-      steps.forEach(function(s,i){
-        var done=i<curr, active=i===curr;
-        var bg=active?'var(--g1)':(done?'var(--g4)':'var(--w2)');
-        var tc=active||done?'#fff':'var(--i4)';
-        res+='<div style="flex:1;text-align:center;position:relative">'
-          +(i>0?'<div style="position:absolute;top:9px;left:0;right:50%;height:2px;background:'+(i<=curr?'var(--g3)':'var(--w2)')+'"></div>':'')
-          +(i<steps.length-1?'<div style="position:absolute;top:9px;left:50%;right:0;height:2px;background:'+(i<curr?'var(--g3)':'var(--w2)')+'"></div>':'')
-          +'<div style="width:18px;height:18px;border-radius:50%;background:'+bg+';margin:0 auto 3px;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;color:'+tc+';position:relative;z-index:1">'+(done?'✓':(active?'●':''))+'</div>'
-          +'<div style="font-size:.55rem;font-weight:'+(active?'700':'400')+';color:'+(active?'var(--g1)':'var(--i4)')+'">'+s+'</div>'
-          +'</div>';
-      }); return res;
-    })()
+  // Timeline statuts
+  var steps=['Étude','Planifié','Programmé','En cours','Réalisé'];
+  var curr=steps.indexOf(statut);
+  var tl='';
+  steps.forEach(function(s,i){
+    var done=i<curr,active=i===curr;
+    var bg=active?'var(--g1)':(done?'var(--g4)':'var(--w2)');
+    var tc=active||done?'#fff':'var(--i4)';
+    tl+='<div style="flex:1;text-align:center;position:relative">'
+      +(i>0?'<div style="position:absolute;top:9px;left:0;right:50%;height:2px;background:'+(i<=curr?'var(--g3)':'var(--w2)')+'"></div>':'')
+      +(i<4?'<div style="position:absolute;top:9px;left:50%;right:0;height:2px;background:'+(i<curr?'var(--g3)':'var(--w2)')+'"></div>':'')
+      +'<div style="width:18px;height:18px;border-radius:50%;background:'+bg+';margin:0 auto 3px;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;color:'+tc+';position:relative;z-index:1">'+(done?'✓':(active?'●':''))+'</div>'
+      +'<div style="font-size:.55rem;font-weight:'+(active?'700':'400')+';color:'+(active?'var(--g1)':'var(--i4)')+'">'+s+'</div>'
+      +'</div>';
+  });
+  pb.innerHTML=
+    '<div style="display:flex;flex-direction:column;gap:1rem">'
+    // Statut + avancement
+    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.1rem 1.25rem;box-shadow:var(--s1)">'
+    +'<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:.75rem">'+tl+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.75rem">'
+    +'<select id="fp-st" class="fi" style="font-size:.78rem;padding:6px 9px" onchange="fpStatutChange(this)">'+stO+'</select>'
+    +'<select id="fp-rsp" class="fi" style="font-size:.78rem;padding:6px 9px">'+rO+'</select>'
     +'</div>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px;align-items:center">'
-    +'<select id="fp-st" class="fi" style="font-size:.78rem;padding:5px 8px;flex:1" onchange="fpStatutChange(this)">'+stO+'</select>'
-    +'<select id="fp-rsp" class="fi" style="font-size:.78rem;padding:5px 8px;flex:1">'+rO+'</select>'
-    +'</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-top:.75rem">'
+    +'<div style="display:flex;align-items:center;gap:8px">'
     +'<div style="background:var(--w2);border-radius:4px;height:8px;flex:1;overflow:hidden">'
     +'<div id="fp-av-bar" style="height:100%;border-radius:4px;background:'+col+';width:'+av+'%;transition:width .3s"></div>'
     +'</div>'
-    +'<span id="fp-av-pct" style="font-size:.75rem;font-weight:700;color:var(--g1);white-space:nowrap">'+av+'%</span>'
+    +'<span id="fp-av-pct" style="font-size:.75rem;font-weight:700;color:var(--g1);white-space:nowrap;min-width:36px">'+av+'%</span>'
     +'<input type="range" id="fp-av-rng" min="0" max="100" value="'+av+'" style="width:80px;accent-color:var(--g2)" oninput="fpAvInput(this)">'
     +'<button onclick="fpSvAv('+pid+')" class="btn btn-p btn-sm" style="font-size:.68rem;padding:4px 10px">💾</button>'
     +'</div></div>'
-
-    // ── Infos générales (dépliable) ──
-    +'<details style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<summary style="font-size:.75rem;font-weight:700;color:var(--g1);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">✏️ Modifier les informations du projet <span style="margin-left:auto;font-size:.7rem;color:var(--i4)">▼</span></summary>'
-    +'<div style="display:flex;flex-direction:column;gap:9px;margin-top:.75rem">'
-    +'<input id="fp-ti" class="fi" value="'+ti+'" placeholder="Titre *" style="font-size:.82rem;padding:8px 11px">'
+    // Infos éditables
+    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.1rem 1.25rem;box-shadow:var(--s1)">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.85rem">Informations du projet</div>'
+    +'<div style="display:flex;flex-direction:column;gap:9px">'
+    +'<input id="fp-ti" class="fi" value="'+ti+'" placeholder="Titre *" style="font-size:.84rem;padding:8px 11px;font-weight:600">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">'
     +'<select id="fp-th" class="fi" style="font-size:.78rem;padding:7px 10px">'+thO+'</select>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
     +'<input id="fp-an" class="fi" type="number" value="'+(p.annee||'')+'" min="2026" max="2032" placeholder="Année" style="font-size:.78rem;padding:7px 10px">'
     +'<select id="fp-im" class="fi" style="font-size:.78rem;padding:7px 10px">'
     +'<option value="1"'+(imp===1?' selected':'')+'>★ Normale</option>'
-    +'<option value="2"'+(imp===2?' selected':'')+'>★★ Import.</option>'
-    +'<option value="3"'+(imp===3?' selected':'')+'>★★★ Prio.</option>'
+    +'<option value="2"'+(imp===2?' selected':'')+'>★★ Importante</option>'
+    +'<option value="3"'+(imp===3?' selected':'')+'>★★★ Prioritaire</option>'
     +'</select></div></div>'
-    +'<input id="fp-rs" class="fi" value="'+rs+'" placeholder="Résumé" style="font-size:.78rem;padding:7px 10px">'
-    +'<textarea id="fp-ds" class="fi" rows="3" style="font-size:.78rem;padding:7px 10px;resize:vertical">'+ds+'</textarea>'
+    +'<input id="fp-rs" class="fi" value="'+rs+'" placeholder="Résumé court" style="font-size:.78rem;padding:7px 10px">'
+    +'<textarea id="fp-ds" class="fi" rows="4" style="font-size:.78rem;padding:7px 10px;resize:vertical">'+ds+'</textarea>'
     +'<input id="fp-tg" class="fi" value="'+tg+'" placeholder="Tags…" style="font-size:.78rem;padding:7px 10px">'
-    +'<div style="display:flex;gap:10px">'
-    +'<button onclick="fpSvProj('+pid+')" class="btn btn-p btn-sm">💾 Enregistrer</button>'
+    +'<div style="display:flex;gap:10px;padding-top:.25rem">'
+    +'<button onclick="fpSvProj('+pid+')" class="btn btn-p">💾 Enregistrer</button>'
     +'<button onclick="fpDlProj('+pid+')" class="btn btn-d btn-sm" style="margin-left:auto">🗑 Supprimer</button>'
-    +'</div></div></details>';
+    +'</div></div></div>'
+    +'</div>';
+}
 
-  // ── Chronologie ──
-  html+='<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">Chronologie du projet</div>';
+// ── JOURNAL = MAIN COURANTE ──────────────────────────────────────────────────
+function fpRenderJournal(pid,p,statut,fiche){
+  var pb=document.getElementById('fp-body'); if(!pb)return;
+  var entries=(fiche&&fiche.journal)||[];
+  var icoType={note:'📝',etape:'🏁',doc:'📎',statut:'🔄',avancement:'📊'};
 
-  // Fusionner jalons + journal dans une timeline triée par date
-  var jalons=(fiche&&fiche.jalons)||[];
-  var notes=(fiche&&fiche.journal)||[];
-  var items=[];
-  jalons.forEach(function(j){items.push({type:'etape',date:j.date_jalon||'',titre:j.titre,statut:j.statut,id:j.id,src:'jalon'});});
-  notes.forEach(function(n){items.push({type:n.action||'note',date:n.created_at||'',titre:n.nouveau_val||'',auteur:n.auteur_nom||'',id:n.id,src:'journal'});});
-  items.sort(function(a,b){return (b.date||'') > (a.date||'') ? 1 : -1;});
-
-  var icoMap={etape:'🏁',note:'📝',statut:'🔄',doc:'📎',avancement:'📊',note_doc:'📄'};
-  var stEtape={prevu:'🔵',en_cours:'🟡',realise:'✅',annule:'❌'};
-
-  if(items.length){
-    html+='<div style="display:flex;flex-direction:column;gap:.5rem">';
-    items.forEach(function(it){
-      var ico=icoMap[it.type]||'📝';
-      var bg=it.type==='etape'?'#fff':'#fafafa';
-      var bdr=it.type==='etape'?'2px solid var(--g7)':'1px solid var(--w2)';
-      html+='<div style="background:'+bg+';border-radius:var(--R);border:'+bdr+';padding:.7rem 1rem;display:flex;align-items:flex-start;gap:10px">'
-        +'<span style="font-size:1rem;flex-shrink:0;margin-top:1px">'+(it.type==='etape'?(stEtape[it.statut]||'🏁'):ico)+'</span>'
-        +'<div style="flex:1">'
-        +(it.type==='etape'
-          ?'<div style="font-size:.82rem;font-weight:700">'+it.titre+'</div>'
-           +(it.date?'<div style="font-size:.68rem;color:var(--i3)">📅 '+it.date+'</div>':'')
-           +'<select onchange="fpPatchJalon('+it.id+',this.value)" style="font-size:.68rem;background:var(--g8);border:1px solid var(--w2);border-radius:6px;padding:2px 6px;margin-top:4px;cursor:pointer">'
-           +'<option value="prevu"'+(it.statut==='prevu'?' selected':'')+'>🔵 Prévu</option>'
-           +'<option value="en_cours"'+(it.statut==='en_cours'?' selected':'')+'>🟡 En cours</option>'
-           +'<option value="realise"'+(it.statut==='realise'?' selected':'')+'>✅ Réalisé</option>'
-           +'<option value="annule"'+(it.statut==='annule'?' selected':'')+'>❌ Annulé</option>'
-           +'</select>'
-          :'<div style="font-size:.82rem;color:var(--ink)">'+it.titre+'</div>'
-           +(it.auteur||it.date?'<div style="font-size:.67rem;color:var(--i4)">'+(it.auteur||'')+( it.auteur&&it.date?' · ':'')+( it.date?it.date.slice(0,16):'')+'</div>':''))
-        +'</div>'
-        +(it.src==='jalon'
-          ?'<button onclick="fpDelJalon('+it.id+','+pid+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.8rem;flex-shrink:0;padding:2px 4px;line-height:1" title="Supprimer">×</button>'
-          :( it.type!=='statut'&&it.type!=='avancement'&&it.type!=='doc'
-             ?'<button onclick="fpDelNote('+it.id+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.8rem;flex-shrink:0;padding:2px 4px;line-height:1" title="Supprimer">×</button>'
-             :''))
-        +'</div>';
-    });
-    html+='</div>';
-  } else {
-    html+='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune entrée — commencez par ajouter une étape ou une note.</div></div>';
-  }
-
-  // ── Formulaire d'ajout ──
-  // Date/heure courante pour affichage
-  var nowFmt=(function(){var d=new Date();return d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});})();
-  html+=
-    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-top:1rem;box-shadow:var(--s1)">'
-    +'<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap">'
-    +'<button onclick="fpJTab(0)" id="jt-note" class="btn btn-p btn-sm" style="font-size:.71rem">📝 Note</button>'
-    +'<button onclick="fpJTab(1)" id="jt-etape" class="btn btn-s btn-sm" style="font-size:.71rem">🏁 Étape clé</button>'
-    +'<button onclick="fpJTab(2)" id="jt-doc" class="btn btn-s btn-sm" style="font-size:.71rem">📎 Document</button>'
-    +'<span style="margin-left:auto;font-size:.65rem;color:var(--i4);align-self:center">🕐 '+nowFmt+'</span>'
+  // ── Formulaire saisie ──
+  var now=new Date();
+  var dateStr=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var timeStr=now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  var html=
+    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1.1rem 1.25rem;margin-bottom:1.25rem;box-shadow:var(--s1)">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em">✍️ Nouvelle entrée</div>'
+    +'<div style="font-size:.68rem;color:var(--i4)" id="jnow-lbl">'+dateStr+' à '+timeStr+'</div>'
     +'</div>'
-    // Zone note
-    +'<div id="jp-note">'
-    +'<textarea id="jn-tx" class="fi" rows="2" placeholder="Note, observation, compte rendu informel, décision…" style="font-size:.79rem;padding:7px 10px;resize:vertical;width:100%;box-sizing:border-box"></textarea>'
-    +'<div style="display:flex;justify-content:flex-end;margin-top:6px"><button onclick="fpAddNote('+pid+')" class="btn btn-p btn-sm">💾 Publier</button></div>'
+    +'<input id="jn-obj" class="fi" placeholder="Objet (ex: Réunion avec la Métropole, Décision en bureau…)" style="font-size:.8rem;padding:7px 10px;margin-bottom:8px;width:100%;box-sizing:border-box">'
+    +'<textarea id="jn-tx" class="fi" rows="4" placeholder="Compte rendu, décision prise, observation, point de situation…" style="font-size:.79rem;padding:8px 10px;resize:vertical;width:100%;box-sizing:border-box;margin-bottom:8px"></textarea>'
+    // Fichier optionnel
+    +'<div style="border:1px dashed var(--w2);border-radius:9px;padding:.65rem .9rem;display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--g8);margin-bottom:8px" onclick="fpOpenFile('+pid+')">'
+    +'<span style="font-size:1rem">📎</span>'
+    +'<div id="jn-file-lbl" style="font-size:.74rem;color:var(--i3);flex:1">Joindre un fichier (optionnel) — PDF, Word, Email, Image…</div>'
+    +'<input type="file" id="dc-file-'+pid+'" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.eml,.msg,.txt,.jpg,.jpeg,.png,.odt,.ods" onchange="fpPreviewDoc(this,'+pid+')">'
     +'</div>'
-    // Zone étape clé
-    +'<div id="jp-etape" style="display:none">'
-    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:6px">'
-    +'<input id="je-ti" class="fi" placeholder="Titre de l&#39;étape *" style="font-size:.79rem;padding:6px 9px">'
-    +'<input id="je-dt" class="fi" type="date" style="font-size:.79rem;padding:6px 9px">'
-    +'</div>'
-    +'<div style="display:flex;justify-content:flex-end"><button onclick="fpAddJalon('+pid+')" class="btn btn-p btn-sm">💾 Ajouter</button></div>'
-    +'</div>'
-    // Zone document — UX simplifiée
-    +'<div id="jp-doc" style="display:none">'
-    // Cible drop cliquable
-    +'<div style="border:2px dashed var(--g7);border-radius:12px;padding:1.1rem;text-align:center;cursor:pointer;background:var(--g8);margin-bottom:8px;transition:.15s" onclick="fpOpenFile('+pid+')">'
-    +'<div style="font-size:1.6rem;margin-bottom:.3rem">📂</div>'
-    +'<div style="font-size:.78rem;font-weight:600;color:var(--g2)">Cliquer pour choisir un fichier</div>'
-    +'<div style="font-size:.67rem;color:var(--i4);margin-top:2px">PDF · Word · Excel · Email (.eml) · Image…</div>'
-    +'<input type="file" id="dc-file-'+pid+'" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.eml,.msg,.txt,.jpg,.jpeg,.png,.odt,.ods,.ppt,.pptx" onchange="fpPreviewDoc(this,'+pid+')">'
-    +'</div>'
-    // Aperçu fichier choisi
     +'<div id="dc-preview-'+pid+'" style="display:none;margin-bottom:8px;padding:.5rem .8rem;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.74rem;font-weight:700;color:var(--g1)"></div>'
-    // Titre auto + type sur une ligne
-    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:6px">'
-    +'<input id="dc-ti-'+pid+'" class="fi" placeholder="Titre (auto depuis le nom du fichier)" style="font-size:.79rem;padding:6px 9px">'
-    +'<select id="dc-ty-'+pid+'" class="fi" style="font-size:.79rem;padding:6px 9px">'
-    +'<option value="CR de commission">CR commission</option>'
-    +'<option value="Délibération">Délibération</option>'
-    +'<option value="Rapport">Rapport</option>'
-    +'<option value="Avis">Avis</option>'
-    +'<option value="Courrier">Courrier</option>'
-    +'<option value="Email">Email</option>'
-    +'<option value="Devis">Devis</option>'
-    +'<option value="Autre">Autre</option>'
-    +'</select></div>'
-    // Lien URL alternatif
-    +'<input id="dc-ul-'+pid+'" class="fi" placeholder="Ou coller un lien (kDrive, Google Drive, URL…)" style="font-size:.79rem;padding:6px 9px;margin-bottom:8px;width:100%;box-sizing:border-box">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.75rem;color:var(--i3)">'
-    +'<input type="checkbox" id="dc-bib-'+pid+'" style="width:14px;height:14px;accent-color:var(--g2);cursor:pointer">'
-    +'<label for="dc-bib-'+pid+'" style="cursor:pointer">Ajouter aussi à la <strong>Bibliothèque générale</strong></label>'
-    +'</div>'
-    +'<button onclick="fpAddDoc('+pid+')" class="btn btn-p" style="width:100%;font-size:.82rem">💾 Joindre ce document</button>'
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:.73rem;color:var(--i3);cursor:pointer">'
+    +'<input type="checkbox" id="dc-bib-'+pid+'" style="accent-color:var(--g2)"> Ajouter à la Bibliothèque générale</label>'
+    +'<button onclick="fpPublishEntry('+pid+')" class="btn btn-p" style="margin-left:auto">✅ Publier</button>'
     +'</div></div>';
 
+  // ── Chronologie ──
+  if(entries.length){
+    html+='<div style="font-size:.65rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem">Chronologie</div>';
+    entries.forEach(function(e){
+      var isNote=(e.action==='note'), isDoc=(e.action==='doc');
+      var ico=icoType[e.action]||'📝';
+      var bdr=isNote?'border-left:3px solid var(--g4)':'border-left:3px solid var(--w2)';
+      html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);'+bdr+';padding:.8rem 1rem;margin-bottom:.5rem;display:flex;gap:10px;box-shadow:var(--s1)">'
+        +'<span style="font-size:1rem;flex-shrink:0;padding-top:1px">'+ico+'</span>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:.2rem">'
+        +(e.ancien_val?'<span style="font-size:.77rem;font-weight:700;color:var(--ink)">'+e.ancien_val+'</span>':'')
+        +'<span style="font-size:.65rem;color:var(--i4)">'+(e.auteur_nom||'Système')+' · '+(e.created_at||'').slice(0,16)+'</span>'
+        +'</div>'
+        +(e.nouveau_val?'<div style="font-size:.79rem;color:var(--i2);line-height:1.6;white-space:pre-wrap">'+e.nouveau_val+'</div>':'')
+        +'</div>'
+        +((e.action==='note'||e.action==='doc')
+          ?'<button onclick="fpDelNote('+e.id+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.85rem;flex-shrink:0;align-self:flex-start;padding:2px 4px" title="Supprimer">×</button>'
+          :'')
+        +'</div>';
+    });
+  } else {
+    html+='<div class="empty"><div class="empty-ico">📒</div><div class="empty-s">Aucune entrée — rédigez la première note ci-dessus.</div></div>';
+  }
   pb.innerHTML=html;
-  fpAttachDrafts(pid);
-}
-
-function fpJTab(i){
-  var zones=['jp-note','jp-etape','jp-doc'];
-  var btns=['jt-note','jt-etape','jt-doc'];
-  zones.forEach(function(id,j){var el=document.getElementById(id);if(el)el.style.display=(j===i?'':'none');});
-  btns.forEach(function(id,j){var b=document.getElementById(id);if(b){b.className=j===i?'btn btn-p btn-sm':'btn btn-s btn-sm';b.style.fontSize='.71rem';}});
-}
-
-function fpAddNote(pid){
-  var tx=document.getElementById('jn-tx'); if(!tx||!tx.value.trim()){toast('Note vide');return;}
-  apiPost('/api/projet/'+pid+'/notes',{type:'note',texte:tx.value.trim()}).then(function(r){
-    if(r&&r.ok){
-      draftClearOnSubmit('note_'+pid,tx);
-      tx.value='';
-      fpReload('journal');
-      var d=new Date();
-      toast('📝 Note publiée — '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
-    } else{toast('Erreur',3000);}
-  });
-}
-
-function fpAttachDrafts(pid){
+  // Brouillons
   setTimeout(function(){
-    draftAttach(document.getElementById('jn-tx'),'note_'+pid);
-    draftAttach(document.getElementById('je-ti'),'etape_ti_'+pid);
-    draftAttach(document.getElementById('dc-ti-'+pid),'doc_ti_'+pid);
+    draftAttach(document.getElementById('jn-obj'),'jobj_'+pid);
+    draftAttach(document.getElementById('jn-tx'),'jtx_'+pid);
   },50);
+  // Mettre à jour l'heure toutes les minutes
+  setInterval(function(){
+    var d=new Date();
+    var el=document.getElementById('jnow-lbl');
+    if(el)el.textContent=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  },60000);
 }
 
-function fpDelNote(id){
-  apiDel('/api/projnote/'+id).then(function(){fpReload('journal');});
+function fpPublishEntry(pid){
+  var obj=document.getElementById('jn-obj');
+  var tx=document.getElementById('jn-tx');
+  var fi=document.getElementById('dc-file-'+pid);
+  var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null;
+  var objet=(obj?obj.value.trim():'');
+  var texte=(tx?tx.value.trim():'');
+  var bibCb=document.getElementById('dc-bib-'+pid);
+  var toBib=bibCb&&bibCb.checked;
+  if(!objet&&!texte&&!file){toast('Saisir un objet, un texte ou joindre un fichier');return;}
+  function afterSave(){
+    draftClear('jobj_'+pid); draftClear('jtx_'+pid);
+    if(obj)obj.value=''; if(tx)tx.value='';
+    if(fi)fi.value='';
+    var prev=document.getElementById('dc-preview-'+pid);
+    if(prev)prev.style.display='none';
+    if(bibCb)bibCb.checked=false;
+    fpReload('journal');
+    var d=new Date();
+    toast('📝 Publié — '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+  }
+  if(file){
+    // Upload + note avec objet
+    var form=new FormData();
+    form.append('file',file,file.name);
+    form.append('titre',objet||file.name.replace(/\.[^.]+$/,''));
+    form.append('type','Autre');
+    var btn=document.querySelector('[onclick="fpPublishEntry('+pid+')"]');
+    if(btn){btn.disabled=true;btn.textContent='⏳';}
+    var xhr=new XMLHttpRequest();
+    xhr.open('POST','/api/projet/'+pid+'/upload-doc');
+    xhr.withCredentials=true;
+    xhr.onload=function(){
+      var r=JSON.parse(xhr.responseText||'{}');
+      if(r.ok&&toBib) fpAddToBiblio(objet||file.name,r.type||'Autre',r.url||'',pid);
+      // Publier aussi la note texte si présente
+      if(texte){
+        apiPost('/api/projet/'+pid+'/notes',{type:'note',texte:texte,objet:objet}).then(afterSave);
+      } else {
+        afterSave();
+      }
+      if(btn){btn.disabled=false;btn.textContent='✅ Publier';}
+    };
+    xhr.onerror=function(){toast('Erreur réseau',3000);if(btn){btn.disabled=false;btn.textContent='✅ Publier';}};
+    xhr.send(form);
+  } else {
+    // Note texte seule
+    apiPost('/api/projet/'+pid+'/notes',{type:'note',texte:(texte||objet),objet:objet}).then(function(r){
+      if(r&&r.ok) afterSave(); else toast('Erreur',3000);
+    });
+  }
 }
 
-function fpAddJalon(pid){
-  var ti=document.getElementById('je-ti')||document.getElementById('jl-ti');
-  var dt=document.getElementById('je-dt')||document.getElementById('jl-dt');
-  if(!ti||!ti.value.trim()){toast('Titre obligatoire');return;}
-  apiPost('/api/projet/'+pid+'/jalons',{titre:ti.value.trim(),date:dt?dt.value:'',statut:'prevu'}).then(function(r){
-    if(r&&r.ok){ti.value='';if(dt)dt.value='';fpReload('journal');toast('Étape ajoutée ✓');}
-  });
-}
-function fpPatchJalon(id,s){apiPatch('/api/jalon/'+id,{statut:s}).then(function(r){if(r&&r.avancement!==undefined){var pid=window._fpPid;P=P.map(function(p){return p.id===pid?Object.assign({},p,{avancement:r.avancement}):p;});}toast('✓');});}
-function fpDelJalon(id,pid){if(!confirm('Supprimer cette étape ?'))return;apiDel('/api/jalon/'+id).then(function(){fpReload('journal');});}
+// Alias pour compatibilité
+function fpAddNote(pid){fpPublishEntry(pid);}
+function fpJTab(i){}
+function fpAttachDrafts(pid){}
+
 
 // ── PARTENAIRES + CONTACTS (onglet fusionné) ─────────────────────────────────
 function fpRenderPartContacts(pid,partenaires,contacts){

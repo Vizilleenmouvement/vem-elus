@@ -2867,8 +2867,12 @@ function init(){
     renderWidgetMandat();
   });
 
-  apiGet("/api/biblio").then(function(data){
-    BIBLIO=data; el("sb-bib",BIBLIO.length); renderBiblio();
+  bibLoadDossiers(function(){
+    apiGet("/api/biblio").then(function(data){
+      BIBLIO=Array.isArray(data)?data:[];
+      el("sb-bib",BIBLIO.length);
+      renderBiblio();
+    });
   });
 
   apiGet("/api/rep_elus").then(function(data){
@@ -3513,7 +3517,7 @@ var TYPE_COLORS={'PDF':'#dc2626','Word':'#2563eb','Excel':'#16a34a','Email':'#c9
 
 function bibLoadDossiers(cb){
   apiGet('/api/biblio/dossiers').then(function(d){
-    BIBLIO_DOSSIERS=d||[];
+    BIBLIO_DOSSIERS=Array.isArray(d)?d:[];
     if(cb)cb();
   });
 }
@@ -3727,7 +3731,7 @@ function bibChangeType(docId,type){
 function delBiblio(id){
   if(!confirm('Supprimer ce document ?'))return;
   apiDel('/api/biblio/'+id).then(function(d){
-    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});renderBiblio();}
+    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});el('sb-bib',BIBLIO.length);renderBiblio();toast('Document supprimé ✓');}
   });
 }
 

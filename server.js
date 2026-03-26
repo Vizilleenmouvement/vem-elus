@@ -769,8 +769,22 @@ const server=http.createServer(function(req,res){
   if(p==='/api/chat'&&m==='GET'){var ch2=Chat.get(qs.channel||'general',parseInt(qs.since||0));return J(res,{ok:true,messages:ch2.messages,lastId:ch2.lastId});}
   if(p==='/api/chat'&&m==='DELETE'){
     var ch5=qs.channel||'general';
-    db.prepare('DELETE FROM chat WHERE channel=?').run(ch5);
-    return J(res,{ok:true});
+    var today5=new Date().toISOString().slice(0,10);
+    // Archiver les messages du jour = les marquer comme archivés (on garde, on les cache)
+    db.prepare("UPDATE chat SET archived=1 WHERE channel=? AND date(created_at)=?").run(ch5,today5);
+    return J(res,{ok:true,date:today5});
+  }
+  if(p==='/api/chat/archives'&&m==='GET'){
+    var ch6=qs.channel||'general';
+    var date6=qs.date;
+    if(!date6)return J(res,[]);
+    var msgs6=db.prepare("SELECT * FROM chat WHERE channel=? AND date(created_at)=? ORDER BY id").all(ch6,date6);
+    return J(res,msgs6);
+  }
+  if(p==='/api/chat/dates'&&m==='GET'){
+    var ch7=qs.channel||'general';
+    var dates7=db.prepare("SELECT DISTINCT date(created_at) as d FROM chat WHERE channel=? ORDER BY d DESC").all(ch7);
+    return J(res,dates7.map(function(r){return r.d;}));
   }
   if(p==='/api/chat'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
@@ -1652,6 +1666,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 <aside class="sb">
   <div class="sbs">Mon espace</div>
   <div class="sbi on" onclick="gp('today',this)"><span class="sbi-ic">&#x1F4CB;</span>Aujourd&#x27;hui</div>
+  <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
   <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
   <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
 
@@ -1906,6 +1921,93 @@ textarea.fi{resize:vertical;min-height:90px;}
 </div>
 
 <!-- GUIDE + RESSOURCES -->
+<div class="page" id="p-tuto">
+  <div class="ph">
+    <div class="ph-ico" style="background:#ede9fe">🎓</div>
+    <div>
+      <div class="ph-t">Guide d'utilisation</div>
+      <div class="ph-s">Comment utiliser l'espace élus VeM</div>
+    </div>
+  </div>
+  <div class="scr" style="padding:1.25rem 1.5rem">
+
+    <!-- Accueil -->
+    <div style="background:linear-gradient(135deg,#1a3a2a,#2d5a40);border-radius:14px;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:.4rem">🌿 Bienvenue dans l'espace élus Vizille en Mouvement</div>
+      <div style="font-size:.78rem;opacity:.85;line-height:1.7">Cet espace est votre outil de travail pour le mandat 2026–2032. Retrouvez ici les projets du programme, les comptes rendus, le tchat de l'équipe et tous vos documents de travail.</div>
+    </div>
+
+    <!-- Sections -->
+    <div style="display:flex;flex-direction:column;gap:1rem">
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📋 Aujourd'hui</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Votre tableau de bord personnel. Retrouvez un résumé de l'activité récente, les prochaines réunions à l'agenda et les dernières notifications.</div>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📁 Projets du programme</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
+          <b>Par commission</b> → vue groupée par thème (Mobilités, Travaux, Culture…)<br>
+          <b>Tous les projets</b> → liste complète avec statut, avancement et élu référent modifiables directement<br><br>
+          Cliquer sur un projet ouvre la <b>fiche détaillée</b> avec 5 onglets :<br>
+          • <b>📋 Infos</b> — statut, avancement, description<br>
+          • <b>📒 Journal</b> — main courante : noter une observation, une étape franchie, joindre un document<br>
+          • <b>👥 Contacts</b> — interlocuteurs et organismes partenaires du projet<br>
+          • <b>📄 Documents</b> — classement des pièces liées au projet<br>
+          • <b>📰 Presse</b> — articles et références médias
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📒 Journal de bord (main courante)</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
+          Dans chaque fiche projet, le journal vous permet de consigner en temps réel :<br>
+          • Un <b>objet</b> (titre de l'entrée, ex : "Réunion Métropole du 25/03")<br>
+          • Un <b>texte libre</b> (compte rendu, décision, observation…)<br>
+          • Un <b>fichier joint</b> optionnel (PDF, Word, email…)<br><br>
+          La date et l'heure sont enregistrées automatiquement. Les brouillons sont sauvegardés automatiquement si vous quittez la page accidentellement.
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📄 Comptes rendus</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Rédigez et archivez les comptes rendus de réunions (bureau, commissions, conseil). Vous pouvez joindre un fichier PDF ou un lien vers kDrive. Tous les élus peuvent consulter les CR publics.</div>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📚 Bibliothèque documentaire</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Classement centralisé de tous les documents de la mandature. Organisez-les par <b>dossiers thématiques</b> que vous créez librement. Vous pouvez déplacer un document d'un dossier à l'autre ou changer son type directement dans la liste.</div>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">💬 Tchat de l'équipe</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
+          Messagerie instantanée par canal thématique (Général, Bureau, Commissions…)<br>
+          • Bouton <b>📅</b> → consulter les messages archivés par date<br>
+          • Bouton <b>📦</b> → archiver les messages du jour (ils restent consultables)
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">🔐 Connexion &amp; sécurité</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
+          Identifiant : <b>prenom.nom</b> (ex : <code style="background:var(--g8);padding:1px 6px;border-radius:4px">michel.thuillier</code>)<br>
+          Mot de passe : communiqué par l'administrateur<br><br>
+          La session dure <b>7 jours</b>. Déconnexion automatique après 30 minutes d'inactivité avec avertissement à 25 min.<br>
+          Pour changer votre mot de passe : menu Répertoire élus → votre fiche → Changer le mot de passe.
+        </div>
+      </div>
+
+      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
+        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">❓ Besoin d'aide</div>
+        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Contacter l'administrateur technique : <a href="mailto:thuilliermichel@mac.com" style="color:var(--g3)">thuilliermichel@mac.com</a></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <div class="page" id="p-guide">
   <div class="ph">
     <div class="ph-ico" style="background:#fef9c3">&#x1F4D6;</div>
@@ -2261,7 +2363,8 @@ textarea.fi{resize:vertical;min-height:90px;}
       <option value="tranquillite">&#x1F6E1; Tranquillit&#xe9;</option>
       <option value="travaux">&#x1F3D7; Travaux</option>
     </select>
-    <button onclick="resetChat()" title="Vider ce canal" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.75rem" id="chat-reset-btn">🗑</button>
+    <button onclick="showChatArchives()" title="Archives" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.75rem">📅</button>
+    <button onclick="resetChat()" title="Archiver aujourd'hui" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.75rem" id="chat-reset-btn">📦</button>
     <button class="chat-x" onclick="toggleChat()">&#xd7;</button>
   </div>
   <div class="chat-msgs" id="chat-msgs"></div>
@@ -4129,11 +4232,48 @@ function openVisio(){window.open("https://kmeet.infomaniak.com/vizilleenmouvemen
 function switchChannel(){CHAT=[];renderChatMsgs([]);pollChat();}
 function resetChat(){
   var ch=v('chat-ch')||'general';
-  if(!confirm('Vider le canal « '+ch+' » ? Tous les messages seront supprimés.'))return;
+  var today=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  if(!confirm('Archiver les messages du jour ('+today+') ? Ils seront consultables dans les archives.'))return;
   fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include',headers:{Authorization:'Basic '+btoa(ME.username+':'+ME._pwd)}})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(d.ok){CHAT=[];renderChatMsgs([]);toast('🗑 Canal vidé');}
+      if(d.ok){CHAT=[];renderChatMsgs([]);toast('📦 Messages archivés ✓');}
+    });
+}
+function showChatArchives(){
+  var ch=v('chat-ch')||'general';
+  fetch('/api/chat/dates?channel='+ch,{credentials:'include',headers:{Authorization:'Basic '+btoa(ME.username+':'+ME._pwd)}})
+    .then(function(r){return r.json();})
+    .then(function(dates){
+      if(!dates.length){toast('Aucune archive');return;}
+      // Afficher un sélecteur de date
+      var sel=document.getElementById('chat-archive-sel');
+      if(!sel){
+        sel=document.createElement('select');
+        sel.id='chat-archive-sel';
+        sel.style.cssText='font-size:.72rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:3px 6px;cursor:pointer;margin-right:4px';
+        var hdBtns=document.querySelector('.chat-hd');
+        if(hdBtns)hdBtns.insertBefore(sel,document.getElementById('chat-reset-btn'));
+      }
+      sel.innerHTML='<option value="">📅 Archives</option>'
+        +dates.map(function(d){
+          var dd=new Date(d);
+          var lbl=dd.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+          return '<option value="'+d+'">'+lbl+'</option>';
+        }).join('');
+      sel.onchange=function(){
+        if(!sel.value)return;
+        fetch('/api/chat/archives?channel='+ch+'&date='+sel.value,{credentials:'include',headers:{Authorization:'Basic '+btoa(ME.username+':'+ME._pwd)}})
+          .then(function(r){return r.json();})
+          .then(function(msgs){
+            var div=$('chat-msgs');
+            if(!div)return;
+            var dd2=new Date(sel.value);
+            var lbl2=dd2.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+            renderChatMsgs([{id:0,auteur:'Archives',avatar:'📅',texte:'Messages du '+lbl2,created_at:''}].concat(msgs));
+            scrollChat();
+          });
+      };
     });
 }
 function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok){CHAT.push(d.message);renderChatMsgs(CHAT);scrollChat();}});}

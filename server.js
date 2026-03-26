@@ -3544,7 +3544,7 @@ function renderBiblio(){
   }
 
   // ── Filtrage ──────────────────────────────────────────────────────────────
-  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';});
+  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';}).sort(function(a,b){return a.nom.localeCompare(b.nom,'fr');});
   var natures=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='nature';});
 
   var r=BIBLIO.filter(function(b){

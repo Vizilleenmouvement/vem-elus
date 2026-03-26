@@ -2656,7 +2656,7 @@ var ME={nom:"Chargement...",avatar:"?",id:0,role:"",color:"var(--g3)",username:"
 var _auth=""; // Sera mis à jour avec les credentials réels
 
 // ── UTILITAIRES ──────────────────────────────────────────────────────────────
-function $(i){return document.getElementById(i);}
+function $(i){var pb=document.getElementById("panel-body");if(pb){var e=pb.querySelector("#"+i);if(e)return e;}return document.getElementById(i);}
 function qsa(s){return document.querySelectorAll(s);}
 function v(i){var e=$(i);return e?e.value:"";}
 function el(i,val){var e=$(i);if(e)e.textContent=val;}
@@ -2761,6 +2761,7 @@ function openPanel(id){
   else if(id==="hist") renderNt();
   else if(id==="comms"){}
   else if(id==="creer") resetNP();
+  else if(id==="cdet") fCD();
 }
 
 function closePanel(){
@@ -3522,15 +3523,35 @@ function renderBiblio(){
   var typeBar=$("bib-type-bar");
   if(typeBar){
     typeBar.innerHTML=
-      '<button data-t="" onclick="bibSetType(this.dataset.t)" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
+      '<button data-t="" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
       +(_bibTypeFiltre===''?'background:var(--g1);color:#fff;border-color:var(--g1);':'background:#fff;color:var(--i2);border-color:var(--w2);')
       +'">Toutes</button>'
       +NATURES.map(function(t){
         var active=_bibTypeFiltre===t;
-        return '<button data-t="'+t+'" onclick="bibSetType(this.dataset.t)" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
+        return '<button data-t="'+t+'" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
           +(active?'background:var(--or);color:#fff;border-color:var(--or);':'background:#fff;color:var(--i2);border-color:var(--w2);')
           +'">'+(NATURE_ICONS[t]||'📄')+' '+t+'</button>';
       }).join('');
+    Array.from(typeBar.querySelectorAll('[data-t]')).forEach(function(btn){
+      btn.addEventListener('click',function(){bibSetType(btn.getAttribute('data-t'));});
+    });
+    // Boutons dossiers admin (Conseil municipal, Bureau municipal, etc.)
+    var ADMIN_DOS=["Conseil municipal","Bureau municipal","D\u00e9lib\u00e9rations","Proc\u00e8s-verbaux","Rapports & \u00c9tudes","Courriers & Emails","Budget & Finances","March\u00e9s publics","Urbanisme & PLU","Administration g\u00e9n\u00e9rale"];
+    var adminDos=BIBLIO_DOSSIERS.filter(function(d){return ADMIN_DOS.indexOf(d.nom)>=0;});
+    if(adminDos.length){
+      var adminBar=document.createElement('div');
+      adminBar.style.cssText='display:flex;gap:5px;flex-wrap:wrap;padding:.3rem 0 0';
+      adminDos.forEach(function(d){
+        var active=_bibDosActif===d.id;
+        var btn=document.createElement('button');
+        btn.setAttribute('data-dos',d.id);
+        btn.style.cssText='padding:3px 10px;border-radius:20px;border:1.5px solid;font-size:.7rem;font-weight:600;cursor:pointer;white-space:nowrap;'+(active?'background:'+d.couleur+';color:#fff;border-color:'+d.couleur+';':'background:#fff;color:var(--i2);border-color:var(--w2);');
+        btn.textContent=(d.icone||'📁')+' '+d.nom;
+        btn.addEventListener('click',function(){bibSetDos(active?null:d.id);});
+        adminBar.appendChild(btn);
+      });
+      typeBar.parentElement.appendChild(adminBar);
+    }
   }
 
   // ── Filtrage ──────────────────────────────────────────────────────────────
@@ -3578,8 +3599,8 @@ function renderBiblio(){
       +'</div>'
       // Séparateur + label THÈMES
       +'<div style="height:1px;background:var(--w2);margin:.2rem .2rem .5rem"></div>'
-      +'<div style="font-size:.6rem;font-weight:800;color:var(--i4);text-transform:uppercase;letter-spacing:.08em;padding:.1rem .5rem .4rem">Thèmes</div>'
-      +themes.map(dosItem).join('')
+      +'<div style="font-size:.6rem;font-weight:800;color:var(--i4);text-transform:uppercase;letter-spacing:.08em;padding:.1rem .5rem .4rem">Thèmes projets</div>'
+      +themes.filter(function(d){return ["Action sociale","Concertation citoyenne","Culture & Patrimoine","Économie","Enfance / Jeunesse","Mobilités","Métropole","Santé","Tranquillité publique","Transition écologique","Travaux & Urbanisme"].indexOf(d.nom)>=0;}).map(dosItem).join('')
       +'<div style="padding:.3rem .5rem .1rem">'
       +'<button data-grp="theme" onclick="bibNewDos(this.dataset.grp)" style="font-size:.64rem;color:var(--g3);background:none;border:none;cursor:pointer;padding:0">+ Ajouter un thème</button>'
       +'</div>';
@@ -4077,7 +4098,7 @@ function uSt(id,nst,titre){
 }
 
 function buildCG(){
-  var cg=$("cg"); if(!cg)return;
+  var pb=document.getElementById("panel-body");var cg=(pb&&pb.querySelector("#cg"))||document.getElementById("cg"); if(!cg)return;
   var ks=Object.keys(COMM);
   cg.innerHTML=ks.map(function(comm,idx){
     var pp=P.filter(function(p){return COMM[comm].indexOf(p.theme)>=0;});

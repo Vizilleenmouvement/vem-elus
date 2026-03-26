@@ -767,6 +767,11 @@ const server=http.createServer(function(req,res){
 
   // CHAT
   if(p==='/api/chat'&&m==='GET'){var ch2=Chat.get(qs.channel||'general',parseInt(qs.since||0));return J(res,{ok:true,messages:ch2.messages,lastId:ch2.lastId});}
+  if(p==='/api/chat'&&m==='DELETE'){
+    var ch5=qs.channel||'general';
+    db.prepare('DELETE FROM chat WHERE channel=?').run(ch5);
+    return J(res,{ok:true});
+  }
   if(p==='/api/chat'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
     var msg=Chat.insert(d);return J(res,{ok:true,message:{...msg,ts:ts()}});
@@ -2256,6 +2261,7 @@ textarea.fi{resize:vertical;min-height:90px;}
       <option value="tranquillite">&#x1F6E1; Tranquillit&#xe9;</option>
       <option value="travaux">&#x1F3D7; Travaux</option>
     </select>
+    <button onclick="resetChat()" title="Vider ce canal" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.75rem" id="chat-reset-btn">🗑</button>
     <button class="chat-x" onclick="toggleChat()">&#xd7;</button>
   </div>
   <div class="chat-msgs" id="chat-msgs"></div>
@@ -4121,6 +4127,15 @@ function copyC(){var t=$("cr-gen");t.select();document.execCommand("copy");toast
 function toggleChat(){_chatOpen=!_chatOpen;$("chat-panel").classList.toggle("on",_chatOpen);if(_chatOpen){$("cbdg").style.display="none";renderChatMsgs(CHAT);scrollChat();}}
 function openVisio(){window.open("https://kmeet.infomaniak.com/vizilleenmouvement","_blank");}
 function switchChannel(){CHAT=[];renderChatMsgs([]);pollChat();}
+function resetChat(){
+  var ch=v('chat-ch')||'general';
+  if(!confirm('Vider le canal « '+ch+' » ? Tous les messages seront supprimés.'))return;
+  fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include',headers:{Authorization:'Basic '+btoa(ME.username+':'+ME._pwd)}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){CHAT=[];renderChatMsgs([]);toast('🗑 Canal vidé');}
+    });
+}
 function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok){CHAT.push(d.message);renderChatMsgs(CHAT);scrollChat();}});}
 function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages.length){CHAT=CHAT.concat(d.messages);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else $("cbdg").style.display="block";}});}
 function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+m.ts+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}

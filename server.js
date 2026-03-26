@@ -311,7 +311,6 @@ try {
 } catch(e) { console.log('Comptes par défaut utilisés'); }
 // ── SESSIONS ─────────────────────────────────────────────────────────────────
 const SESSIONS = {}; // token → {username, expires}
-const PRESENCE = {}; // username → {nom, avatar, color, lastSeen}
 function makeToken(){ return require('crypto').randomBytes(24).toString('hex'); }
 function getSession(req){
   var cookies = req.headers.cookie||'';
@@ -702,10 +701,6 @@ const server=http.createServer(function(req,res){
     if(err)return J(res,{ok:false},400);d.id=nid(documents);documents.push(d);save('documents.json',documents);return J(res,{ok:true,item:d});
   });
   if(p.match(/^\/api\/document\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());documents=documents.filter(d=>d.id!==id);save('documents.json',documents);return J(res,{ok:true});}
-
-  // PRESENCE
-  if(p==='/api/ping'&&m==='POST'){if(ME){PRESENCE[ME.username]={nom:ME.nom,avatar:ME.avatar||"?",color:ME.color||"var(--g3)",lastSeen:Date.now()};}var _n=Date.now();Object.keys(PRESENCE).forEach(function(u){if(_n-PRESENCE[u].lastSeen>120000)delete PRESENCE[u];});return J(res,{ok:true});}
-  if(p==='/api/online'&&m==='GET'){var _n2=Date.now();var ol=Object.entries(PRESENCE).filter(function(e){return _n2-e[1].lastSeen<120000;}).map(function(e){return Object.assign({username:e[0]},e[1]);});return J(res,ol);}
 
   // BIBLIOTHÈQUE DOCUMENTAIRE
   if(p==='/api/biblio'&&m==='GET')return J(res,Biblio.getAll(ME.id,ME.id===0));
@@ -1649,8 +1644,7 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div style="display:flex;align-items:center;gap:8px">
     <button class="tbtn tbtn-v" onclick="openVisio()">&#x1F4F9; Visio</button>
     <button class="tbtn tbtn-c" onclick="toggleChat()">&#x1F4AC; Tchat<span class="cbdg" id="cbdg"></span></button>
-    <div id="online-bar" style="display:flex;align-items:center;gap:4px;margin-right:8px"></div>
-  <button onclick="vemLogout()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);font-size:.7rem;font-weight:600;cursor:pointer;margin-right:4px" title="Se déconnecter">&#x23FB; Déconnexion</button>
+    <button onclick="vemLogout()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);font-size:.7rem;font-weight:600;cursor:pointer;margin-right:4px" title="Se déconnecter">&#x23FB; Déconnexion</button>
     <div class="top-av" id="top-av-btn" onclick="om('profile')" title="Mon profil">MT</div>
   </div>
 </div>
@@ -5147,24 +5141,11 @@ function applyRoles(){
   }
 }
 
-function pingPresence(){
-  apiPost('/api/ping',{}).catch(function(){});
-  apiGet('/api/online').then(function(data){
-    var bar=document.getElementById('online-bar');if(!bar)return;
-    var oth=(data||[]).filter(function(u){return u.username!==ME.username;});
-    if(!oth.length){bar.innerHTML='';return;}
-    bar.innerHTML='<span style="font-size:.65rem;color:rgba(255,255,255,.5);margin-right:4px">En ligne :</span>'
-      +oth.map(function(u){return '<div title="'+u.nom+' — en ligne" style="width:26px;height:26px;border-radius:50%;background:'+(u.color||'var(--g4)')+';border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#fff">'+(u.avatar||'?')+'</div>';}).join('');
-  }).catch(function(){});
-}
-setInterval(pingPresence,45000);
-pingPresence();
-
 init();
 
 // ── DÉCONNEXION + AUTO-LOGOUT ─────────────────────────────────────────────────
 var _idleT=null, _idleW=null, _idleC=null, _idleR=0;
-var IDLE_MIN=9999, WARN_MIN=9990; // auto-logout désactivé
+var IDLE_MIN=30, WARN_MIN=25;
 
 function vemLogout(){
   if(confirm('Déconnexion ?')) window.location.href='/logout';
@@ -5190,8 +5171,7 @@ function idleWarn(){
       +'<div style="font-size:1.4rem;font-weight:800;text-align:center;letter-spacing:.05em;margin-bottom:.75rem">'+mStr+s+'s</div>'
       +'<div style="display:flex;gap:8px">'
       +'<button onclick="idleReset()" style="flex:1;background:var(--g4);border:none;color:#fff;border-radius:8px;padding:.5rem;font-weight:700;cursor:pointer;font-size:.78rem">Je suis là ✓</button>'
-      +'<div id="online-bar" style="display:flex;align-items:center;gap:4px;margin-right:8px"></div>
-  <button onclick="vemLogout()" style="flex:1;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:.5rem;font-weight:600;cursor:pointer;font-size:.78rem">Déconnecter</button>'
+      +'<button onclick="vemLogout()" style="flex:1;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:.5rem;font-weight:600;cursor:pointer;font-size:.78rem">Déconnecter</button>'
       +'</div>';
     if(--_idleR<0){clearInterval(_idleC); window.location.href='/logout';}
   }

@@ -4377,7 +4377,7 @@ function resetChat(){
 }
 
 
-function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok){CHAT.push(d.message);renderChatMsgs(CHAT);scrollChat();}});}
+function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok){CHAT.push(d.message);if(d.message&&d.message.id)_chatLast=d.message.id;renderChatMsgs(CHAT);scrollChat();}}); }
 function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages.length){CHAT=CHAT.concat(d.messages);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else $("cbdg").style.display="block";}});}
 function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+m.ts+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}
 function scrollChat(){var e=$("chat-msgs");if(e)e.scrollTop=e.scrollHeight;}

@@ -769,22 +769,8 @@ const server=http.createServer(function(req,res){
   if(p==='/api/chat'&&m==='GET'){var ch2=Chat.get(qs.channel||'general',parseInt(qs.since||0));return J(res,{ok:true,messages:ch2.messages,lastId:ch2.lastId});}
   if(p==='/api/chat'&&m==='DELETE'){
     var ch5=qs.channel||'general';
-    var today5=new Date().toISOString().slice(0,10);
-    // Archiver les messages du jour = les marquer comme archivés (on garde, on les cache)
-    db.prepare("UPDATE chat SET archived=1 WHERE channel=? AND date(created_at)=?").run(ch5,today5);
-    return J(res,{ok:true,date:today5});
-  }
-  if(p==='/api/chat/archives'&&m==='GET'){
-    var ch6=qs.channel||'general';
-    var date6=qs.date;
-    if(!date6)return J(res,[]);
-    var msgs6=db.prepare("SELECT * FROM chat WHERE channel=? AND date(created_at)=? ORDER BY id").all(ch6,date6);
-    return J(res,msgs6);
-  }
-  if(p==='/api/chat/dates'&&m==='GET'){
-    var ch7=qs.channel||'general';
-    var dates7=db.prepare("SELECT DISTINCT date(created_at) as d FROM chat WHERE channel=? ORDER BY d DESC").all(ch7);
-    return J(res,dates7.map(function(r){return r.d;}));
+    db.prepare('DELETE FROM chat WHERE channel=?').run(ch5);
+    return J(res,{ok:true});
   }
   if(p==='/api/chat'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
@@ -2363,8 +2349,7 @@ textarea.fi{resize:vertical;min-height:90px;}
       <option value="tranquillite">&#x1F6E1; Tranquillit&#xe9;</option>
       <option value="travaux">&#x1F3D7; Travaux</option>
     </select>
-    <button onclick="showChatArchives()" title="Archives" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.75rem">📅</button>
-    <button onclick="resetChat()" title="Archiver aujourd'hui" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.75rem" id="chat-reset-btn">📦</button>
+    <button onclick="resetChat()" title="Vider ce canal" style="background:rgba(220,38,38,.3);border:1px solid rgba(220,38,38,.5);color:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:.72rem">🗑 Vider</button>
     <button class="chat-x" onclick="toggleChat()">&#xd7;</button>
   </div>
   <div class="chat-msgs" id="chat-msgs"></div>
@@ -4232,50 +4217,18 @@ function openVisio(){window.open("https://kmeet.infomaniak.com/vizilleenmouvemen
 function switchChannel(){CHAT=[];renderChatMsgs([]);pollChat();}
 function resetChat(){
   var ch=v('chat-ch')||'general';
-  var today=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-  if(!confirm('Archiver les messages du jour ('+today+') ? Ils seront consultables dans les archives.'))return;
+  var labels={'general':'Général','bureau':'Bureau','culture':'Culture','mobilites':'Mobilités','ecologie':'Écologie','social':'Social','enfance':'Enfance','tranquillite':'Tranquillité','travaux':'Travaux'};
+  var lbl=labels[ch]||ch;
+  if(!confirm('Vider le canal « '+lbl+' » ?\nTous les messages seront définitivement supprimés.'))return;
   fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include'})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(d.ok){CHAT=[];renderChatMsgs([]);toast('📦 Messages archivés ✓');}
+      if(d.ok){CHAT=[];renderChatMsgs([]);toast('🗑 Canal vidé');}
+      else{toast('Erreur',3000);}
     });
 }
-function showChatArchives(){
-  var ch=v('chat-ch')||'general';
-  fetch('/api/chat/dates?channel='+ch,{credentials:'include'})
-    .then(function(r){return r.json();})
-    .then(function(dates){
-      if(!dates.length){toast('Aucune archive');return;}
-      // Afficher un sélecteur de date
-      var sel=document.getElementById('chat-archive-sel');
-      if(!sel){
-        sel=document.createElement('select');
-        sel.id='chat-archive-sel';
-        sel.style.cssText='font-size:.72rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:3px 6px;cursor:pointer;margin-right:4px';
-        var hdBtns=document.querySelector('.chat-hd');
-        if(hdBtns)hdBtns.insertBefore(sel,document.getElementById('chat-reset-btn'));
-      }
-      sel.innerHTML='<option value="">📅 Archives</option>'
-        +dates.map(function(d){
-          var dd=new Date(d);
-          var lbl=dd.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
-          return '<option value="'+d+'">'+lbl+'</option>';
-        }).join('');
-      sel.onchange=function(){
-        if(!sel.value)return;
-        fetch('/api/chat/archives?channel='+ch+'&date='+sel.value,{credentials:'include'})
-          .then(function(r){return r.json();})
-          .then(function(msgs){
-            var div=$('chat-msgs');
-            if(!div)return;
-            var dd2=new Date(sel.value);
-            var lbl2=dd2.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-            renderChatMsgs([{id:0,auteur:'Archives',avatar:'📅',texte:'Messages du '+lbl2,created_at:''}].concat(msgs));
-            scrollChat();
-          });
-      };
-    });
-}
+
+
 function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok){CHAT.push(d.message);renderChatMsgs(CHAT);scrollChat();}});}
 function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages.length){CHAT=CHAT.concat(d.messages);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else $("cbdg").style.display="block";}});}
 function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+m.ts+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}

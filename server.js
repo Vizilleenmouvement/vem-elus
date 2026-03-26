@@ -2699,6 +2699,7 @@ function gp(id,ni){
   else if(id==="hist")renderNt();
   else if(id==="comm"){buildCG();}
   else if(id==="global"){fG();}
+  else if(id==="cdet"){fCD();}
   else if(id==="creer"){resetNP();}
   else if(id==="budget"){setTimeout(buildBudgetChart,50);}
   else if(id==="guide"||id==="ress"){
@@ -4122,6 +4123,19 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
+  // Remplir les éléments existants de p-cdet
+  var ico=$("cdet-ico"); if(ico)ico.textContent=ICONS[comm]||"📋";
+  var tit=$("cdet-t"); if(tit)tit.textContent=comm;
+  var sub=$("cdet-s"); if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
+  var kpis=$("cdet-kpis"); if(kpis)kpis.innerHTML=
+    '<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div>'
+    +'<div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div>'
+    +'<div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div>'
+    +'<div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
+  var cdSt=$("cd-st"); if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
+  // Naviguer vers la page cdet
+  gp("cdet");
+  return; // la suite (panel-body) n'est plus utilisée
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
     '<div style="background:'+col+'18;border-bottom:3px solid '+col+';padding:.85rem 1.4rem;display:flex;align-items:center;gap:12px;flex-shrink:0">'

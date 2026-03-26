@@ -1651,8 +1651,8 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <div class="layout">
 <aside class="sb">
+  <div onclick="closePanel()" style="margin:.75rem .65rem .5rem;padding:.65rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px;letter-spacing:.01em">🏠 <span>Accueil</span></div>
   <div class="sbs">Mon espace</div>
-  <div class="sbi on" onclick="gp('today',this)"><span class="sbi-ic">&#x1F4CB;</span>Aujourd&#x27;hui</div>
   <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
   <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
   <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
@@ -2711,64 +2711,69 @@ function gp(id,ni){
   }
 }
 // ── PANNEAU UNIQUE — s'ouvre par-dessus le dashboard ─────────────────────────
+var _panelPageId = null; // page actuellement dans le panel
+
 function openPanel(id){
-  // Activer le menu
+  // Remettre la page précédente dans le DOM caché
+  if(_panelPageId && _panelPageId !== id){
+    var prev = document.getElementById("p-"+_panelPageId);
+    if(prev){ prev.style.display="none"; document.body.appendChild(prev); }
+  }
+
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
-  var menuEl = document.querySelector("[data-panel='" + id + "']");
+  var menuEl = document.querySelector("[data-panel='"+id+"']");
   if(menuEl) menuEl.classList.add("on");
 
   var pg = document.getElementById("p-"+id);
   if(!pg) return;
+  _panelPageId = id;
 
-  // Créer ou réutiliser le panneau
+  // Créer ou réutiliser le panel
   var panel = document.getElementById("main-panel");
   if(!panel){
     panel = document.createElement("div");
     panel.id = "main-panel";
-    panel.style.cssText = "position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
+    panel.style.cssText = "position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
     document.body.appendChild(panel);
+    panel.innerHTML = '<div id="panel-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;"></div>';
   }
 
-  // Barre titre avec ✕
-  var title = "";
-  var phT = pg.querySelector(".ph-t");
-  if(phT) title = phT.textContent;
-  else { var h = pg.querySelector("h2,h3"); if(h) title = h.textContent; else title = id; }
-
-  panel.innerHTML = '<div style="background:var(--g1);color:#fff;padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:.78rem;font-weight:600;font-family:var(--fd);">'
-    + '<span style="flex:1">'+title+'</span>'
-    + '<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:.9rem;">&#x2715;</button>'
-    + '</div>'
-    + '<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
-
-  var clone = pg.cloneNode(true);
-  clone.style.display = "block";
-  document.getElementById("panel-body").appendChild(clone);
+  // DÉPLACER la page (pas cloner) → getElementById trouve toujours les vrais éléments
+  var body = document.getElementById("panel-body");
+  body.innerHTML = "";
+  pg.style.cssText = "display:flex;flex-direction:column;flex:1;height:100%;";
+  body.appendChild(pg);
   panel.style.display = "flex";
 
   // Charger données
   if(id==="agenda") renderAg();
   else if(id==="cr") renderCR();
-  else if(id==="biblio") renderBiblio();
+  else if(id==="biblio"){bibLoadDossiers(function(){apiGet("/api/biblio").then(function(data){BIBLIO=Array.isArray(data)?data:[];el("sb-bib",BIBLIO.length);renderBiblio();});});}
   else if(id==="repelus") renderRepElus();
   else if(id==="elus") renderElus();
-  else if(id==="comm") renderComm();
-  else if(id==="global") renderGlobal();
-  else if(id==="signal") renderSignal();
-  else if(id==="events") renderEvents();
-  else if(id==="guide") renderGuide();
-  else if(id==="ress") renderRess();
-  else if(id==="hist") renderHist();
-  else if(id==="comms") renderComms();
-  else if(id==="creer") renderCreer();
+  else if(id==="comm") buildCG();
+  else if(id==="global") fG();
+  else if(id==="signal"){fSig();updSig();}
+  else if(id==="events") renderEv();
+  else if(id==="guide") buildGuides();
+  else if(id==="ress") buildRess();
+  else if(id==="tuto"){}
+  else if(id==="hist") renderNt();
+  else if(id==="comms"){}
+  else if(id==="creer") resetNP();
+  else if(id==="budget") setTimeout(buildBudgetChart,50);
+  else if(id==="cdet") fCD();
 }
 
 function closePanel(){
-  var panel = document.getElementById("main-panel");
-  if(panel) panel.style.display = "none";
+  if(_panelPageId){
+    var pg=document.getElementById("p-"+_panelPageId);
+    if(pg){pg.style.display="none";document.body.appendChild(pg);}
+    _panelPageId=null;
+  }
+  var panel=document.getElementById("main-panel");
+  if(panel)panel.style.display="none";
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
-  var first = document.querySelector(".sbi");
-  if(first) first.classList.add("on");
 }
 
 
@@ -2867,8 +2872,12 @@ function init(){
     renderWidgetMandat();
   });
 
-  apiGet("/api/biblio").then(function(data){
-    BIBLIO=data; el("sb-bib",BIBLIO.length); renderBiblio();
+  bibLoadDossiers(function(){
+    apiGet("/api/biblio").then(function(data){
+      BIBLIO=Array.isArray(data)?data:[];
+      el("sb-bib",BIBLIO.length);
+      renderBiblio();
+    });
   });
 
   apiGet("/api/rep_elus").then(function(data){
@@ -3513,7 +3522,7 @@ var TYPE_COLORS={'PDF':'#dc2626','Word':'#2563eb','Excel':'#16a34a','Email':'#c9
 
 function bibLoadDossiers(cb){
   apiGet('/api/biblio/dossiers').then(function(d){
-    BIBLIO_DOSSIERS=d||[];
+    BIBLIO_DOSSIERS=Array.isArray(d)?d:[];
     if(cb)cb();
   });
 }
@@ -3540,7 +3549,7 @@ function renderBiblio(){
   }
 
   // ── Filtrage ──────────────────────────────────────────────────────────────
-  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';});
+  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';}).sort(function(a,b){return a.nom.localeCompare(b.nom,'fr');});
   var natures=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='nature';});
 
   var r=BIBLIO.filter(function(b){
@@ -3727,7 +3736,7 @@ function bibChangeType(docId,type){
 function delBiblio(id){
   if(!confirm('Supprimer ce document ?'))return;
   apiDel('/api/biblio/'+id).then(function(d){
-    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});renderBiblio();}
+    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});el('sb-bib',BIBLIO.length);renderBiblio();toast('Document supprimé ✓');}
   });
 }
 
@@ -4118,6 +4127,13 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
+  // Remplir les éléments de p-cdet
+  var ico=$("cdet-ico");if(ico)ico.textContent=ICONS[comm]||"📋";
+  var tit=$("cdet-t");if(tit)tit.textContent=comm;
+  var sub=$("cdet-s");if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
+  var kpis=$("cdet-kpis");if(kpis)kpis.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
+  var cdSt=$("cd-st");if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
+  openPanel("cdet"); return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
     '<div style="background:'+col+'18;border-bottom:3px solid '+col+';padding:.85rem 1.4rem;display:flex;align-items:center;gap:12px;flex-shrink:0">'
@@ -4632,7 +4648,7 @@ var _ePid=null;
 function _fpPanel(){
   var p=document.getElementById('main-panel');
   if(!p){p=document.createElement('div');p.id='main-panel';document.body.appendChild(p);}
-  p.style.cssText='position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
+  p.style.cssText='position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
   return p;
 }
 function _fpCss(){

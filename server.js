@@ -4648,38 +4648,64 @@ function fpAttachDrafts(pid){}
 // ── PARTENAIRES + CONTACTS (onglet fusionné) ─────────────────────────────────
 function fpRenderPartContacts(pid,partenaires,contacts){
   var pb=document.getElementById('fp-body'); if(!pb)return;
+  // Fusion : anciens partenaires + contacts dans une liste unique
+  var tous=[];
+  partenaires.forEach(function(p){tous.push({id:p.id,src:'part',nom:p.nom,rs:p.type||'',role:'',email:p.email||'',tel:p.tel||'',partenariat:1});});
+  contacts.forEach(function(c){tous.push({id:c.id,src:'ct',nom:c.nom,rs:c.raison_sociale||c.organisation||'',role:c.role||'',email:c.email||'',tel:c.tel||'',partenariat:c.partenariat?1:0});});
   var html=
-    // Partenaires
-    '<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem">🤝 Partenaires</div>'
-    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +'<input id="pt-nm" class="fi" placeholder="Nom *" style="font-size:.79rem;padding:6px 9px">'
-    +'<input id="pt-ty" class="fi" placeholder="Type (Métropole, État…)" style="font-size:.79rem;padding:6px 9px">'
-    +'<input id="pt-em" class="fi" placeholder="Email" type="email" style="font-size:.79rem;padding:6px 9px">'
-    +'<input id="pt-te" class="fi" placeholder="Téléphone" style="font-size:.79rem;padding:6px 9px">'
-    +'</div><div style="display:flex;justify-content:flex-end;margin-top:8px">'
-    +'<button onclick="fpAddPart('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div></div>';
-  partenaires.forEach(function(p){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.75rem 1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)"><span style="font-size:1.1rem">🤝</span><div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+p.nom+'</div>'+(p.type?'<span style="font-size:.67rem;color:var(--i3)">'+p.type+'</span>':'')+(p.email?' &nbsp;<a href="mailto:'+p.email+'" style="font-size:.67rem;color:var(--g3)">'+p.email+'</a>':'')+'</div><button onclick="fpDelPart('+p.id+','+pid+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.9rem">×</button></div>';});
-  if(!partenaires.length)html+='<div class="empty" style="margin-bottom:1rem"><div class="empty-ico">🤝</div><div class="empty-s">Aucun partenaire.</div></div>';
-
-  // Contacts
-  html+=
-    '<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;margin-top:.5rem">👤 Contacts</div>'
-    +'<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem;margin-bottom:1rem;box-shadow:var(--s1)">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    '<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--s1)">'
+    +'<div style="font-size:.68rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.85rem">+ Ajouter un contact</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
     +'<input id="ct-nm" class="fi" placeholder="Nom *" style="font-size:.79rem;padding:6px 9px">'
     +'<input id="ct-ro" class="fi" placeholder="Rôle / Fonction" style="font-size:.79rem;padding:6px 9px">'
-    +'<input id="ct-og" class="fi" placeholder="Organisation" style="font-size:.79rem;padding:6px 9px">'
+    +'<input id="ct-rs" class="fi" placeholder="Raison sociale (organisme, société…)" style="font-size:.79rem;padding:6px 9px">'
     +'<input id="ct-em" class="fi" placeholder="Email" type="email" style="font-size:.79rem;padding:6px 9px">'
-    +'</div><div style="display:flex;justify-content:flex-end;margin-top:8px">'
-    +'<button onclick="fpAddCt('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button></div></div>';
-  contacts.forEach(function(c){html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.75rem 1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)"><span style="font-size:1.1rem">👤</span><div style="flex:1"><div style="font-size:.82rem;font-weight:700">'+c.nom+'</div>'+(c.role?'<span style="font-size:.67rem;color:var(--i3)">'+c.role+(c.organisation?' · '+c.organisation:'')+'</span>':'')+(c.email?' &nbsp;<a href="mailto:'+c.email+'" style="font-size:.67rem;color:var(--g3)">'+c.email+'</a>':'')+'</div><button onclick="fpDelCt('+c.id+','+pid+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.9rem">×</button></div>';});
-  if(!contacts.length)html+='<div class="empty"><div class="empty-ico">👤</div><div class="empty-s">Aucun contact.</div></div>';
+    +'<input id="ct-te" class="fi" placeholder="Téléphone" style="font-size:.79rem;padding:6px 9px">'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:0 2px">'
+    +'<input type="checkbox" id="ct-pt" style="width:15px;height:15px;accent-color:var(--g2);cursor:pointer">'
+    +'<label for="ct-pt" style="font-size:.76rem;color:var(--i2);cursor:pointer">Organisme partenaire</label>'
+    +'</div></div>'
+    +'<div style="display:flex;justify-content:flex-end">'
+    +'<button onclick="fpAddContact('+pid+')" class="btn btn-p btn-sm">+ Ajouter</button>'
+    +'</div></div>';
+  if(tous.length){
+    tous.forEach(function(c){
+      var ico=c.partenariat?'🤝':'👤';
+      var badge=c.partenariat?'<span style="font-size:.63rem;background:#dcfce7;color:#15803d;padding:1px 7px;border-radius:4px;font-weight:700;margin-left:6px">Partenaire</span>':'';
+      var delFn=c.src==='part'?'fpDelPart':'fpDelCt';
+      html+='<div style="background:#fff;border-radius:var(--R);border:1px solid var(--w2);padding:.75rem 1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:10px;box-shadow:var(--s1)">'
+        +'<span style="font-size:1.1rem;flex-shrink:0">'+ico+'</span>'
+        +'<div style="flex:1">'
+        +'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">'
+        +'<span style="font-size:.82rem;font-weight:700">'+c.nom+'</span>'+badge
+        +'</div>'
+        +((c.rs||c.role)?'<div style="font-size:.7rem;color:var(--i3)">'+(c.rs||'')+(c.rs&&c.role?' · ':'')+c.role+'</div>':'')
+        +(c.email?'<a href="mailto:'+c.email+'" style="font-size:.7rem;color:var(--g3)">'+c.email+'</a>':'')
+        +(c.tel?'<span style="font-size:.7rem;color:var(--i4);margin-left:8px">'+c.tel+'</span>':'')
+        +'</div>'
+        +'<button onclick="'+delFn+'('+c.id+','+pid+')" style="background:none;border:none;color:var(--i4);cursor:pointer;font-size:.9rem;flex-shrink:0">×</button>'
+        +'</div>';
+    });
+  } else {
+    html+='<div class="empty"><div class="empty-ico">👥</div><div class="empty-s">Aucun contact pour ce projet.</div></div>';
+  }
   pb.innerHTML=html;
 }
-function fpAddPart(pid){var nm=document.getElementById('pt-nm');if(!nm||!nm.value.trim()){toast('Nom obligatoire');return;}apiPost('/api/projet/'+pid+'/partenaires',{nom:nm.value.trim(),type:(document.getElementById('pt-ty')||{}).value||'',email:(document.getElementById('pt-em')||{}).value||'',tel:(document.getElementById('pt-te')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('contacts');});}
+function fpAddContact(pid){
+  var nm=document.getElementById('ct-nm'); if(!nm||!nm.value.trim()){toast('Nom obligatoire');return;}
+  var pt=document.getElementById('ct-pt');
+  apiPost('/api/projet/'+pid+'/contacts',{
+    nom:nm.value.trim(),
+    role:(document.getElementById('ct-ro')||{}).value||'',
+    raison_sociale:(document.getElementById('ct-rs')||{}).value||'',
+    email:(document.getElementById('ct-em')||{}).value||'',
+    tel:(document.getElementById('ct-te')||{}).value||'',
+    partenariat:pt&&pt.checked?1:0
+  }).then(function(r){if(r&&r.ok)fpReload('contacts');});
+}
+function fpAddPart(pid){fpAddContact(pid);}
+function fpAddCt(pid){fpAddContact(pid);}
 function fpDelPart(id,pid){apiDel('/api/partenaire/'+id).then(function(){fpReload('contacts');});}
-function fpAddCt(pid){var nm=document.getElementById('ct-nm');if(!nm||!nm.value.trim()){toast('Nom obligatoire');return;}apiPost('/api/projet/'+pid+'/contacts',{nom:nm.value.trim(),role:(document.getElementById('ct-ro')||{}).value||'',organisation:(document.getElementById('ct-og')||{}).value||'',email:(document.getElementById('ct-em')||{}).value||''}).then(function(r){if(r&&r.ok)fpReload('contacts');});}
 function fpDelCt(id,pid){apiDel('/api/contact/'+id).then(function(){fpReload('contacts');});}
 
 

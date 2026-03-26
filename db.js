@@ -355,6 +355,8 @@ const BiblioDoc = {
 try { db.exec("ALTER TABLE projets ADD COLUMN avancement INTEGER DEFAULT 0;"); } catch(e) {}
 try { db.exec("ALTER TABLE projets ADD COLUMN responsable_id INTEGER;"); } catch(e) {}
 try { db.exec("ALTER TABLE projets ADD COLUMN responsable_nom TEXT DEFAULT '';"); } catch(e) {}
+try { db.exec("ALTER TABLE projet_contacts ADD COLUMN partenariat INTEGER DEFAULT 0;"); } catch(e) {}
+try { db.exec("ALTER TABLE projet_contacts ADD COLUMN raison_sociale TEXT DEFAULT '';"); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS projet_jalons (
@@ -427,7 +429,7 @@ const ProjetPartenaires = {
 };
 const ProjetContacts = {
   get(pid) { return db.prepare('SELECT * FROM projet_contacts WHERE projet_id=? ORDER BY id').all(pid); },
-  insert(pid, d) { const r=db.prepare('INSERT INTO projet_contacts (projet_id,nom,role,email,tel,organisation) VALUES (?,?,?,?,?,?)').run(pid,d.nom||'',d.role||'',d.email||'',d.tel||'',d.organisation||''); return db.prepare('SELECT * FROM projet_contacts WHERE id=?').get(r.lastInsertRowid); },
+  insert(pid, d) { const r=db.prepare('INSERT INTO projet_contacts (projet_id,nom,raison_sociale,role,email,tel,organisation,partenariat) VALUES (?,?,?,?,?,?,?,?)').run(pid,d.nom||'',d.raison_sociale||'',d.role||'',d.email||'',d.tel||'',d.organisation||'',d.partenariat?1:0); return db.prepare('SELECT * FROM projet_contacts WHERE id=?').get(r.lastInsertRowid); },
   delete(id) { db.prepare('DELETE FROM projet_contacts WHERE id=?').run(id); }
 };
 const ProjetDocs = {

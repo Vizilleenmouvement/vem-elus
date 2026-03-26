@@ -3522,12 +3522,12 @@ function renderBiblio(){
   var typeBar=$("bib-type-bar");
   if(typeBar){
     typeBar.innerHTML=
-      '<button onclick="bibSetType('')" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
+      '<button data-t="" onclick="bibSetType(this.dataset.t)" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
       +(_bibTypeFiltre===''?'background:var(--g1);color:#fff;border-color:var(--g1);':'background:#fff;color:var(--i2);border-color:var(--w2);')
       +'">Toutes</button>'
       +NATURES.map(function(t){
         var active=_bibTypeFiltre===t;
-        return '<button data-t="'+t+'" onclick="bibSetType('"+t+"')" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
+        return '<button data-t="'+t+'" onclick="bibSetType(this.dataset.t)" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
           +(active?'background:var(--or);color:#fff;border-color:var(--or);':'background:#fff;color:var(--i2);border-color:var(--w2);')
           +'">'+(NATURE_ICONS[t]||'📄')+' '+t+'</button>';
       }).join('');
@@ -4124,7 +4124,7 @@ function showCD(idx){
     +'<div style="width:40px;height:40px;border-radius:10px;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:1.2rem">'+(ICONS[comm]||"📋")+'</div>'
     +'<div style="flex:1"><div style="font-size:1rem;font-weight:800;font-family:var(--fd)">'+comm+'</div>'
     +'<div style="font-size:.72rem;color:var(--i3)">'+themes.join(" · ")+(REFS[comm]?" — <strong>"+REFS[comm]+"</strong>":"")+'</div></div>'
-    +'<button onclick="openPanel('comm')" style="background:rgba(0,0,0,.08);border:none;border-radius:7px;padding:5px 12px;font-size:.73rem;cursor:pointer;color:var(--i2)">&#x2190; Commissions</button>'
+    +'<button onclick="goComm()" style="background:rgba(0,0,0,.08);border:none;border-radius:7px;padding:5px 12px;font-size:.73rem;cursor:pointer;color:var(--i2)">&#x2190; Commissions</button>'
     +'</div>'
     +'<div style="display:flex;gap:8px;padding:.75rem 1.4rem;background:#fff;border-bottom:1px solid var(--w2)">'
     +'<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div>'

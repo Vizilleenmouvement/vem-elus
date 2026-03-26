@@ -3112,7 +3112,12 @@ function wgPollChat() {
   var ch = v("wg-chat-ch") || "general";
   apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d) {
     if(d.ok && d.messages && d.messages.length) {
-      var _ei2=CHAT.map(function(m){return m.id;});var _nw2=d.messages.filter(function(m){return _ei2.indexOf(m.id)<0;});if(_nw2.length){CHAT=CHAT.concat(_nw2);_chatLast=d.lastId;wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));var badge=$("wg-chat-badge");if(badge)badge.style.display="block";}
+      CHAT = CHAT.concat(d.messages);
+      _chatLast = d.lastId;
+      wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));
+      // Indiquer nouveau message si pas visible
+      var badge = $("wg-chat-badge");
+      if(badge) badge.style.display = "block";
     }
   });
 }
@@ -3156,7 +3161,12 @@ function wgSendMsg() {
   var ch = v("wg-chat-ch") || "general";
   apiPost("/api/chat", {channel:ch, auteur:ME.nom, avatar:ME.avatar, texte:txt})
     .then(function(d) {
-      if(d.ok&&d.message){var _ei3=CHAT.map(function(m){return m.id;});if(_ei3.indexOf(d.message.id)<0)CHAT.push(d.message);if(d.message.id&&d.message.id>_chatLast)_chatLast=d.message.id;wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));var badge=$("wg-chat-badge");if(badge)badge.style.display="none";}
+      if(d.ok) {
+        CHAT.push(d.message);
+        wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));
+        var badge = $("wg-chat-badge");
+        if(badge) badge.style.display = "none";
+      }
     });
 }
 function wgSendMsg2(){
@@ -3174,7 +3184,7 @@ function wgLoadChat2(){
     var msgs=d.messages||[];
     box.innerHTML=msgs.length?msgs.slice(-15).map(function(m){
       var isMe=m.auteur===ME.nom;
-      return '<div class="msg-w'+(isMe?' me':'')+'"><div class="msg-meta">'+m.auteur+' · '+(m.ts||m.created_at||'')+'</div><div class="msg-bub">'+m.texte+'</div></div>';
+      return '<div class="msg-w'+(isMe?' me':'')+'"><div class="msg-meta">'+m.auteur+' · '+m.ts+'</div><div class="msg-bub">'+m.texte+'</div></div>';
     }).join(''):'<div style="font-size:.72rem;color:var(--i4);text-align:center;padding:1rem">Aucun message</div>';
     box.scrollTop=box.scrollHeight;
   });
@@ -3522,12 +3532,12 @@ function renderBiblio(){
   var typeBar=$("bib-type-bar");
   if(typeBar){
     typeBar.innerHTML=
-      '<button onclick="bibSetType('')" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
+      '<button data-t="" onclick="bibSetType(this.dataset.t)" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
       +(_bibTypeFiltre===''?'background:var(--g1);color:#fff;border-color:var(--g1);':'background:#fff;color:var(--i2);border-color:var(--w2);')
       +'">Toutes</button>'
       +NATURES.map(function(t){
         var active=_bibTypeFiltre===t;
-        return '<button onclick="bibSetType(\''+t+'\')" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
+        return '<button data-t="'+t+'" onclick="bibSetType(this.dataset.t)" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
           +(active?'background:var(--or);color:#fff;border-color:var(--or);':'background:#fff;color:var(--i2);border-color:var(--w2);')
           +'">'+(NATURE_ICONS[t]||'📄')+' '+t+'</button>';
       }).join('');
@@ -4112,12 +4122,6 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
-  var _ico=document.getElementById("cdet-ico");if(_ico)_ico.textContent=ICONS[comm]||"📋";
-  var _tit=document.getElementById("cdet-t");if(_tit)_tit.textContent=comm;
-  var _sub=document.getElementById("cdet-s");if(_sub)_sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
-  var _kpi=document.getElementById("cdet-kpis");if(_kpi)_kpi.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
-  var _cst=document.getElementById("cd-st");if(_cst)_cst.innerHTML='<option value="">Tous statuts</option>'+statOpts;
-  openPanel("cdet"); return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
     '<div style="background:'+col+'18;border-bottom:3px solid '+col+';padding:.85rem 1.4rem;display:flex;align-items:center;gap:12px;flex-shrink:0">'
@@ -4360,9 +4364,9 @@ function resetChat(){
 }
 
 
-function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok&&d.message){var _ei=CHAT.map(function(m){return m.id;});if(_ei.indexOf(d.message.id)<0)CHAT.push(d.message);if(d.message.id)_chatLast=d.message.id;renderChatMsgs(CHAT);scrollChat();}}); }
+function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok){CHAT.push(d.message);renderChatMsgs(CHAT);scrollChat();}});}
 function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages&&d.messages.length){var _ei=CHAT.map(function(m){return m.id;});var _nw=d.messages.filter(function(m){return _ei.indexOf(m.id)<0;});if(_nw.length){CHAT=CHAT.concat(_nw);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else{var b=$("cbdg");if(b)b.style.display="block";}}}}); }
-function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+' · '+(m.ts||m.created_at||'')+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}
+function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+m.ts+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}
 function scrollChat(){var e=$("chat-msgs");if(e)e.scrollTop=e.scrollHeight;}
 
 // ── DÉMARRAGE ─────────────────────────────────────────────────────────────────

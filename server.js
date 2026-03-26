@@ -702,6 +702,25 @@ const server=http.createServer(function(req,res){
   });
   if(p.match(/^\/api\/document\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());documents=documents.filter(d=>d.id!==id);save('documents.json',documents);return J(res,{ok:true});}
 
+
+  // ── AUDIT ADMIN ────────────────────────────────────────────────────────────
+  if(p==='/api/audit'&&m==='GET'){
+    if(ME.id!==0)return J(res,{ok:false},403);
+    const _P=Projets.getAll();
+    const _ST=Statuts.getAll();
+    // Statuts
+    const byStatut={};
+    _P.forEach(function(p){const s=_ST[p.id]||p.statut||'ND';byStatut[s]=(byStatut[s]||0)+1;});
+    // Par commission (theme)
+    const byTheme={};
+    _P.forEach(function(p){const t=p.theme||'?';if(!byTheme[t])byTheme[t]={total:0,realise:0,encours:0,prio:0};byTheme[t].total++;const s=_ST[p.id]||p.statut||'ND';if(s==='Réalisé')byTheme[t].realise++;if(s.indexOf('cours')>=0)byTheme[t].encours++;if(s==='Prioritaire')byTheme[t].prio++;});
+    // Projets jamais modifiés (modified_at null ou = created_at)
+    const stale=_P.filter(function(p){return !p.modified_at||p.modified_at===p.created_at;}).length;
+    // Dernières modifs via notifs
+    const lastModifs=db.prepare('SELECT * FROM notifs ORDER BY id DESC LIMIT 10').all();
+    return J(res,{ok:true,total:_P.length,byStatut,byTheme,stale,lastModifs});
+  }
+
   // BIBLIOTHÈQUE DOCUMENTAIRE
   if(p==='/api/biblio'&&m==='GET')return J(res,Biblio.getAll(ME.id,ME.id===0));
   if(p==='/api/biblio'&&m==='POST')return body(req,function(err,d){
@@ -1673,6 +1692,10 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div class="sbi" data-panel="signal" onclick="openPanel('signal')"><span class="sbi-ic">&#x1F534;</span>Signalements<span class="sbi-new" id="sb-sig">!</span></div>
   <div class="sbi" data-panel="events" onclick="openPanel('events')"><span class="sbi-ic">&#x1F3AA;</span>Événements</div>
 
+  <div id="sb-audit-section" style="display:none">
+  <div class="sbs">Administration</div>
+  <div class="sbi" onclick="openPanel('audit')"><span class="sbi-ic">📊</span>Audit mandat</div>
+  </div>
   <div class="sbs">Outils</div>
   <div class="sbi" data-panel="comms" onclick="openPanel('comms')"><span class="sbi-ic">&#x270D;&#xFE0F;</span>Rédiger un doc</div>
   <div class="sbi" data-panel="hist" onclick="openPanel('hist')"><span class="sbi-ic">&#x1F514;</span>Historique</div>
@@ -2047,6 +2070,12 @@ textarea.fi{resize:vertical;min-height:90px;}
   </div>
 </div>
 
+<!-- AUDIT ADMIN -->
+<div class="page" id="p-audit">
+  <div class="ph"><div class="ph-ico" style="background:var(--g8)">📊</div><div><div class="ph-t">Audit du mandat</div><div class="ph-s">Vue administrateur — 91 projets</div></div><div class="ph-a"><button class="btn btn-s btn-sm" onclick="renderAudit()">🔄 Actualiser</button></div></div>
+  <div class="scr" id="audit-body" style="padding:1.25rem 1.5rem"></div>
+</div>
+
 <!-- RÉPERTOIRE ÉLUS -->
 <div class="page" id="p-repelus">
   <div class="ph"><div class="ph-ico" style="background:var(--g8)">&#x1F4C2;</div><div><div class="ph-t">Mon r&#xe9;pertoire personnel</div><div class="ph-s">Vos documents priv&#xe9;s &#x2014; visibles uniquement par vous</div></div><div class="ph-a"><button class="btn btn-p btn-sm" onclick="om(&#x27;repelu&#x27;)">+ Ajouter</button></div></div>
@@ -2219,6 +2248,15 @@ textarea.fi{resize:vertical;min-height:90px;}
       </div>
     </div>
   </div>
+</div>
+
+
+<!-- AUDIT ADMIN -->
+<div class="page" id="p-audit">
+  <div class="ph"><div class="ph-ico" style="background:#b91c1c">🔍</div><div><div class="ph-t">Audit — Avancement du mandat</div><div class="ph-s">Vue administrateur · non visible des élus</div></div>
+    <div class="ph-a"><button class="btn btn-s btn-sm" onclick="renderAudit()">↻ Actualiser</button></div>
+  </div>
+  <div class="scr" id="audit-body" style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1.5rem"></div>
 </div>
 
 <!-- BUDGET -->
@@ -2747,6 +2785,8 @@ function openPanel(id){
   else if(id==="comms"){}
   else if(id==="creer") resetNP();
   else if(id==="cdet") fCD();
+  else if(id==="audit") renderAudit();
+  else if(id==="audit") renderAudit();
 }
 
 function closePanel(){
@@ -2764,6 +2804,7 @@ function goGlobal(){openPanel("global");}
 // ── INIT ─────────────────────────────────────────────────────────────────────
 function openProfile(){
   var av=$("top-av-btn");if(av){av.textContent=ME.avatar;av.style.background=ME.color||"var(--g4)";}
+      if(ME.id===0){var _as=document.getElementById("sb-audit-section");if(_as)_as.style.display="";}
       setTimeout(applyRoles,100);
   var pb=$("profile-body");if(!pb)return;
   pb.innerHTML='<div style="display:flex;align-items:center;gap:14px;padding:.85rem;background:var(--g8);border-radius:var(--R)">'
@@ -2823,6 +2864,8 @@ function init(){
       if(repT)repT.textContent="Mon répertoire personnel";
       var repS=document.querySelector("#p-repelus .ph-s");
       if(repS)repS.textContent="Vos documents privés — visibles uniquement par vous";
+      // Afficher section audit si admin
+      if(ME.id===0){var _as=document.getElementById("sb-audit-section");if(_as)_as.style.display="";}
     }
     SIGN=d.signalements||[]; EVTS=d.evenements||[];
     CRS=d.comptes_rendus||[]; ELUS_DATA=d.elus||[];
@@ -5126,6 +5169,7 @@ function applyRoles(){
     var oc=el.getAttribute("onclick")||'';
     if(oc.indexOf("'creer'")>=0)el.style.display=isPriv?'':'none';
   });
+  var auditSbi=document.getElementById('sbi-audit');if(auditSbi)auditSbi.style.display=(ME.username==='admin'||ME.role==='Admin')?'':'none';
   if(ME.username==='admin'||ME.role==='Admin'){
     if(!$("adm-badge")){
       var b=document.createElement("div");b.id="adm-badge";b.textContent="Admin";
@@ -5135,6 +5179,123 @@ function applyRoles(){
   }
 }
 
+
+// ── AUDIT ADMIN ──────────────────────────────────────────────────────────────
+function renderAudit(){
+  var body=$("audit-body"); if(!body)return;
+  var total=P.length;
+  if(!total){body.innerHTML='<div class="empty"><div class="empty-ico">📊</div><div class="empty-t">Aucun projet chargé</div></div>';return;}
+
+  // KPIs globaux
+  var counts={};
+  SLIST.forEach(function(s){counts[s]=0;});
+  counts['ND']=0;
+  P.forEach(function(p){var s=ST[p.id]||p.statut||'ND';counts[s]=(counts[s]||0)+1;});
+
+  var stColors={Prioritaire:'#dc2626',Programmé:'#2563eb',Planifié:'#7c3aed','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#0891b2',Suspendu:'#9ca3af',ND:'#e5e7eb'};
+  var realises=counts['Réalisé']||0;
+  var enCours=(counts['En cours']||0);
+  var pct=total?Math.round(realises/total*100):0;
+
+  var kpiHtml='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">';
+  kpiHtml+='<div class="kpi" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#16a34a">'+realises+'</div><div style="font-size:.72rem;color:#166534;font-weight:600">Réalisés</div></div>';
+  kpiHtml+='<div class="kpi" style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:1rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#d97706">'+enCours+'</div><div style="font-size:.72rem;color:#92400e;font-weight:600">En cours</div></div>';
+  kpiHtml+='<div class="kpi" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:1rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#2563eb">'+(counts['Programmé']||0)+'</div><div style="font-size:.72rem;color:#1e40af;font-weight:600">Programmés</div></div>';
+  kpiHtml+='<div class="kpi" style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:1rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#dc2626">'+(counts['Prioritaire']||0)+'</div><div style="font-size:.72rem;color:#991b1b;font-weight:600">Prioritaires</div></div>';
+  kpiHtml+='</div>';
+
+  // Barre globale
+  var barHtml='<div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem;border:1px solid var(--w2)">';
+  barHtml+='<div style="display:flex;justify-content:space-between;font-size:.75rem;font-weight:700;margin-bottom:.5rem"><span>Avancement global du mandat</span><span style="color:var(--g3)">'+pct+'% réalisés</span></div>';
+  barHtml+='<div style="background:var(--w2);border-radius:8px;height:12px;overflow:hidden;display:flex">';
+  SLIST.forEach(function(s){
+    var n=counts[s]||0;
+    var w=total?Math.round(n/total*100):0;
+    if(w>0) barHtml+='<div title="'+s+' : '+n+'" style="width:'+w+'%;background:'+(stColors[s]||'#ccc')+';height:100%;transition:.3s" ></div>';
+  });
+  barHtml+='</div>';
+  // Légende
+  barHtml+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:.6rem">';
+  SLIST.forEach(function(s){
+    var n=counts[s]||0;
+    if(n>0) barHtml+='<span style="font-size:.67rem;display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:'+(stColors[s]||'#ccc')+';display:inline-block"></span>'+s+' ('+n+')</span>';
+  });
+  barHtml+='</div></div>';
+
+  // Par commission avec détail par thème dépliable
+  var _auditOpen={};
+  var commHtml='<div><div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:.75rem;font-family:var(--fd)">Par commission — détail par thème</div>';
+  commHtml+='<div style="display:flex;flex-direction:column;gap:6px">';
+  Object.keys(COMM).forEach(function(comm,ci){
+    var themes=COMM[comm];
+    var col=COLORS[comm]||'var(--g3)';
+    var icon=ICONS[comm]||'📋';
+    var pp=P.filter(function(p){return themes.indexOf(p.theme)>=0;});
+    var tot=pp.length;
+    var ok=pp.filter(function(p){return (ST[p.id]||p.statut||'')==='Réalisé';}).length;
+    var ec=pp.filter(function(p){return (ST[p.id]||p.statut||'').indexOf('cours')>=0;}).length;
+    var pr=pp.filter(function(p){return (ST[p.id]||p.statut||'')==='Prioritaire';}).length;
+    var pctC=tot?Math.round(ok/tot*100):0;
+    var cid='audit-comm-'+ci;
+    // En-tête commission cliquable
+    commHtml+='<div style="border:1px solid '+col+'30;border-radius:10px;overflow:hidden">';
+    commHtml+='<div onclick="auditToggle(''+cid+'')" style="display:flex;align-items:center;gap:10px;padding:.6rem .9rem;background:'+col+'10;cursor:pointer">';
+    commHtml+='<span style="font-size:1rem">'+icon+'</span>';
+    commHtml+='<span style="flex:1;font-size:.75rem;font-weight:700;color:var(--ink)">'+comm+'</span>';
+    commHtml+='<span style="font-size:.68rem;color:var(--i3)">'+tot+' projets</span>';
+    if(pr>0) commHtml+='<span style="font-size:.63rem;background:#fef2f2;color:#dc2626;border-radius:5px;padding:1px 7px;font-weight:700;margin-left:4px">⚠ '+pr+'</span>';
+    commHtml+='<div style="flex:1"></div>';
+    commHtml+='<div style="width:80px;background:var(--w2);border-radius:4px;height:6px;overflow:hidden;margin-right:6px"><div style="width:'+pctC+'%;background:'+col+';height:100%"></div></div>';
+    commHtml+='<span style="font-size:.7rem;font-weight:700;color:'+col+';width:32px;text-align:right">'+pctC+'%</span>';
+    commHtml+='<span id="'+cid+'-ico" style="font-size:.7rem;margin-left:6px;color:var(--i3)">▶</span>';
+    commHtml+='</div>';
+    // Détail projets (caché par défaut)
+    commHtml+='<div id="'+cid+'" style="display:none;padding:.5rem .75rem;border-top:1px solid '+col+'20">';
+    // Grouper par thème
+    themes.forEach(function(theme){
+      var tp=pp.filter(function(p){return p.theme===theme;});
+      if(!tp.length) return;
+      commHtml+='<div style="font-size:.67rem;font-weight:800;color:'+col+';text-transform:uppercase;letter-spacing:.05em;padding:.35rem 0 .25rem">'+theme+'</div>';
+      tp.forEach(function(p){
+        var s=ST[p.id]||p.statut||'ND';
+        var scls=s==='Réalisé'?'b-re':s==='Prioritaire'?'b-pr':s.indexOf('cours')>=0?'b-ec':s==='Programmé'?'b-pg':'b-nd';
+        commHtml+='<div style="display:flex;align-items:center;gap:8px;padding:.25rem .4rem;border-radius:5px;cursor:pointer" onclick="oProj('+p.id+')">';
+        commHtml+='<span style="font-size:.72rem;flex:1;color:var(--ink)">'+p.titre+'</span>';
+        commHtml+='<span class="b '+scls+'" style="font-size:.6rem">'+s+'</span>';
+        commHtml+='</div>';
+      });
+    });
+    commHtml+='</div></div>';
+  });
+  commHtml+='</div></div>';
+
+  // Projets sans statut défini (ND)
+  var ndProjs=P.filter(function(p){var s=ST[p.id]||p.statut||'ND';return s==='ND'||!s;});
+  var alertHtml='';
+  if(ndProjs.length>0){
+    alertHtml='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:1rem 1.25rem">';
+    alertHtml+='<div style="font-size:.75rem;font-weight:800;color:#92400e;margin-bottom:.5rem">⚠️ '+ndProjs.length+' projets sans statut défini</div>';
+    alertHtml+='<div style="display:flex;flex-direction:column;gap:4px">';
+    ndProjs.slice(0,10).forEach(function(p){
+      alertHtml+='<div style="font-size:.71rem;color:var(--ink);display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#d97706;flex-shrink:0"></span>'+p.titre+'</div>';
+    });
+    if(ndProjs.length>10) alertHtml+='<div style="font-size:.68rem;color:var(--i3)">… et '+(ndProjs.length-10)+' autres</div>';
+    alertHtml+='</div></div>';
+  }
+
+  body.innerHTML=kpiHtml+barHtml+commHtml+alertHtml;
+}
+
+
+
+function auditToggle(id){
+  var el=document.getElementById(id);
+  var ico=document.getElementById(id+'-ico');
+  if(!el)return;
+  var open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  if(ico)ico.textContent=open?'▼':'▶';
+}
 init();
 
 // ── DÉCONNEXION + AUTO-LOGOUT ─────────────────────────────────────────────────

@@ -360,24 +360,24 @@ function deny(res,msg){
 <title>Connexion — VeM Espace élus</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:-apple-system,"Inter",sans-serif;background:linear-gradient(135deg,#0a2015 0%,#1a3a2a 50%,#2d5a40 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  body{font-family:-apple-system,"Inter",sans-serif;background:linear-gradient(135deg,#0d1e35 0%,#1a3a5c 50%,#2d5a87 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
   .box{background:#fff;border-radius:20px;padding:2.5rem 2.75rem;width:min(400px,90vw);box-shadow:0 24px 80px rgba(0,0,0,.35);}
   .logo{display:flex;align-items:center;gap:12px;margin-bottom:1.75rem;justify-content:center;}
   .logo-ico{width:44px;height:44px;border-radius:12px;background:#1a3a2a;display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
   .logo-txt{font-size:.85rem;font-weight:700;color:#1a3a2a;line-height:1.3;}
   .logo-sub{font-size:.7rem;color:#6a7870;font-weight:400;}
   label{display:block;font-size:.68rem;font-weight:700;color:#4a6858;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;}
-  input{width:100%;border:1.5px solid #d1fae5;border-radius:10px;padding:.65rem .9rem;font-size:.88rem;outline:none;transition:.15s;background:#f8fdf9;}
-  input:focus{border-color:#2d5a40;background:#fff;box-shadow:0 0 0 3px rgba(45,90,64,.12);}
+  input{width:100%;border:1.5px solid #d0dce8;border-radius:10px;padding:.65rem .9rem;font-size:.88rem;outline:none;transition:.15s;background:#f4f8fc;}
+  input:focus{border-color:#2d5a87;background:#fff;box-shadow:0 0 0 3px rgba(45,90,135,.12);}
   .field{margin-bottom:1rem;}
-  button{width:100%;background:#1a3a2a;color:#fff;border:none;border-radius:12px;padding:.8rem;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:.5rem;transition:.15s;}
-  button:hover{background:#2d5a40;}
+  button{width:100%;background:#1a3a5c;color:#fff;border:none;border-radius:12px;padding:.8rem;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:.5rem;transition:.15s;}
+  button:hover{background:#2d5a87;}
   .hint{font-size:.7rem;color:#9aada6;text-align:center;margin-top:1.25rem;line-height:1.6;}
   code{background:#f0fdf4;padding:1px 5px;border-radius:4px;border:1px solid #b8d9c4;font-family:monospace;color:#2d5a40;}
 </style></head>
 <body><div class="box">
   <div class="logo">
-    <div class="logo-ico">🌿</div>
+    <div class="logo-ico" style="background:linear-gradient(135deg,#1a3a5c,#2d5a87)">🏛</div>
     <div class="logo-txt">Vizille en Mouvement<br><span class="logo-sub">Espace des conseillers municipaux</span></div>
   </div>
   ${errHtml}
@@ -932,8 +932,8 @@ function buildPublicPage(){
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --g1:#0f2318;--g2:#1d3d2b;--g3:#2d5a40;--g4:#3d7a5a;--g5:#5a9a70;--g6:#7ab890;--g7:#b8d9c4;--g8:#e6f4ea;
-  --w:#f9f7f3;--w2:#f1ede5;--ink:#18201c;--i2:#3a4440;--i3:#6a7870;--i4:#9aaca4;
+  --g1:#1a3a5c;--g2:#1e4a72;--g3:#2d5a87;--g4:#3d6fa0;--g5:#5a8ab8;--g6:#8ab0d0;--g7:#b8d0e8;--g8:#e8f0f7;
+  --w:#f8f6f1;--w2:#eeeae2;--ink:#1a2535;--i2:#2d3d52;--i3:#6a7a8a;--i4:#9aaab8;
   --fn:"Inter",sans-serif;--fd:"DM Sans",sans-serif;
   --r:10px;--R:16px;--rr:22px;
   --s1:0 2px 8px rgba(0,0,0,.07);--s2:0 6px 24px rgba(0,0,0,.1);--s3:0 20px 60px rgba(0,0,0,.14);
@@ -1213,11 +1213,12 @@ return `<!DOCTYPE html>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"><\/script>
 <style>
 :root{
-  --g1:#0f2318;--g2:#1d3d2b;--g3:#2d5a40;--g4:#3d7a5a;--g5:#5a9a70;--g6:#7ab890;--g7:#b8d9c4;--g8:#e6f4ea;--g9:#f4fbf6;
-  --w:#f9f7f3;--w2:#f1ede5;--w3:#e4ddd1;--w4:#c8c2b8;
-  --ink:#18201c;--i2:#3a4440;--i3:#6a7870;--i4:#9aaca4;
+  --g1:#1a3a5c;--g2:#1e4a72;--g3:#2d5a87;--g4:#3d6fa0;--g5:#5a8ab8;--g6:#8ab0d0;--g7:#b8d0e8;--g8:#e8f0f7;--g9:#f4f8fc;
+  --w:#f8f6f1;--w2:#eeeae2;--w3:#ddd8ce;--w4:#c5bfb4;
+  --ink:#1a2535;--i2:#2d3d52;--i3:#6a7a8a;--i4:#9aaab8;
+  --or:#c9a227;--or2:#e8c84a;--or3:#f5e18a;
   --red:#dc2626;--amber:#d97706;--blue:#2563eb;--violet:#7c3aed;--pink:#db2777;--teal:#0891b2;
-  --fn:"Inter",sans-serif;--fd:"DM Sans",sans-serif;--fm:"JetBrains Mono",monospace;
+  --fn:"Inter","Source Sans 3",sans-serif;--fd:"DM Sans",sans-serif;--fh:"Playfair Display",serif;--fm:"JetBrains Mono",monospace;
   --r:8px;--R:14px;--rr:20px;
   --s1:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.05);
   --s2:0 4px 16px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.05);
@@ -1430,7 +1431,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 /* BOUTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r);font-size:.76rem;font-weight:600;cursor:pointer;border:1.5px solid transparent;font-family:var(--fn);transition:all .15s;text-decoration:none;}
-.btn-p{background:var(--g2);color:#fff;border-color:var(--g2);}.btn-p:hover{background:var(--g1);}
+.btn-p{background:var(--or,#c9a227);color:#fff;border-color:var(--or,#c9a227);}.btn-p:hover{background:#b08a1e;}
 .btn-s{background:#fff;color:var(--i2);border-color:var(--w2);}.btn-s:hover{background:var(--w);}
 .btn-g{background:var(--w);color:var(--g3);border:1px solid var(--w3);}.btn-g:hover{background:var(--g8);color:var(--g2);border-color:var(--g5);}
 .btn-d{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}.btn-d:hover{background:#fca5a5;}

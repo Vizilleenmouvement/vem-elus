@@ -325,6 +325,41 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);
+// Dossiers préétablis — créés au 1er démarrage si table vide
+const DOSSIERS_DEFAUT = [
+  // Thèmes
+  {nom:'Conseil municipal',       couleur:'#1a3a5c', icone:'🏛',  ordre:1},
+  {nom:'Bureau municipal',        couleur:'#2d5a87', icone:'🏢',  ordre:2},
+  {nom:'Mobilités',               couleur:'#3B82F6', icone:'🚲',  ordre:3},
+  {nom:'Transition écologique',   couleur:'#16a34a', icone:'🌿',  ordre:4},
+  {nom:'Action sociale',          couleur:'#F59E0B', icone:'🤝',  ordre:5},
+  {nom:'Enfance / Jeunesse',      couleur:'#F97316', icone:'👶',  ordre:6},
+  {nom:'Travaux & Urbanisme',     couleur:'#84CC16', icone:'🏗',  ordre:7},
+  {nom:'Culture & Patrimoine',    couleur:'#8B5CF6', icone:'🎭',  ordre:8},
+  {nom:'Tranquillité publique',   couleur:'#EF4444', icone:'🛡',  ordre:9},
+  {nom:'Économie',                couleur:'#14B8A6', icone:'💼',  ordre:10},
+  {nom:'Santé',                   couleur:'#06B6D4', icone:'🏥',  ordre:11},
+  {nom:'Concertation citoyenne',  couleur:'#6366F1', icone:'🗣',  ordre:12},
+  {nom:'Métropole',               couleur:'#6B7280', icone:'🏙',  ordre:13},
+  // Natures de documents
+  {nom:'Délibérations',           couleur:'#1a3a5c', icone:'📜',  ordre:20},
+  {nom:'Procès-verbaux',          couleur:'#2d5a87', icone:'📋',  ordre:21},
+  {nom:'Rapports & Études',       couleur:'#5a8ab8', icone:'📊',  ordre:22},
+  {nom:'Courriers & Emails',      couleur:'#8ab0d0', icone:'📨',  ordre:23},
+  {nom:'Budget & Finances',       couleur:'#c9a227', icone:'💶',  ordre:24},
+  {nom:'Marchés publics',         couleur:'#b08a1e', icone:'📝',  ordre:25},
+  {nom:'Urbanisme & PLU',         couleur:'#84CC16', icone:'🗺',  ordre:26},
+  {nom:'Administration générale', couleur:'#6B7280', icone:'📁',  ordre:27},
+];
+(function(){
+  const cnt = db.prepare('SELECT COUNT(*) as n FROM biblio_dossiers').get().n;
+  if(cnt === 0){
+    const stmt = db.prepare('INSERT INTO biblio_dossiers (nom,couleur,icone,ordre) VALUES (?,?,?,?)');
+    DOSSIERS_DEFAUT.forEach(function(d){ stmt.run(d.nom,d.couleur,d.icone,d.ordre); });
+    console.log('✓ '+DOSSIERS_DEFAUT.length+' dossiers bibliothèque créés');
+  }
+})();
+
 const BiblioDoc = {
   getDossiers() { return db.prepare('SELECT * FROM biblio_dossiers ORDER BY ordre,nom').all(); },
   insertDossier(d) {

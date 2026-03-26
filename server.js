@@ -3519,39 +3519,29 @@ function renderBiblio(){
 
   // ── Barre filtres NATURE du document ────────────────────────────────────────
   var NATURES=['CR de commission','Délibération','Procès-verbal','Rapport','Étude','Avis','Courrier','Email','Devis','Marché public','Budget','Autre'];
-  var NATURE_ICONS={'CR de commission':'📋','Délibération':'🏛','Procès-verbal':'📋','Rapport':'📊','Étude':'🔬','Avis':'⚖️','Courrier':'📨','Email':'📧','Devis':'💶','Marché public':'📝','Budget':'💰','Autre':'📄'};
+  var ADMIN_NOMS=["Conseil municipal","Bureau municipal","Délibérations","Procès-verbaux","Rapports & Études","Courriers & Emails","Budget & Finances","Marchés publics","Urbanisme & PLU","Administration générale"];
   var typeBar=$("bib-type-bar");
   if(typeBar){
-    typeBar.innerHTML=
-      '<button data-t="" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
-      +(_bibTypeFiltre===''?'background:var(--g1);color:#fff;border-color:var(--g1);':'background:#fff;color:var(--i2);border-color:var(--w2);')
-      +'">Toutes</button>'
-      +NATURES.map(function(t){
-        var active=_bibTypeFiltre===t;
-        return '<button data-t="'+t+'" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
-          +(active?'background:var(--or);color:#fff;border-color:var(--or);':'background:#fff;color:var(--i2);border-color:var(--w2);')
-          +'">'+(NATURE_ICONS[t]||'📄')+' '+t+'</button>';
-      }).join('');
-    Array.from(typeBar.querySelectorAll('[data-t]')).forEach(function(btn){
-      btn.addEventListener('click',function(){bibSetType(btn.getAttribute('data-t'));});
-    });
-    // Ajouter séparateur + boutons dossiers admin dans typeBar
-    var ADMIN_DOS2=["Conseil municipal","Bureau municipal","D\u00e9lib\u00e9rations","Proc\u00e8s-verbaux","Rapports & \u00c9tudes","Courriers & Emails","Budget & Finances","March\u00e9s publics","Urbanisme & PLU","Administration g\u00e9n\u00e9rale"];
-    var adminDos2=BIBLIO_DOSSIERS.filter(function(d){return ADMIN_DOS2.indexOf(d.nom)>=0;});
-    if(adminDos2.length){
-      var sep=document.createElement('div');
-      sep.style.cssText='width:100%;height:1px;background:var(--w2);margin:.3rem 0 .2rem';
-      typeBar.appendChild(sep);
-      adminDos2.forEach(function(d){
-        var active=_bibDosActif===d.id;
-        var btn=document.createElement('button');
-        btn.setAttribute('data-dos',String(d.id));
-        btn.style.cssText='padding:3px 10px;border-radius:20px;border:1.5px solid;font-size:.7rem;font-weight:600;cursor:pointer;white-space:nowrap;'+(active?'background:'+d.couleur+';color:#fff;border-color:'+d.couleur+';':'background:#fff;color:var(--i2);border-color:var(--w2);');
-        btn.textContent=(d.icone||'📁')+' '+d.nom;
-        btn.addEventListener('click',(function(did){return function(){bibSetDos(_bibDosActif===did?null:did);};})(d.id));
-        typeBar.appendChild(btn);
-      });
-    }
+    // Menu 1 : Nature du document
+    var selNat=document.createElement('select');
+    selNat.className='fsel';
+    selNat.style.cssText='font-size:.75rem;max-width:180px';
+    selNat.innerHTML='<option value="">📄 Toutes natures</option>'
+      +NATURES.map(function(t){return '<option value="'+t+'"'+(_bibTypeFiltre===t?' selected':'')+'>'+t+'</option>';}).join('');
+    selNat.addEventListener('change',function(){bibSetType(selNat.value);});
+    // Menu 2 : Dossier admin
+    var adminDos=BIBLIO_DOSSIERS.filter(function(d){return ADMIN_NOMS.indexOf(d.nom)>=0;});
+    var selDos=document.createElement('select');
+    selDos.className='fsel';
+    selDos.style.cssText='font-size:.75rem;max-width:200px';
+    var curAdminDos=adminDos.find(function(d){return d.id===_bibDosActif;})||null;
+    selDos.innerHTML='<option value="">📁 Tous dossiers</option>'
+      +adminDos.map(function(d){return '<option value="'+d.id+'"'+(_bibDosActif===d.id?' selected':'')+'>'+( d.icone||'📁')+' '+d.nom+'</option>';}).join('');
+    selDos.addEventListener('change',function(){bibSetDos(selDos.value?parseInt(selDos.value):null);});
+    typeBar.innerHTML='';
+    typeBar.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:.2rem 0';
+    typeBar.appendChild(selNat);
+    typeBar.appendChild(selDos);
   }
 
   // ── Filtrage ──────────────────────────────────────────────────────────────

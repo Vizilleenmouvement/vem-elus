@@ -3167,7 +3167,7 @@ function wgSendMsg2(){
   var inp=$('wg-chat-inp2');
   if(!inp||!inp.value.trim())return;
   var ch=($('wg-chat-ch2')||{value:'general'}).value;
-  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Basic '+btoa(ME.username+':'+ME._pwd)},body:JSON.stringify({channel:ch,auteur:ME.nom,avatar:ME.avatar,texte:inp.value.trim()})})
+  fetch('/api/chat',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel:ch,auteur:ME.nom,avatar:ME.avatar,texte:inp.value.trim()})})
   .then(function(r){return r.json();}).then(function(){inp.value='';wgLoadChat2();});
 }
 function wgLoadChat2(){
@@ -4234,7 +4234,7 @@ function resetChat(){
   var ch=v('chat-ch')||'general';
   var today=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   if(!confirm('Archiver les messages du jour ('+today+') ? Ils seront consultables dans les archives.'))return;
-  fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include',headers:{Authorization:'Basic '+btoa(ME.username+':'+ME._pwd)}})
+  fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include'})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.ok){CHAT=[];renderChatMsgs([]);toast('📦 Messages archivés ✓');}
@@ -4242,7 +4242,7 @@ function resetChat(){
 }
 function showChatArchives(){
   var ch=v('chat-ch')||'general';
-  fetch('/api/chat/dates?channel='+ch,{credentials:'include',headers:{Authorization:'Basic '+btoa(ME.username+':'+ME._pwd)}})
+  fetch('/api/chat/dates?channel='+ch,{credentials:'include'})
     .then(function(r){return r.json();})
     .then(function(dates){
       if(!dates.length){toast('Aucune archive');return;}
@@ -4263,7 +4263,7 @@ function showChatArchives(){
         }).join('');
       sel.onchange=function(){
         if(!sel.value)return;
-        fetch('/api/chat/archives?channel='+ch+'&date='+sel.value,{credentials:'include',headers:{Authorization:'Basic '+btoa(ME.username+':'+ME._pwd)}})
+        fetch('/api/chat/archives?channel='+ch+'&date='+sel.value,{credentials:'include'})
           .then(function(r){return r.json();})
           .then(function(msgs){
             var div=$('chat-msgs');

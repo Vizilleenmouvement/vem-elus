@@ -230,6 +230,7 @@ const Evenements = {
 };
 
 // ── CHAT ──────────────────────────────────────────────────────────────────────
+try { db.prepare("ALTER TABLE chat ADD COLUMN archived INTEGER DEFAULT 0").run(); } catch(e) {}
 const Chat = {
   get(channel, since) {
     const msgs = db.prepare('SELECT * FROM chat WHERE channel=? AND id>? ORDER BY id').all(channel||'general', since||0);

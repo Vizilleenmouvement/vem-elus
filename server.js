@@ -2656,7 +2656,7 @@ var ME={nom:"Chargement...",avatar:"?",id:0,role:"",color:"var(--g3)",username:"
 var _auth=""; // Sera mis à jour avec les credentials réels
 
 // ── UTILITAIRES ──────────────────────────────────────────────────────────────
-function $(i){return document.getElementById(i);}
+function $(i){if(window._panelId){var pc=document.getElementById("panel-clone");if(pc){var e=pc.querySelector("#"+i);if(e)return e;}}return document.getElementById(i);}
 function qsa(s){return document.querySelectorAll(s);}
 function v(i){var e=$(i);return e?e.value:"";}
 function el(i,val){var e=$(i);if(e)e.textContent=val;}
@@ -2741,15 +2741,14 @@ function openPanel(id){
     + '</div>'
     + '<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
 
-  // Swap IDs : enlever sur original, garder sur clone → getElementById trouve le bon
-  Array.from(pg.querySelectorAll('[id]')).forEach(function(el){
-    el.dataset.origId=el.id; el.removeAttribute('id');
-  });
-  if(pg.id){pg.dataset.origId=pg.id;pg.removeAttribute('id');}
+  // Cloner la page dans le panel
   var clone = pg.cloneNode(true);
+  clone.id = "panel-clone";
   clone.style.display = "block";
   document.getElementById("panel-body").appendChild(clone);
   panel.style.display = "flex";
+  // Stocker le contexte courant pour que $() le trouve
+  window._panelId = id;
 
   // Charger données
   if(id==="agenda") renderAg();
@@ -2769,10 +2768,7 @@ function openPanel(id){
 }
 
 function closePanel(){
-  // Remettre les IDs sur les originaux cachés
-  qsa("[data-orig-id]").forEach(function(el){
-    if(!el.closest("#main-panel")){ el.id=el.dataset.origId; delete el.dataset.origId; }
-  });
+  window._panelId = null;
   var panel = document.getElementById("main-panel");
   if(panel) panel.style.display = "none";
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
@@ -3545,12 +3541,12 @@ function renderBiblio(){
   var typeBar=$("bib-type-bar");
   if(typeBar){
     typeBar.innerHTML=
-      '<button data-t="" onclick="bibSetType(this.dataset.t)" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
+      '<button onclick="bibSetType(\'\')" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
       +(_bibTypeFiltre===''?'background:var(--g1);color:#fff;border-color:var(--g1);':'background:#fff;color:var(--i2);border-color:var(--w2);')
       +'">Toutes</button>'
       +NATURES.map(function(t){
         var active=_bibTypeFiltre===t;
-        return '<button data-t="'+t+'" onclick="bibSetType(this.dataset.t)" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
+        return '<button onclick="bibSetType(\''+t+'\')" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
           +(active?'background:var(--or);color:#fff;border-color:var(--or);':'background:#fff;color:var(--i2);border-color:var(--w2);')
           +'">'+(NATURE_ICONS[t]||'📄')+' '+t+'</button>';
       }).join('');
@@ -4135,11 +4131,11 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
-  var ico=document.querySelector("[data-orig-id='cdet-ico']")||document.getElementById("cdet-ico");if(ico)ico.textContent=ICONS[comm]||"📋";
-  var tit=document.querySelector("[data-orig-id='cdet-t']")||document.getElementById("cdet-t");if(tit)tit.textContent=comm;
-  var sub=document.querySelector("[data-orig-id='cdet-s']")||document.getElementById("cdet-s");if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
-  var kpis=document.querySelector("[data-orig-id='cdet-kpis']")||document.getElementById("cdet-kpis");if(kpis)kpis.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
-  var cdSt=document.querySelector("[data-orig-id='cd-st']")||document.getElementById("cd-st");if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
+  var ico=document.getElementById("cdet-ico");if(ico)ico.textContent=ICONS[comm]||"📋";
+  var tit=document.getElementById("cdet-t");if(tit)tit.textContent=comm;
+  var sub=document.getElementById("cdet-s");if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
+  var kpis=document.getElementById("cdet-kpis");if(kpis)kpis.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
+  var cdSt=document.getElementById("cd-st");if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
   openPanel("cdet"); return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=

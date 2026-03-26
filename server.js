@@ -1651,7 +1651,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <div class="layout">
 <aside class="sb">
-  <div onclick="closePanel()" style="margin:.75rem .65rem .5rem;padding:.65rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px">🏠 <span>Accueil</span></div>
+  <div onclick="gp('today',this)" style="margin:.75rem .65rem .5rem;padding:.65rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px">🏠 <span>Accueil</span></div>
   <div class="sbs">Mon espace</div>
   <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
   <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
@@ -2656,7 +2656,7 @@ var ME={nom:"Chargement...",avatar:"?",id:0,role:"",color:"var(--g3)",username:"
 var _auth=""; // Sera mis à jour avec les credentials réels
 
 // ── UTILITAIRES ──────────────────────────────────────────────────────────────
-function $(i){if(window._panelId){var pc=document.getElementById("panel-clone");if(pc){var e=pc.querySelector("#"+i);if(e)return e;}}return document.getElementById(i);}
+function $(i){return document.getElementById(i);}
 function qsa(s){return document.querySelectorAll(s);}
 function v(i){var e=$(i);return e?e.value:"";}
 function el(i,val){var e=$(i);if(e)e.textContent=val;}
@@ -2741,14 +2741,10 @@ function openPanel(id){
     + '</div>'
     + '<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
 
-  // Cloner la page dans le panel
   var clone = pg.cloneNode(true);
-  clone.id = "panel-clone";
   clone.style.display = "block";
   document.getElementById("panel-body").appendChild(clone);
   panel.style.display = "flex";
-  // Stocker le contexte courant pour que $() le trouve
-  window._panelId = id;
 
   // Charger données
   if(id==="agenda") renderAg();
@@ -2756,22 +2752,23 @@ function openPanel(id){
   else if(id==="biblio"){bibLoadDossiers(function(){apiGet("/api/biblio").then(function(data){BIBLIO=Array.isArray(data)?data:[];el("sb-bib",BIBLIO.length);renderBiblio();});});}
   else if(id==="repelus") renderRepElus();
   else if(id==="elus") renderElus();
-  else if(id==="comm") renderComm();
-  else if(id==="global") renderGlobal();
-  else if(id==="signal") renderSignal();
-  else if(id==="events") renderEvents();
-  else if(id==="guide") renderGuide();
-  else if(id==="ress") renderRess();
-  else if(id==="hist") renderHist();
-  else if(id==="comms") renderComms();
-  else if(id==="creer") renderCreer();
+  else if(id==="comm") buildCG();
+  else if(id==="global") fG();
+  else if(id==="signal"){fSig();updSig();}
+  else if(id==="events") renderEv();
+  else if(id==="guide") buildGuides();
+  else if(id==="ress") buildRess();
+  else if(id==="hist") renderNt();
+  else if(id==="comms"){}
+  else if(id==="creer") resetNP();
 }
 
 function closePanel(){
-  window._panelId = null;
   var panel = document.getElementById("main-panel");
   if(panel) panel.style.display = "none";
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
+  var first = document.querySelector(".sbi");
+  if(first) first.classList.add("on");
 }
 
 
@@ -3093,7 +3090,7 @@ function renderShortcuts(){}
 
 
 /* ── WIDGET TCHAT ACCUEIL ────────────────────────────────────────────────── */
-// _chatLast unifié avec _chatLast
+// _chatLast unifié → _chatLast
 
 function wgRenderMsgs(msgs) {
   var el2 = $("wg-chat-msgs"); if(!el2) return;
@@ -3115,9 +3112,9 @@ function wgPollChat() {
   var ch = v("wg-chat-ch") || "general";
   apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d) {
     if(d.ok && d.messages && d.messages.length) {
-      var _wIds=CHAT.map(function(m){return m.id;});
-      var _wNew=d.messages.filter(function(m){return _wIds.indexOf(m.id)<0;});
-      if(_wNew.length){CHAT=CHAT.concat(_wNew);_chatLast=d.lastId;wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));var badge=$("wg-chat-badge");if(badge)badge.style.display="block";}
+      var _ei2=CHAT.map(function(m){return m.id;});
+      var _nw2=d.messages.filter(function(m){return _ei2.indexOf(m.id)<0;});
+      if(_nw2.length){CHAT=CHAT.concat(_nw2);_chatLast=d.lastId;wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));var badge=$("wg-chat-badge");if(badge)badge.style.display="block";}
     }
   });
 }
@@ -3161,12 +3158,11 @@ function wgSendMsg() {
   var ch = v("wg-chat-ch") || "general";
   apiPost("/api/chat", {channel:ch, auteur:ME.nom, avatar:ME.avatar, texte:txt})
     .then(function(d) {
-      if(d.ok&&d.message) {
-        var _ids=CHAT.map(function(m){return m.id;});if(_ids.indexOf(d.message.id)<0)CHAT.push(d.message);
+      if(d.ok&&d.message){
+        var _ei3=CHAT.map(function(m){return m.id;});if(_ei3.indexOf(d.message.id)<0)CHAT.push(d.message);
         if(d.message.id&&d.message.id>_chatLast)_chatLast=d.message.id;
         wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));
-        var badge = $("wg-chat-badge");
-        if(badge) badge.style.display = "none";
+        var badge=$("wg-chat-badge");if(badge)badge.style.display="none";
       }
     });
 }
@@ -3185,24 +3181,19 @@ function wgLoadChat2(){
     var msgs=d.messages||[];
     box.innerHTML=msgs.length?msgs.slice(-15).map(function(m){
       var isMe=m.auteur===ME.nom;
-      return '<div class="msg-w'+(isMe?' me':'')+'"><div class="msg-meta">'+m.auteur+' · '+m.ts+'</div><div class="msg-bub">'+m.texte+'</div></div>';
+      return '<div class="msg-w'+(isMe?' me':'')+'"><div class="msg-meta">'+m.auteur+' · <'+(m.ts||m.created_at||'')+'</div><div class="msg-bub">'+m.texte+'</div></div>';
     }).join(''):'<div style="font-size:.72rem;color:var(--i4);text-align:center;padding:1rem">Aucun message</div>';
     box.scrollTop=box.scrollHeight;
   });
 }
 function wgSwitchCh2(){wgLoadChat2();}
 
-function initWidgetChat() {
-  // Charger l'historique et synchro _chatLast global
-  var ch = v("wg-chat-ch") || "general";
+function initWidgetChat(){
+  var ch=v("wg-chat-ch")||"general";
   apiGet("/api/chat?channel="+ch+"&since=0").then(function(d){
-    if(d.ok){
-      CHAT = d.messages || [];
-      _chatLast = d.lastId || 0;
-      wgRenderMsgs(CHAT);
-    }
+    if(d.ok){CHAT=d.messages||[];_chatLast=d.lastId||0;wgRenderMsgs(CHAT);}
   });
-  setInterval(wgPollChat, 8000);
+  setInterval(wgPollChat,8000);
 }
 
 
@@ -4131,11 +4122,11 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
-  var ico=document.getElementById("cdet-ico");if(ico)ico.textContent=ICONS[comm]||"📋";
-  var tit=document.getElementById("cdet-t");if(tit)tit.textContent=comm;
-  var sub=document.getElementById("cdet-s");if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
-  var kpis=document.getElementById("cdet-kpis");if(kpis)kpis.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
-  var cdSt=document.getElementById("cd-st");if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
+  var _ico=document.getElementById("cdet-ico");if(_ico)_ico.textContent=ICONS[comm]||"📋";
+  var _tit=document.getElementById("cdet-t");if(_tit)_tit.textContent=comm;
+  var _sub=document.getElementById("cdet-s");if(_sub)_sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
+  var _kpi=document.getElementById("cdet-kpis");if(_kpi)_kpi.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
+  var _cst=document.getElementById("cd-st");if(_cst)_cst.innerHTML='<option value="">Tous statuts</option>'+statOpts;
   openPanel("cdet"); return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
@@ -4379,9 +4370,9 @@ function resetChat(){
 }
 
 
-function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok&&d.message){var ids=CHAT.map(function(m){return m.id;});if(ids.indexOf(d.message.id)<0)CHAT.push(d.message);if(d.message.id)_chatLast=d.message.id;renderChatMsgs(CHAT);scrollChat();}}); }
-function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages&&d.messages.length){var existIds=CHAT.map(function(m){return m.id;});var news=d.messages.filter(function(m){return existIds.indexOf(m.id)<0;});if(news.length){CHAT=CHAT.concat(news);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else{var b=$("cbdg");if(b)b.style.display="block";}}}});}
-function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+m.ts+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}
+function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok&&d.message){var _ei=CHAT.map(function(m){return m.id;});if(_ei.indexOf(d.message.id)<0)CHAT.push(d.message);if(d.message.id)_chatLast=d.message.id;renderChatMsgs(CHAT);scrollChat();}});}
+function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages&&d.messages.length){var _ei=CHAT.map(function(m){return m.id;});var _nw=d.messages.filter(function(m){return _ei.indexOf(m.id)<0;});if(_nw.length){CHAT=CHAT.concat(_nw);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else{var b=$("cbdg");if(b)b.style.display="block";}}}});}
+function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+(m.ts||m.created_at||'')+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}
 function scrollChat(){var e=$("chat-msgs");if(e)e.scrollTop=e.scrollHeight;}
 
 // ── DÉMARRAGE ─────────────────────────────────────────────────────────────────
@@ -4651,7 +4642,7 @@ var _ePid=null;
 function _fpPanel(){
   var p=document.getElementById('main-panel');
   if(!p){p=document.createElement('div');p.id='main-panel';document.body.appendChild(p);}
-  p.style.cssText='position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
+  p.style.cssText='position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
   return p;
 }
 function _fpCss(){

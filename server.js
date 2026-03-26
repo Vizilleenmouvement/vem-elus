@@ -1652,7 +1652,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 <div class="layout">
 <aside class="sb">
   <div class="sbs">Mon espace</div>
-  <div class="sbi on" onclick="gp('today',this)"><span class="sbi-ic">&#x1F4CB;</span>Aujourd&#x27;hui</div>
+  <div class="sbi on" onclick="gp('today',this)"><span class="sbi-ic">🏠</span>Accueil</div>
   <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
   <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
   <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
@@ -2043,7 +2043,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 <!-- BIBLIOTHÈQUE -->
 <div class="page" id="p-biblio">
   <div class="ph"><div class="ph-ico" style="background:var(--g8)">&#x1F4DA;</div><div><div class="ph-t">Biblioth&#xe8;que documentaire</div><div class="ph-s">Classement par dossier, type, commission</div></div>
-    <div class="ph-a"><button class="btn btn-p btn-sm" onclick="om('biblio')">+ Ajouter</button></div>
+    <div class="ph-a" style="display:flex;gap:6px;align-items:center"><button class="btn btn-s btn-sm" onclick="gp('today',document.querySelector('.sbi'))">🏠 Accueil</button><button class="btn btn-p btn-sm" onclick="om('biblio')">+ Ajouter</button></div>
   </div>
   <div style="display:flex;height:calc(100% - 70px)">
     <!-- Sidebar dossiers -->

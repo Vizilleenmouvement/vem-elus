@@ -1653,29 +1653,29 @@ textarea.fi{resize:vertical;min-height:90px;}
 <aside class="sb">
   <div onclick="gp('today',document.querySelector('.sbi-accueil'))" class="sbi-accueil" style="margin:.75rem .65rem .5rem;padding:.7rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s;letter-spacing:.01em" onmouseover="this.style.background='#b8891e'" onmouseout="this.style.background='var(--or)'">🏠 <span>Accueil</span></div>
   <div class="sbs">Mon espace</div>
-  <div class="sbi" onclick="gp('tuto',this)"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
-  <div class="sbi" onclick="gp('guide',this)"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
-  <div class="sbi" onclick="gp('ress',this)"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
+  <div class="sbi" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
+  <div class="sbi" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
+  <div class="sbi" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
 
   <div class="sbs">Le mandat</div>
-  <div class="sbi" onclick="gp('agenda',this)"><span class="sbi-ic">&#x1F4C5;</span>Agenda</div>
-  <div class="sbi" onclick="gp('cr',this)"><span class="sbi-ic">&#x1F4DD;</span>Comptes rendus</div>
-  <div class="sbi" onclick="gp('biblio',this)"><span class="sbi-ic">&#x1F4DA;</span>Biblioth&#xe8;que<span class="sbi-n" id="sb-bib">0</span></div>
-  <div class="sbi" onclick="gp('repelus',this)"><span class="sbi-ic">&#x1F4C2;</span>R&#xe9;pertoire élus</div>
-  <div class="sbi" onclick="gp('elus',this)"><span class="sbi-ic">&#x1F9D1;&#x200D;&#x1F4BC;</span>L&#x27;équipe</div>
+  <div class="sbi" onclick="openPanel('agenda')"><span class="sbi-ic">&#x1F4C5;</span>Agenda</div>
+  <div class="sbi" onclick="openPanel('cr')"><span class="sbi-ic">&#x1F4DD;</span>Comptes rendus</div>
+  <div class="sbi" onclick="openPanel('biblio')"><span class="sbi-ic">&#x1F4DA;</span>Biblioth&#xe8;que<span class="sbi-n" id="sb-bib">0</span></div>
+  <div class="sbi" onclick="openPanel('repelus')"><span class="sbi-ic">&#x1F4C2;</span>R&#xe9;pertoire élus</div>
+  <div class="sbi" onclick="openPanel('elus')"><span class="sbi-ic">&#x1F9D1;&#x200D;&#x1F4BC;</span>L&#x27;équipe</div>
 
   <div class="sbs">Projets du programme</div>
-  <div class="sbi" onclick="gp('comm',this)"><span class="sbi-ic">&#x1F465;</span>Par commission<span class="sbi-n" id="sb-tot">91</span></div>
-  <div class="sbi" onclick="gp('global',this)"><span class="sbi-ic">&#x1F4CA;</span>Tous les projets</div>
-  <div class="sbi" onclick="gp('creer',this)"><span class="sbi-ic">&#x2795;</span>Nouveau projet</div>
+  <div class="sbi" onclick="openPanel('comm')"><span class="sbi-ic">&#x1F465;</span>Par commission<span class="sbi-n" id="sb-tot">91</span></div>
+  <div class="sbi" onclick="openPanel('global')"><span class="sbi-ic">&#x1F4CA;</span>Tous les projets</div>
+  <div class="sbi" onclick="openPanel('creer')"><span class="sbi-ic">&#x2795;</span>Nouveau projet</div>
 
   <div class="sbs">Terrain</div>
-  <div class="sbi" onclick="gp('signal',this)"><span class="sbi-ic">&#x1F534;</span>Signalements<span class="sbi-new" id="sb-sig">!</span></div>
-  <div class="sbi" onclick="gp('events',this)"><span class="sbi-ic">&#x1F3AA;</span>Événements</div>
+  <div class="sbi" onclick="openPanel('signal')"><span class="sbi-ic">&#x1F534;</span>Signalements<span class="sbi-new" id="sb-sig">!</span></div>
+  <div class="sbi" onclick="openPanel('events')"><span class="sbi-ic">&#x1F3AA;</span>Événements</div>
 
   <div class="sbs">Outils</div>
-  <div class="sbi" onclick="gp('comms',this)"><span class="sbi-ic">&#x270D;&#xFE0F;</span>Rédiger un doc</div>
-  <div class="sbi" onclick="gp('hist',this)"><span class="sbi-ic">&#x1F514;</span>Historique</div>
+  <div class="sbi" onclick="openPanel('comms')"><span class="sbi-ic">&#x270D;&#xFE0F;</span>Rédiger un doc</div>
+  <div class="sbi" onclick="openPanel('hist')"><span class="sbi-ic">&#x1F514;</span>Historique</div>
 
   <div class="sbf">elus.vizilleenmouvement.fr<br>Node.js &#xb7; Infomaniak</div>
 </aside>
@@ -1721,7 +1721,7 @@ textarea.fi{resize:vertical;min-height:90px;}
           <div id="wg-day-events" style="min-height:80px"></div>
         </div>
         <div style="padding:.6rem 1rem;border-top:1px solid var(--w2);display:flex;gap:6px">
-          <button class="btn btn-g btn-sm btn-full" onclick="gp('agenda',this)" style="font-size:.68rem">Toutes les réunions →</button>
+          <button class="btn btn-g btn-sm btn-full" onclick="openPanel('agenda')" style="font-size:.68rem">Toutes les réunions →</button>
         </div>
       </div>
 
@@ -1760,7 +1760,7 @@ textarea.fi{resize:vertical;min-height:90px;}
         </div>
         <div style="padding:.75rem 1rem;flex:1;overflow-y:auto;max-height:180px" id="wg-sig-list"></div>
         <div style="padding:.6rem 1rem;border-top:1px solid var(--w2)">
-          <button class="btn btn-g btn-sm btn-full" onclick="gp('signal',this)" style="font-size:.68rem">Tous les signalements →</button>
+          <button class="btn btn-g btn-sm btn-full" onclick="openPanel('signal')" style="font-size:.68rem">Tous les signalements →</button>
         </div>
       </div>
 
@@ -1785,7 +1785,7 @@ textarea.fi{resize:vertical;min-height:90px;}
       </a>
 
       <!-- BIBLIO -->
-      <div class="wg-tile" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6);border-radius:16px;padding:1.1rem 1rem;color:#fff;box-shadow:0 4px 16px rgba(109,40,217,.3);cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:.5rem" onclick="gp('biblio',this)" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(109,40,217,.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 16px rgba(109,40,217,.3)'">
+      <div class="wg-tile" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6);border-radius:16px;padding:1.1rem 1rem;color:#fff;box-shadow:0 4px 16px rgba(109,40,217,.3);cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:.5rem" onclick="openPanel('biblio')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(109,40,217,.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 16px rgba(109,40,217,.3)'">
         <div style="display:flex;align-items:center;gap:8px">
           <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem">&#x1F4DA;</div>
           <div>
@@ -1797,7 +1797,7 @@ textarea.fi{resize:vertical;min-height:90px;}
       </div>
 
       <!-- MON DOSSIER -->
-      <div class="wg-tile" style="background:linear-gradient(135deg,#92400e,#d97706);border-radius:16px;padding:1.1rem 1rem;color:#fff;box-shadow:0 4px 16px rgba(146,64,14,.3);cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:.5rem" onclick="gp('repelus',this)" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(146,64,14,.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 16px rgba(146,64,14,.3)'">
+      <div class="wg-tile" style="background:linear-gradient(135deg,#92400e,#d97706);border-radius:16px;padding:1.1rem 1rem;color:#fff;box-shadow:0 4px 16px rgba(146,64,14,.3);cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:.5rem" onclick="openPanel('repelus')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(146,64,14,.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 16px rgba(146,64,14,.3)'">
         <div style="display:flex;align-items:center;gap:8px">
           <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem">&#x1F512;</div>
           <div>
@@ -1868,7 +1868,7 @@ textarea.fi{resize:vertical;min-height:90px;}
         <div class="wg-h" style="padding:.85rem 1.1rem .65rem;border-bottom:1px solid var(--w2);display:flex;align-items:center;gap:8px">
           <div style="width:28px;height:28px;border-radius:8px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:.9rem">&#x1F4DD;</div>
           <div style="font-size:.78rem;font-weight:700;font-family:var(--fd);color:var(--ink);flex:1">Comptes rendus</div>
-          <button class="btn btn-g btn-sm" onclick="gp('cr',this)" style="font-size:.62rem">Tous →</button>
+          <button class="btn btn-g btn-sm" onclick="openPanel('cr')" style="font-size:.62rem">Tous →</button>
         </div>
         <div style="padding:.7rem 1rem;flex:1" id="cr-home-list">
           <div style="font-size:.73rem;color:var(--i4);text-align:center;padding:.75rem 0">Aucun CR</div>
@@ -2656,8 +2656,9 @@ var ME={nom:"Chargement...",avatar:"?",id:0,role:"",color:"var(--g3)",username:"
 var _auth=""; // Sera mis à jour avec les credentials réels
 
 // ── UTILITAIRES ──────────────────────────────────────────────────────────────
-function $(i){return document.getElementById(i);}
+function $(i){var pb=document.getElementById("panel-body");if(pb){var e=pb.querySelector("#"+i);if(e)return e;}return document.getElementById(i);}
 function qsa(s){return document.querySelectorAll(s);}
+function _pq(s){var pb=document.getElementById("panel-body");return pb?pb.querySelector(s):document.querySelector(s);}
 function v(i){var e=$(i);return e?e.value:"";}
 function el(i,val){var e=$(i);if(e)e.textContent=val;}
 function mkH(extra){
@@ -2707,16 +2708,53 @@ function gp(id,ni){
   else if(id==="tuto"){}
 }
 // ── PANNEAU UNIQUE — s'ouvre par-dessus le dashboard ─────────────────────────
-function openPanel(id){ gp(id); } // obsolète — tout passe par gp()
+function openPanel(id){
+  qsa(".sbi").forEach(function(n){n.classList.remove("on");});
+  var menuEl=document.querySelector("[data-panel='"+id+"']");
+  if(menuEl)menuEl.classList.add("on");
+  var pg=document.getElementById("p-"+id); if(!pg)return;
+  var panel=document.getElementById("main-panel");
+  if(!panel){
+    panel=document.createElement("div");
+    panel.id="main-panel";
+    document.body.appendChild(panel);
+  }
+  panel.style.cssText="position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
+  var phT=pg.querySelector(".ph-t");
+  var title=phT?phT.textContent:id;
+  panel.innerHTML='<div id="panel-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;"></div>';
+  var clone=pg.cloneNode(true);
+  clone.id="clone-p-"+id;
+  clone.style.cssText="display:flex;flex-direction:column;flex:1;height:100%;";
+  document.getElementById("panel-body").appendChild(clone);
+  panel.style.display="flex";
+  // Déclencher le rendu dans le contexte panel-body
+  if(id==="agenda")renderAg();
+  else if(id==="cr")renderCR();
+  else if(id==="biblio"){bibLoadDossiers(function(){apiGet("/api/biblio").then(function(data){BIBLIO=Array.isArray(data)?data:[];el("sb-bib",BIBLIO.length);renderBiblio();});});}
+  else if(id==="repelus")renderRepElus();
+  else if(id==="elus")renderElus();
+  else if(id==="comm")buildCG();
+  else if(id==="global")fG();
+  else if(id==="signal"){fSig();updSig();}
+  else if(id==="events")renderEv();
+  else if(id==="guide")buildGuides();
+  else if(id==="ress")buildRess();
+  else if(id==="tuto"){}
+  else if(id==="hist")renderNt();
+  else if(id==="comms"){}
+  else if(id==="creer")resetNP();
+  else if(id==="budget")setTimeout(buildBudgetChart,50);
+}
 
 function closePanel(){
-  var panel = document.getElementById("main-panel");
-  if(panel) panel.style.display = "none";
-  gp("today", document.querySelector(".sbi-accueil"));
+  var panel=document.getElementById("main-panel");
+  if(panel)panel.style.display="none";
+  qsa(".sbi").forEach(function(n){n.classList.remove("on");});
 }
 
 
-function goComm(){gp("comm");}
+function goComm(){openPanel("comm");}
 function goGlobal(){gp("global");}
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
@@ -4077,8 +4115,8 @@ function showCD(idx){
     +'<div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
   var cdSt=$("cd-st"); if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
   // Naviguer vers la page cdet
-  gp("cdet");
-  return; // la suite (panel-body) n'est plus utilisée
+  openPanel("cdet");
+  return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
     '<div style="background:'+col+'18;border-bottom:3px solid '+col+';padding:.85rem 1.4rem;display:flex;align-items:center;gap:12px;flex-shrink:0">'

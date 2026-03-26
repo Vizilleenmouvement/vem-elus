@@ -1651,7 +1651,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <div class="layout">
 <aside class="sb">
-  <div onclick="closePanel()" style="margin:.75rem .65rem .5rem;padding:.65rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px;letter-spacing:.01em">🏠 <span>Accueil</span></div>
+  <div onclick="closePanel()" style="margin:.75rem .65rem .5rem;padding:.65rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px">🏠 <span>Accueil</span></div>
   <div class="sbs">Mon espace</div>
   <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
   <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
@@ -2711,38 +2711,44 @@ function gp(id,ni){
   }
 }
 // ── PANNEAU UNIQUE — s'ouvre par-dessus le dashboard ─────────────────────────
-var _panelPageId = null; // page actuellement dans le panel
-
 function openPanel(id){
-  // Remettre la page précédente dans le DOM caché
-  if(_panelPageId && _panelPageId !== id){
-    var prev = document.getElementById("p-"+_panelPageId);
-    if(prev){ prev.style.display="none"; document.body.appendChild(prev); }
-  }
-
+  // Activer le menu
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
-  var menuEl = document.querySelector("[data-panel='"+id+"']");
+  var menuEl = document.querySelector("[data-panel='" + id + "']");
   if(menuEl) menuEl.classList.add("on");
 
   var pg = document.getElementById("p-"+id);
   if(!pg) return;
-  _panelPageId = id;
 
-  // Créer ou réutiliser le panel
+  // Créer ou réutiliser le panneau
   var panel = document.getElementById("main-panel");
   if(!panel){
     panel = document.createElement("div");
     panel.id = "main-panel";
-    panel.style.cssText = "position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
+    panel.style.cssText = "position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
     document.body.appendChild(panel);
-    panel.innerHTML = '<div id="panel-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;"></div>';
   }
 
-  // DÉPLACER la page (pas cloner) → getElementById trouve toujours les vrais éléments
-  var body = document.getElementById("panel-body");
-  body.innerHTML = "";
-  pg.style.cssText = "display:flex;flex-direction:column;flex:1;height:100%;";
-  body.appendChild(pg);
+  // Barre titre avec ✕
+  var title = "";
+  var phT = pg.querySelector(".ph-t");
+  if(phT) title = phT.textContent;
+  else { var h = pg.querySelector("h2,h3"); if(h) title = h.textContent; else title = id; }
+
+  panel.innerHTML = '<div style="background:var(--g1);color:#fff;padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:.78rem;font-weight:600;font-family:var(--fd);">'
+    + '<span style="flex:1">'+title+'</span>'
+    + '<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:.9rem;">&#x2715;</button>'
+    + '</div>'
+    + '<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
+
+  // Swap IDs : enlever sur original, garder sur clone → getElementById trouve le bon
+  Array.from(pg.querySelectorAll('[id]')).forEach(function(el){
+    el.dataset.origId=el.id; el.removeAttribute('id');
+  });
+  if(pg.id){pg.dataset.origId=pg.id;pg.removeAttribute('id');}
+  var clone = pg.cloneNode(true);
+  clone.style.display = "block";
+  document.getElementById("panel-body").appendChild(clone);
   panel.style.display = "flex";
 
   // Charger données
@@ -2751,28 +2757,24 @@ function openPanel(id){
   else if(id==="biblio"){bibLoadDossiers(function(){apiGet("/api/biblio").then(function(data){BIBLIO=Array.isArray(data)?data:[];el("sb-bib",BIBLIO.length);renderBiblio();});});}
   else if(id==="repelus") renderRepElus();
   else if(id==="elus") renderElus();
-  else if(id==="comm") buildCG();
-  else if(id==="global") fG();
-  else if(id==="signal"){fSig();updSig();}
-  else if(id==="events") renderEv();
-  else if(id==="guide") buildGuides();
-  else if(id==="ress") buildRess();
-  else if(id==="tuto"){}
-  else if(id==="hist") renderNt();
-  else if(id==="comms"){}
-  else if(id==="creer") resetNP();
-  else if(id==="budget") setTimeout(buildBudgetChart,50);
-  else if(id==="cdet") fCD();
+  else if(id==="comm") renderComm();
+  else if(id==="global") renderGlobal();
+  else if(id==="signal") renderSignal();
+  else if(id==="events") renderEvents();
+  else if(id==="guide") renderGuide();
+  else if(id==="ress") renderRess();
+  else if(id==="hist") renderHist();
+  else if(id==="comms") renderComms();
+  else if(id==="creer") renderCreer();
 }
 
 function closePanel(){
-  if(_panelPageId){
-    var pg=document.getElementById("p-"+_panelPageId);
-    if(pg){pg.style.display="none";document.body.appendChild(pg);}
-    _panelPageId=null;
-  }
-  var panel=document.getElementById("main-panel");
-  if(panel)panel.style.display="none";
+  // Remettre les IDs sur les originaux cachés
+  qsa("[data-orig-id]").forEach(function(el){
+    if(!el.closest("#main-panel")){ el.id=el.dataset.origId; delete el.dataset.origId; }
+  });
+  var panel = document.getElementById("main-panel");
+  if(panel) panel.style.display = "none";
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
 }
 
@@ -4127,12 +4129,11 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
-  // Remplir les éléments de p-cdet
-  var ico=$("cdet-ico");if(ico)ico.textContent=ICONS[comm]||"📋";
-  var tit=$("cdet-t");if(tit)tit.textContent=comm;
-  var sub=$("cdet-s");if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
-  var kpis=$("cdet-kpis");if(kpis)kpis.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
-  var cdSt=$("cd-st");if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
+  var ico=document.querySelector("[data-orig-id='cdet-ico']")||document.getElementById("cdet-ico");if(ico)ico.textContent=ICONS[comm]||"📋";
+  var tit=document.querySelector("[data-orig-id='cdet-t']")||document.getElementById("cdet-t");if(tit)tit.textContent=comm;
+  var sub=document.querySelector("[data-orig-id='cdet-s']")||document.getElementById("cdet-s");if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
+  var kpis=document.querySelector("[data-orig-id='cdet-kpis']")||document.getElementById("cdet-kpis");if(kpis)kpis.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
+  var cdSt=document.querySelector("[data-orig-id='cd-st']")||document.getElementById("cd-st");if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
   openPanel("cdet"); return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
@@ -4648,7 +4649,7 @@ var _ePid=null;
 function _fpPanel(){
   var p=document.getElementById('main-panel');
   if(!p){p=document.createElement('div');p.id='main-panel';document.body.appendChild(p);}
-  p.style.cssText='position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
+  p.style.cssText='position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
   return p;
 }
 function _fpCss(){
@@ -5145,7 +5146,7 @@ init();
 
 // ── DÉCONNEXION + AUTO-LOGOUT ─────────────────────────────────────────────────
 var _idleT=null, _idleW=null, _idleC=null, _idleR=0;
-var IDLE_MIN=30, WARN_MIN=25;
+var IDLE_MIN=9999, WARN_MIN=9990; // désactivé
 
 function vemLogout(){
   if(confirm('Déconnexion ?')) window.location.href='/logout';

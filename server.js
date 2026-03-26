@@ -827,7 +827,7 @@ const server=http.createServer(function(req,res){
   // CLAUDE AI
   if(p==='/api/genere'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false,error:'Données invalides'},400);
-    const KEY=process.env.ANTHROPIC_API_KEY||('sk-ant-api03-iRo-Mb101Ngs_RIk5HgRqStD0oddiZH'+'vyIJKJtk6z34PQSZQoewva7mpnq0lKeTcLLEawbY8EzsQ8ijswAsbqQ-ixPn3gAA');if(!KEY)return J(res,{ok:false,error:'Clé ANTHROPIC_API_KEY non configurée.'});
+    const KEY=process.env.ANTHROPIC_API_KEY||'';if(!KEY)return J(res,{ok:false,error:'Clé ANTHROPIC_API_KEY non configurée.'});
     const prompts={arrete:'Rédigez un arrêté municipal pour Vizille (Isère 38431). Numéro, visas CGCT, considérants, articles. Sujet : ',deliberation:'Rédigez une délibération du conseil de Vizille. Objet, motifs, décision. Sujet : ',facebook:'Post Facebook pour Vizille en Mouvement. Chaleureux, emojis, 300 mots max. Sujet : ',communique:'Communiqué de presse Ville de Vizille. Titre, chapeau, corps, contact. Sujet : ',convocation:'Convocation conseil Vizille art.L2121-10 CGCT. Date, heure, lieu, ODJ. Sujet : ',discours:'Discours pour élu de Vizille. Sincère et ancré territoire 2026-2032. Sujet : ',question:'Question orale pour séance du conseil de Vizille. Argumentée, précise. Sujet : ',courrier:'Courrier officiel au nom de la Ville de Vizille. Professionnel. Objet : ',cr:'Compte-rendu de réunion pour Vizille en Mouvement. Structuré : présents, ordre du jour, débats, décisions, prochaine étape. Réunion : '};
     const prompt=(prompts[d.type]||'')+(d.sujet||'')+' Contexte: Vizille Isère, Maire Catherine Troton, mandat 2026-2032. '+(d.contexte||'');
     const rb=JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]});
@@ -1651,8 +1651,8 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <div class="layout">
 <aside class="sb">
-  <div onclick="gp('today',this)" style="margin:.75rem .65rem .5rem;padding:.65rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px">🏠 <span>Accueil</span></div>
   <div class="sbs">Mon espace</div>
+  <div class="sbi on" onclick="gp('today',this)"><span class="sbi-ic">&#x1F4CB;</span>Aujourd&#x27;hui</div>
   <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
   <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
   <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
@@ -2749,18 +2749,18 @@ function openPanel(id){
   // Charger données
   if(id==="agenda") renderAg();
   else if(id==="cr") renderCR();
-  else if(id==="biblio"){bibLoadDossiers(function(){apiGet("/api/biblio").then(function(data){BIBLIO=Array.isArray(data)?data:[];el("sb-bib",BIBLIO.length);renderBiblio();});});}
+  else if(id==="biblio") renderBiblio();
   else if(id==="repelus") renderRepElus();
   else if(id==="elus") renderElus();
-  else if(id==="comm") buildCG();
-  else if(id==="global") fG();
-  else if(id==="signal"){fSig();updSig();}
-  else if(id==="events") renderEv();
-  else if(id==="guide") buildGuides();
-  else if(id==="ress") buildRess();
-  else if(id==="hist") renderNt();
-  else if(id==="comms"){}
-  else if(id==="creer") resetNP();
+  else if(id==="comm") renderComm();
+  else if(id==="global") renderGlobal();
+  else if(id==="signal") renderSignal();
+  else if(id==="events") renderEvents();
+  else if(id==="guide") renderGuide();
+  else if(id==="ress") renderRess();
+  else if(id==="hist") renderHist();
+  else if(id==="comms") renderComms();
+  else if(id==="creer") renderCreer();
 }
 
 function closePanel(){
@@ -2867,12 +2867,8 @@ function init(){
     renderWidgetMandat();
   });
 
-  bibLoadDossiers(function(){
-    apiGet("/api/biblio").then(function(data){
-      BIBLIO=Array.isArray(data)?data:[];
-      el("sb-bib",BIBLIO.length);
-      renderBiblio();
-    });
+  apiGet("/api/biblio").then(function(data){
+    BIBLIO=data; el("sb-bib",BIBLIO.length); renderBiblio();
   });
 
   apiGet("/api/rep_elus").then(function(data){
@@ -3090,7 +3086,7 @@ function renderShortcuts(){}
 
 
 /* ── WIDGET TCHAT ACCUEIL ────────────────────────────────────────────────── */
-// _chatLast unifié → _chatLast
+var _wgChatLast = 0;
 
 function wgRenderMsgs(msgs) {
   var el2 = $("wg-chat-msgs"); if(!el2) return;
@@ -3101,7 +3097,7 @@ function wgRenderMsgs(msgs) {
   el2.innerHTML = msgs.slice(-20).map(function(m) {
     var isMe = m.auteur === ME.nom || m.avatar === ME.avatar;
     return '<div style="display:flex;flex-direction:column;gap:1px;align-items:'+(isMe?"flex-end":"flex-start")+'">'
-      + '<div style="font-size:.58rem;color:var(--i4);padding:0 4px">'+m.auteur+' · '+(m.ts||m.created_at||'')+'</div>'
+      + '<div style="font-size:.58rem;color:var(--i4);padding:0 4px">'+m.auteur+' · '+m.ts+'</div>'
       + '<div style="background:'+(isMe?"var(--g3)":"#fff")+';color:'+(isMe?"#fff":"var(--ink)")+';border-radius:'+(isMe?"10px 10px 3px 10px":"10px 10px 10px 3px")+';padding:.45rem .65rem;font-size:.74rem;max-width:88%;box-shadow:var(--s1);border:1px solid '+(isMe?"var(--g3)":"var(--w2)")+';line-height:1.45">'+m.texte+'</div>'
       + '</div>';
   }).join("");
@@ -3110,17 +3106,20 @@ function wgRenderMsgs(msgs) {
 
 function wgPollChat() {
   var ch = v("wg-chat-ch") || "general";
-  apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d) {
+  apiGet("/api/chat?channel="+ch+"&since="+_wgChatLast).then(function(d) {
     if(d.ok && d.messages && d.messages.length) {
-      var _ei2=CHAT.map(function(m){return m.id;});
-      var _nw2=d.messages.filter(function(m){return _ei2.indexOf(m.id)<0;});
-      if(_nw2.length){CHAT=CHAT.concat(_nw2);_chatLast=d.lastId;wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));var badge=$("wg-chat-badge");if(badge)badge.style.display="block";}
+      CHAT = CHAT.concat(d.messages);
+      _wgChatLast = d.lastId;
+      wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));
+      // Indiquer nouveau message si pas visible
+      var badge = $("wg-chat-badge");
+      if(badge) badge.style.display = "block";
     }
   });
 }
 
 function wgSwitchCh() {
-  CHAT = []; _chatLast = 0;
+  CHAT = []; _wgChatLast = 0;
   var badge = $("wg-chat-badge");
   if(badge) badge.style.display = "none";
   // Charger l'historique du canal
@@ -3128,7 +3127,7 @@ function wgSwitchCh() {
   apiGet("/api/chat?channel="+ch+"&since=0").then(function(d) {
     if(d.ok) {
       CHAT = d.messages || [];
-      _chatLast = d.lastId || 0;
+      _wgChatLast = d.lastId || 0;
       wgRenderMsgs(CHAT);
     }
   });
@@ -3158,11 +3157,11 @@ function wgSendMsg() {
   var ch = v("wg-chat-ch") || "general";
   apiPost("/api/chat", {channel:ch, auteur:ME.nom, avatar:ME.avatar, texte:txt})
     .then(function(d) {
-      if(d.ok&&d.message){
-        var _ei3=CHAT.map(function(m){return m.id;});if(_ei3.indexOf(d.message.id)<0)CHAT.push(d.message);
-        if(d.message.id&&d.message.id>_chatLast)_chatLast=d.message.id;
+      if(d.ok) {
+        CHAT.push(d.message);
         wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));
-        var badge=$("wg-chat-badge");if(badge)badge.style.display="none";
+        var badge = $("wg-chat-badge");
+        if(badge) badge.style.display = "none";
       }
     });
 }
@@ -3181,19 +3180,16 @@ function wgLoadChat2(){
     var msgs=d.messages||[];
     box.innerHTML=msgs.length?msgs.slice(-15).map(function(m){
       var isMe=m.auteur===ME.nom;
-      return '<div class="msg-w'+(isMe?' me':'')+'"><div class="msg-meta">'+m.auteur+' · <'+(m.ts||m.created_at||'')+'</div><div class="msg-bub">'+m.texte+'</div></div>';
+      return '<div class="msg-w'+(isMe?' me':'')+'"><div class="msg-meta">'+m.auteur+' · '+m.ts+'</div><div class="msg-bub">'+m.texte+'</div></div>';
     }).join(''):'<div style="font-size:.72rem;color:var(--i4);text-align:center;padding:1rem">Aucun message</div>';
     box.scrollTop=box.scrollHeight;
   });
 }
 function wgSwitchCh2(){wgLoadChat2();}
 
-function initWidgetChat(){
-  var ch=v("wg-chat-ch")||"general";
-  apiGet("/api/chat?channel="+ch+"&since=0").then(function(d){
-    if(d.ok){CHAT=d.messages||[];_chatLast=d.lastId||0;wgRenderMsgs(CHAT);}
-  });
-  setInterval(wgPollChat,8000);
+function initWidgetChat() {
+  wgSwitchCh();
+  setInterval(wgPollChat, 8000);
 }
 
 
@@ -3517,7 +3513,7 @@ var TYPE_COLORS={'PDF':'#dc2626','Word':'#2563eb','Excel':'#16a34a','Email':'#c9
 
 function bibLoadDossiers(cb){
   apiGet('/api/biblio/dossiers').then(function(d){
-    BIBLIO_DOSSIERS=Array.isArray(d)?d:[];
+    BIBLIO_DOSSIERS=d||[];
     if(cb)cb();
   });
 }
@@ -3532,19 +3528,19 @@ function renderBiblio(){
   var typeBar=$("bib-type-bar");
   if(typeBar){
     typeBar.innerHTML=
-      '<button onclick="bibSetType(\'\')" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
+      '<button data-t="" onclick="bibSetType(this.dataset.t)" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
       +(_bibTypeFiltre===''?'background:var(--g1);color:#fff;border-color:var(--g1);':'background:#fff;color:var(--i2);border-color:var(--w2);')
       +'">Toutes</button>'
       +NATURES.map(function(t){
         var active=_bibTypeFiltre===t;
-        return '<button onclick="bibSetType(\''+t+'\')" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
+        return '<button data-t="'+t+'" onclick="bibSetType(this.dataset.t)" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
           +(active?'background:var(--or);color:#fff;border-color:var(--or);':'background:#fff;color:var(--i2);border-color:var(--w2);')
           +'">'+(NATURE_ICONS[t]||'📄')+' '+t+'</button>';
       }).join('');
   }
 
   // ── Filtrage ──────────────────────────────────────────────────────────────
-  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';}).sort(function(a,b){return a.nom.localeCompare(b.nom,'fr');});
+  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';});
   var natures=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='nature';});
 
   var r=BIBLIO.filter(function(b){
@@ -3731,7 +3727,7 @@ function bibChangeType(docId,type){
 function delBiblio(id){
   if(!confirm('Supprimer ce document ?'))return;
   apiDel('/api/biblio/'+id).then(function(d){
-    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});el('sb-bib',BIBLIO.length);renderBiblio();toast('Document supprimé ✓');}
+    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});renderBiblio();}
   });
 }
 
@@ -4122,12 +4118,6 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
-  var _ico=document.getElementById("cdet-ico");if(_ico)_ico.textContent=ICONS[comm]||"📋";
-  var _tit=document.getElementById("cdet-t");if(_tit)_tit.textContent=comm;
-  var _sub=document.getElementById("cdet-s");if(_sub)_sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
-  var _kpi=document.getElementById("cdet-kpis");if(_kpi)_kpi.innerHTML='<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div><div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
-  var _cst=document.getElementById("cd-st");if(_cst)_cst.innerHTML='<option value="">Tous statuts</option>'+statOpts;
-  openPanel("cdet"); return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
     '<div style="background:'+col+'18;border-bottom:3px solid '+col+';padding:.85rem 1.4rem;display:flex;align-items:center;gap:12px;flex-shrink:0">'
@@ -4370,9 +4360,9 @@ function resetChat(){
 }
 
 
-function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok&&d.message){var _ei=CHAT.map(function(m){return m.id;});if(_ei.indexOf(d.message.id)<0)CHAT.push(d.message);if(d.message.id)_chatLast=d.message.id;renderChatMsgs(CHAT);scrollChat();}});}
-function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages&&d.messages.length){var _ei=CHAT.map(function(m){return m.id;});var _nw=d.messages.filter(function(m){return _ei.indexOf(m.id)<0;});if(_nw.length){CHAT=CHAT.concat(_nw);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else{var b=$("cbdg");if(b)b.style.display="block";}}}});}
-function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+(m.ts||m.created_at||'')+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}
+function sendMsg(){var i=$("chat-inp"),txt=i.value.trim();if(!txt)return;i.value="";apiPost("/api/chat",{channel:v("chat-ch"),auteur:ME.nom,avatar:ME.avatar,texte:txt}).then(function(d){if(d.ok){CHAT.push(d.message);renderChatMsgs(CHAT);scrollChat();}});}
+function pollChat(){var ch=v("chat-ch")||"general";apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d){if(d.ok&&d.messages.length){CHAT=CHAT.concat(d.messages);_chatLast=d.lastId;if(_chatOpen){renderChatMsgs(CHAT);scrollChat();}else $("cbdg").style.display="block";}});}
+function renderChatMsgs(msgs){var el2=$("chat-msgs");if(!el2)return;el2.innerHTML=msgs.slice(-40).map(function(m){var me=m.auteur===ME.nom||m.avatar===ME.avatar;return '<div class="msg-w'+(me?" me":"")+'">'+'<div class="msg-meta">'+m.auteur+" · "+m.ts+'</div>'+'<div class="msg-bub'+(me?" me":"")+'">'+m.texte+'</div></div>';}).join("")||'<div class="empty" style="padding:2rem"><div class="empty-ico">💬</div><div class="empty-s">Aucun message.</div></div>';}
 function scrollChat(){var e=$("chat-msgs");if(e)e.scrollTop=e.scrollHeight;}
 
 // ── DÉMARRAGE ─────────────────────────────────────────────────────────────────
@@ -4642,7 +4632,7 @@ var _ePid=null;
 function _fpPanel(){
   var p=document.getElementById('main-panel');
   if(!p){p=document.createElement('div');p.id='main-panel';document.body.appendChild(p);}
-  p.style.cssText='position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
+  p.style.cssText='position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
   return p;
 }
 function _fpCss(){
@@ -5139,7 +5129,7 @@ init();
 
 // ── DÉCONNEXION + AUTO-LOGOUT ─────────────────────────────────────────────────
 var _idleT=null, _idleW=null, _idleC=null, _idleR=0;
-var IDLE_MIN=9999, WARN_MIN=9990; // désactivé
+var IDLE_MIN=30, WARN_MIN=25;
 
 function vemLogout(){
   if(confirm('Déconnexion ?')) window.location.href='/logout';

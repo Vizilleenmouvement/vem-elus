@@ -1651,11 +1651,11 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <div class="layout">
 <aside class="sb">
+  <div onclick="gp('today',document.querySelector('.sbi-accueil'))" class="sbi-accueil" style="margin:.75rem .65rem .5rem;padding:.7rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s;letter-spacing:.01em" onmouseover="this.style.background='#b8891e'" onmouseout="this.style.background='var(--or)'">🏠 <span>Accueil</span></div>
   <div class="sbs">Mon espace</div>
-  <div class="sbi on" onclick="gp('today',this)"><span class="sbi-ic">🏠</span>Accueil</div>
-  <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
-  <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
-  <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
+  <div class="sbi" onclick="gp('tuto',this)"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
+  <div class="sbi" onclick="gp('guide',this)"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
+  <div class="sbi" onclick="gp('ress',this)"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
 
   <div class="sbs">Le mandat</div>
   <div class="sbi" onclick="gp('agenda',this)"><span class="sbi-ic">&#x1F4C5;</span>Agenda</div>
@@ -2043,7 +2043,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 <!-- BIBLIOTHÈQUE -->
 <div class="page" id="p-biblio">
   <div class="ph"><div class="ph-ico" style="background:var(--g8)">&#x1F4DA;</div><div><div class="ph-t">Biblioth&#xe8;que documentaire</div><div class="ph-s">Classement par dossier, type, commission</div></div>
-    <div class="ph-a" style="display:flex;gap:6px;align-items:center"><button class="btn btn-s btn-sm" onclick="gp('today',document.querySelector('.sbi'))">🏠 Accueil</button><button class="btn btn-p btn-sm" onclick="om('biblio')">+ Ajouter</button></div>
+    <div class="ph-a"><button class="btn btn-p btn-sm" onclick="om('biblio')">+ Ajouter</button></div>
   </div>
   <div style="display:flex;height:calc(100% - 70px)">
     <!-- Sidebar dossiers -->
@@ -2702,74 +2702,17 @@ function gp(id,ni){
   else if(id==="cdet"){fCD();}
   else if(id==="creer"){resetNP();}
   else if(id==="budget"){setTimeout(buildBudgetChart,50);}
-  else if(id==="guide"||id==="ress"){
-    // Ress et Guide fusionnés
-    qsa(".page").forEach(function(p){p.classList.remove("on");});
-    var pg=$("p-guide");if(pg)pg.classList.add("on");
-    if(ni)ni.classList.add("on");
-    buildGuides(); buildRess();
-    return;
-  }
+  else if(id==="guide"){buildGuides();}
+  else if(id==="ress"){buildRess();}
+  else if(id==="tuto"){}
 }
 // ── PANNEAU UNIQUE — s'ouvre par-dessus le dashboard ─────────────────────────
-function openPanel(id){
-  // Activer le menu
-  qsa(".sbi").forEach(function(n){n.classList.remove("on");});
-  var menuEl = document.querySelector("[data-panel='" + id + "']");
-  if(menuEl) menuEl.classList.add("on");
-
-  var pg = document.getElementById("p-"+id);
-  if(!pg) return;
-
-  // Créer ou réutiliser le panneau
-  var panel = document.getElementById("main-panel");
-  if(!panel){
-    panel = document.createElement("div");
-    panel.id = "main-panel";
-    panel.style.cssText = "position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
-    document.body.appendChild(panel);
-  }
-
-  // Barre titre avec ✕
-  var title = "";
-  var phT = pg.querySelector(".ph-t");
-  if(phT) title = phT.textContent;
-  else { var h = pg.querySelector("h2,h3"); if(h) title = h.textContent; else title = id; }
-
-  panel.innerHTML = '<div style="background:var(--g1);color:#fff;padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:.78rem;font-weight:600;font-family:var(--fd);">'
-    + '<span style="flex:1">'+title+'</span>'
-    + '<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:.9rem;">&#x2715;</button>'
-    + '</div>'
-    + '<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
-
-  var clone = pg.cloneNode(true);
-  clone.style.display = "block";
-  document.getElementById("panel-body").appendChild(clone);
-  panel.style.display = "flex";
-
-  // Charger données
-  if(id==="agenda") renderAg();
-  else if(id==="cr") renderCR();
-  else if(id==="biblio") renderBiblio();
-  else if(id==="repelus") renderRepElus();
-  else if(id==="elus") renderElus();
-  else if(id==="comm") renderComm();
-  else if(id==="global") renderGlobal();
-  else if(id==="signal") renderSignal();
-  else if(id==="events") renderEvents();
-  else if(id==="guide") renderGuide();
-  else if(id==="ress") renderRess();
-  else if(id==="hist") renderHist();
-  else if(id==="comms") renderComms();
-  else if(id==="creer") renderCreer();
-}
+function openPanel(id){ gp(id); } // obsolète — tout passe par gp()
 
 function closePanel(){
   var panel = document.getElementById("main-panel");
   if(panel) panel.style.display = "none";
-  qsa(".sbi").forEach(function(n){n.classList.remove("on");});
-  var first = document.querySelector(".sbi");
-  if(first) first.classList.add("on");
+  gp("today", document.querySelector(".sbi-accueil"));
 }
 
 
@@ -4650,7 +4593,7 @@ var _ePid=null;
 function _fpPanel(){
   var p=document.getElementById('main-panel');
   if(!p){p=document.createElement('div');p.id='main-panel';document.body.appendChild(p);}
-  p.style.cssText='position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
+  p.style.cssText='position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
   return p;
 }
 function _fpCss(){

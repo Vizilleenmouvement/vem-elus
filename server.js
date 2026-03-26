@@ -3097,7 +3097,7 @@ function renderShortcuts(){}
 
 
 /* ── WIDGET TCHAT ACCUEIL ────────────────────────────────────────────────── */
-var _wgChatLast = 0;
+// _chatLast unifié avec _chatLast
 
 function wgRenderMsgs(msgs) {
   var el2 = $("wg-chat-msgs"); if(!el2) return;
@@ -3108,7 +3108,7 @@ function wgRenderMsgs(msgs) {
   el2.innerHTML = msgs.slice(-20).map(function(m) {
     var isMe = m.auteur === ME.nom || m.avatar === ME.avatar;
     return '<div style="display:flex;flex-direction:column;gap:1px;align-items:'+(isMe?"flex-end":"flex-start")+'">'
-      + '<div style="font-size:.58rem;color:var(--i4);padding:0 4px">'+m.auteur+' · '+m.ts+'</div>'
+      + '<div style="font-size:.58rem;color:var(--i4);padding:0 4px">'+m.auteur+' · '+(m.ts||m.created_at||'')+'</div>'
       + '<div style="background:'+(isMe?"var(--g3)":"#fff")+';color:'+(isMe?"#fff":"var(--ink)")+';border-radius:'+(isMe?"10px 10px 3px 10px":"10px 10px 10px 3px")+';padding:.45rem .65rem;font-size:.74rem;max-width:88%;box-shadow:var(--s1);border:1px solid '+(isMe?"var(--g3)":"var(--w2)")+';line-height:1.45">'+m.texte+'</div>'
       + '</div>';
   }).join("");
@@ -3117,20 +3117,17 @@ function wgRenderMsgs(msgs) {
 
 function wgPollChat() {
   var ch = v("wg-chat-ch") || "general";
-  apiGet("/api/chat?channel="+ch+"&since="+_wgChatLast).then(function(d) {
+  apiGet("/api/chat?channel="+ch+"&since="+_chatLast).then(function(d) {
     if(d.ok && d.messages && d.messages.length) {
-      CHAT = CHAT.concat(d.messages);
-      _wgChatLast = d.lastId;
-      wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));
-      // Indiquer nouveau message si pas visible
-      var badge = $("wg-chat-badge");
-      if(badge) badge.style.display = "block";
+      var _wIds=CHAT.map(function(m){return m.id;});
+      var _wNew=d.messages.filter(function(m){return _wIds.indexOf(m.id)<0;});
+      if(_wNew.length){CHAT=CHAT.concat(_wNew);_chatLast=d.lastId;wgRenderMsgs(CHAT.filter(function(m){return m.channel===ch;}));var badge=$("wg-chat-badge");if(badge)badge.style.display="block";}
     }
   });
 }
 
 function wgSwitchCh() {
-  CHAT = []; _wgChatLast = 0;
+  CHAT = []; _chatLast = 0;
   var badge = $("wg-chat-badge");
   if(badge) badge.style.display = "none";
   // Charger l'historique du canal
@@ -3138,7 +3135,7 @@ function wgSwitchCh() {
   apiGet("/api/chat?channel="+ch+"&since=0").then(function(d) {
     if(d.ok) {
       CHAT = d.messages || [];
-      _wgChatLast = d.lastId || 0;
+      _chatLast = d.lastId || 0;
       wgRenderMsgs(CHAT);
     }
   });
@@ -3200,7 +3197,15 @@ function wgLoadChat2(){
 function wgSwitchCh2(){wgLoadChat2();}
 
 function initWidgetChat() {
-  wgSwitchCh();
+  // Charger l'historique et synchro _chatLast global
+  var ch = v("wg-chat-ch") || "general";
+  apiGet("/api/chat?channel="+ch+"&since=0").then(function(d){
+    if(d.ok){
+      CHAT = d.messages || [];
+      _chatLast = d.lastId || 0;
+      wgRenderMsgs(CHAT);
+    }
+  });
   setInterval(wgPollChat, 8000);
 }
 

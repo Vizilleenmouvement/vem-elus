@@ -3522,124 +3522,93 @@ function renderBiblio(){
   var bl=$("bib-list"); if(!bl)return;
   var q=v("bib-q").toLowerCase();
 
-  // ── Barre filtres type — grands boutons évidents ──────────────────────────
-  var allTypes=['PDF','Word','Excel','Email','Image','PPT','Texte','Autre'];
+  // ── Barre filtres NATURE du document ────────────────────────────────────────
+  var NATURES=['CR de commission','Délibération','Procès-verbal','Rapport','Étude','Avis','Courrier','Email','Devis','Marché public','Budget','Autre'];
+  var NATURE_ICONS={'CR de commission':'📋','Délibération':'🏛','Procès-verbal':'📋','Rapport':'📊','Étude':'🔬','Avis':'⚖️','Courrier':'📨','Email':'📧','Devis':'💶','Marché public':'📝','Budget':'💰','Autre':'📄'};
   var typeBar=$("bib-type-bar");
   if(typeBar){
     typeBar.innerHTML=
-      '<button data-t="" onclick="bibSetType(this.dataset.t)" style="'
-      +(_bibTypeFiltre===''
-        ?'background:var(--g1);color:#fff;border-color:var(--g1);'
-        :'background:#fff;color:var(--i2);border-color:var(--w2);')
-      +'padding:5px 14px;border-radius:20px;border:1.5px solid;font-size:.75rem;font-weight:700;cursor:pointer">Tous</button>'
-      +allTypes.map(function(t){
+      '<button data-t="" onclick="bibSetType(this.dataset.t)" style="padding:4px 13px;border-radius:20px;border:1.5px solid;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;'
+      +(_bibTypeFiltre===''?'background:var(--g1);color:#fff;border-color:var(--g1);':'background:#fff;color:var(--i2);border-color:var(--w2);')
+      +'">Toutes</button>'
+      +NATURES.map(function(t){
         var active=_bibTypeFiltre===t;
-        var c=TYPE_COLORS[t]||'#9ca3af';
-        return '<button data-t="'+t+'" onclick="bibSetType(this.dataset.t)" style="'
-          +(active?'background:'+c+';color:#fff;border-color:'+c+';':'background:#fff;color:var(--i2);border-color:var(--w2);')
-          +'padding:5px 12px;border-radius:20px;border:1.5px solid;font-size:.75rem;font-weight:600;cursor:pointer">'
-          +TYPE_ICONS[t]+' '+t+'</button>';
+        return '<button data-t="'+t+'" onclick="bibSetType(this.dataset.t)" style="padding:4px 12px;border-radius:20px;border:1.5px solid;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;'
+          +(active?'background:var(--or);color:#fff;border-color:var(--or);':'background:#fff;color:var(--i2);border-color:var(--w2);')
+          +'">'+(NATURE_ICONS[t]||'📄')+' '+t+'</button>';
       }).join('');
   }
 
   // ── Filtrage ──────────────────────────────────────────────────────────────
+  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';});
+  var natures=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='nature';});
+
   var r=BIBLIO.filter(function(b){
     var matchQ=!q||(b.titre||'').toLowerCase().indexOf(q)>=0||(b.description||'').toLowerCase().indexOf(q)>=0;
     var matchDos=_bibDosActif===null?true:(_bibDosActif===0?!b.dossier_id:b.dossier_id===_bibDosActif);
-    var matchType=!_bibTypeFiltre||getFileType(b.url)===_bibTypeFiltre;
+    var matchType=!_bibTypeFiltre||(b.type||'')=== _bibTypeFiltre;
     return matchQ&&matchDos&&matchType;
   });
 
   el("bib-cnt",r.length+' document'+(r.length>1?'s':''));
   el("sb-bib",BIBLIO.length);
 
-  // ── Sidebar — tout visible, deux sections étiquetées ─────────────────────
+  // ── Sidebar : THÈMES uniquement, toujours visibles ───────────────────────
   var side=$("bib-dossiers");
   if(side){
-    var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';});
-    var natures=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='nature';});
-
     function dosItem(d){
       var cnt=BIBLIO.filter(function(b){return b.dossier_id===d.id;}).length;
       var active=_bibDosActif===d.id;
-      return '<div onclick="bibSetDos('+d.id+')" style="display:flex;align-items:center;gap:6px;padding:.32rem .5rem .32rem 1.1rem;border-radius:7px;cursor:pointer;'
+      return '<div onclick="bibSetDos('+d.id+')" style="display:flex;align-items:center;gap:6px;padding:.3rem .5rem .3rem 1rem;border-radius:7px;cursor:pointer;'
         +(active?'background:'+d.couleur+'20;border-left:3px solid '+d.couleur+';':'border-left:3px solid transparent;')
         +'">'
         +'<span style="font-size:.82rem">'+d.icone+'</span>'
         +'<span style="flex:1;font-size:.71rem;font-weight:'+(active?700:400)+';color:'+(active?d.couleur:'var(--i2)')+'">'+d.nom+'</span>'
-        +(cnt?'<span style="font-size:.62rem;background:'+(active?d.couleur:'var(--w2)')+';color:'+(active?'#fff':'var(--i4)')+';padding:0 5px;border-radius:8px;min-width:16px;text-align:center">'+cnt+'</span>':'')
-        +'<span class="bib-dos-actions" style="display:none;gap:2px">'
-        +'<button onclick="event.stopPropagation();bibRenameDos('+d.id+')" style="background:none;border:none;cursor:pointer;color:var(--i4);font-size:.6rem;padding:1px 2px" title="Renommer">✏️</button>'
-        +'<button onclick="event.stopPropagation();bibDelDos('+d.id+')" style="background:none;border:none;cursor:pointer;color:var(--i4);font-size:.65rem;padding:1px 2px" title="Supprimer">×</button>'
-        +'</span>'
+        +(cnt?'<span style="font-size:.62rem;background:'+(active?d.couleur+'30':'var(--w2)')+';color:'+(active?d.couleur:'var(--i4)')+';padding:0 6px;border-radius:8px">'+cnt+'</span>':'')
         +'</div>';
     }
 
     var shtml=
       // Tous / Non classé
       '<div style="margin-bottom:.5rem">'
-      +'<div onclick="bibSetDos(null)" style="display:flex;align-items:center;gap:7px;padding:.45rem .6rem;border-radius:8px;cursor:pointer;'
-      +(_bibDosActif===null?'background:var(--g1);':'background:none;')
+      +'<div onclick="bibSetDos(null)" style="display:flex;align-items:center;gap:7px;padding:.42rem .6rem;border-radius:8px;cursor:pointer;'
+      +(_bibDosActif===null?'background:var(--g1);':'')
       +'">'
-      +'<span>📚</span>'
-      +'<span style="flex:1;font-size:.75rem;font-weight:700;color:'+(_bibDosActif===null?'#fff':'var(--i2)')+'">Tous</span>'
+      +'<span>📚</span><span style="flex:1;font-size:.75rem;font-weight:700;color:'+(_bibDosActif===null?'#fff':'var(--i2)')+'">Tous</span>'
       +'<span style="font-size:.67rem;color:'+(_bibDosActif===null?'rgba(255,255,255,.7)':'var(--i4)')+';font-weight:600">'+BIBLIO.length+'</span>'
       +'</div>'
-      +'<div onclick="bibSetDos(0)" style="display:flex;align-items:center;gap:7px;padding:.4rem .6rem;border-radius:8px;cursor:pointer;'
-      +(_bibDosActif===0?'background:var(--g8);':'')
-      +'">'
-      +'<span>📄</span>'
-      +'<span style="flex:1;font-size:.71rem;color:'+(_bibDosActif===0?'var(--g2)':'var(--i3)')+'">Non classé</span>'
+      +'<div onclick="bibSetDos(0)" style="display:flex;align-items:center;gap:7px;padding:.38rem .6rem;border-radius:8px;cursor:pointer;border-left:3px solid '+(_bibDosActif===0?'var(--g3)':'transparent')+'">'
+      +'<span>📄</span><span style="flex:1;font-size:.71rem;color:'+(_bibDosActif===0?'var(--g2)':'var(--i3)')+'">Non classé</span>'
       +'<span style="font-size:.62rem;color:var(--i4)">'+BIBLIO.filter(function(b){return !b.dossier_id;}).length+'</span>'
       +'</div>'
       +'</div>'
-
-      // Section Thèmes
-      +'<div style="height:1px;background:var(--w2);margin:.2rem .3rem .5rem"></div>'
-      +'<div style="font-size:.6rem;font-weight:800;color:var(--i4);text-transform:uppercase;letter-spacing:.08em;padding:.1rem .5rem .4rem">🗂 Thèmes</div>'
+      // Séparateur + label THÈMES
+      +'<div style="height:1px;background:var(--w2);margin:.2rem .2rem .5rem"></div>'
+      +'<div style="font-size:.6rem;font-weight:800;color:var(--i4);text-transform:uppercase;letter-spacing:.08em;padding:.1rem .5rem .4rem">Thèmes</div>'
       +themes.map(dosItem).join('')
-      +'<div style="padding:.3rem .5rem">'
+      +'<div style="padding:.3rem .5rem .1rem">'
       +'<button data-grp="theme" onclick="bibNewDos(this.dataset.grp)" style="font-size:.64rem;color:var(--g3);background:none;border:none;cursor:pointer;padding:0">+ Ajouter un thème</button>'
-      +'</div>'
-
-      // Section Nature
-      +'<div style="height:1px;background:var(--w2);margin:.3rem .3rem .5rem"></div>'
-      +'<div style="font-size:.6rem;font-weight:800;color:var(--i4);text-transform:uppercase;letter-spacing:.08em;padding:.1rem .5rem .4rem">📋 Nature du document</div>'
-      +natures.map(dosItem).join('')
-      +'<div style="padding:.3rem .5rem">'
-      +'<button data-grp="nature" onclick="bibNewDos(this.dataset.grp)" style="font-size:.64rem;color:var(--g3);background:none;border:none;cursor:pointer;padding:0">+ Ajouter une nature</button>'
       +'</div>';
 
     side.innerHTML=shtml;
-
-    // Afficher boutons renommer/supprimer au survol
-    side.querySelectorAll('[onclick]').forEach(function(el){
-      el.addEventListener('mouseenter',function(){
-        var a=el.querySelector('.bib-dos-actions');if(a)a.style.display='flex';
-      });
-      el.addEventListener('mouseleave',function(){
-        var a=el.querySelector('.bib-dos-actions');if(a)a.style.display='none';
-      });
-    });
   }
 
   // ── Liste documents ───────────────────────────────────────────────────────
   if(!r.length){
     bl.innerHTML='<div class="empty"><div class="empty-ico">📚</div><div class="empty-t">Aucun document</div>'
-      +'<div class="empty-s">'+(_bibDosActif&&_bibDosActif!==null?'Ce dossier est vide.':'Ajoutez des documents via le bouton + Ajouter.')+'</div></div>';
+      +'<div class="empty-s">'+(_bibDosActif&&_bibDosActif!==null?'Ce dossier est vide.':'Ajoutez des documents ou affinez le filtre.')+'</div></div>';
     return;
   }
 
   bl.innerHTML=r.map(function(b){
-    var dos=BIBLIO_DOSSIERS.find(function(d){return d.id===b.dossier_id;});
     var ftype=getFileType(b.url);
     var fico=TYPE_ICONS[ftype]||'📄';
     var fcol=TYPE_COLORS[ftype]||'#9ca3af';
+    var dosTh=BIBLIO_DOSSIERS.find(function(d){return d.id===b.dossier_id;});
     var isLocal=b.url&&b.url.startsWith('/uploads/');
     var isPdf=b.url&&b.url.toLowerCase().endsWith('.pdf');
     var isImg=b.url&&/\.(jpg|jpeg|png|gif|webp)$/i.test(b.url);
 
-    // Prévisualisation : PDF → iframe toggle, Image → inline, autre → lien
     var previewBtn='';
     var previewZone='';
     if(isPdf&&isLocal){
@@ -3649,39 +3618,40 @@ function renderBiblio(){
       previewZone='<div style="margin-top:.6rem"><img src="'+b.url+'" style="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--w2);object-fit:contain" loading="lazy"></div>';
     }
 
+    // Menu déroulant THÈME (dossiers groupe=theme)
+    var dosThemes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';});
+    var themeSelect='<select onchange="bibMoveTo('+b.id+',this.value)" style="font-size:.67rem;background:var(--g9);border:1px solid var(--w2);border-radius:7px;padding:3px 7px;cursor:pointer;color:var(--i3);max-width:140px">'
+      +'<option value="">📂 '+(dosTh&&dosTh.groupe==='theme'?dosTh.icone+' '+dosTh.nom:'Thème…')+'</option>'
+      +dosThemes.filter(function(d){return d.id!==b.dossier_id;}).map(function(d){return '<option value="'+d.id+'">'+d.icone+' '+d.nom+'</option>';}).join('')
+      +(b.dossier_id&&dosTh&&dosTh.groupe==='theme'?'<option value="0">📄 Sans thème</option>':'')
+      +'</select>';
+
+    // Menu déroulant NATURE
+    var NATURES2=['CR de commission','Délibération','Procès-verbal','Rapport','Étude','Avis','Courrier','Email','Devis','Marché public','Budget','Autre'];
+    var natureSelect='<select onchange="bibChangeType('+b.id+',this.value)" style="font-size:.67rem;background:var(--g9);border:1px solid var(--w2);border-radius:7px;padding:3px 7px;cursor:pointer;color:var(--i3);max-width:130px">'
+      +'<option value="">🏷 '+(b.type||'Nature…')+'</option>'
+      +NATURES2.map(function(t){return '<option value="'+t+'"'+(b.type===t?' selected':'')+'>'+t+'</option>';}).join('')
+      +'</select>';
+
     return '<div class="bib-card" style="flex-direction:column;padding:0;overflow:hidden">'
       +'<div style="display:flex;gap:10px;padding:.85rem 1rem;align-items:flex-start">'
-      // Icone type
       +'<div style="width:40px;height:40px;border-radius:10px;background:'+fcol+'15;border:1.5px solid '+fcol+'30;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">'+fico+'</div>'
-      // Contenu
       +'<div style="flex:1;min-width:0">'
-      // Titre + badges
       +'<div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:4px">'
       +'<span style="font-size:.85rem;font-weight:700;color:var(--ink);font-family:var(--fd);line-height:1.3">'+b.titre+'</span>'
-      +'<span style="font-size:.65rem;background:'+fcol+'15;color:'+fcol+';padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid '+fcol+'30;white-space:nowrap">'+ftype+'</span>'
-      +(isLocal?'<span style="font-size:.63rem;background:#dcfce7;color:#15803d;padding:2px 7px;border-radius:8px;font-weight:600;white-space:nowrap">local</span>':'')
+      +(b.type?'<span style="font-size:.65rem;background:var(--or,#c9a227)18;color:var(--or,#c9a227);padding:2px 8px;border-radius:10px;font-weight:700;border:1px solid var(--or,#c9a227)33;white-space:nowrap">'+b.type+'</span>':'')
+      +(dosTh?'<span style="font-size:.65rem;background:'+dosTh.couleur+'15;color:'+dosTh.couleur+';padding:2px 8px;border-radius:10px;font-weight:600;border:1px solid '+dosTh.couleur+'30">'+dosTh.icone+' '+dosTh.nom+'</span>':'')
+      +(isLocal?'<span style="font-size:.62rem;background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:8px;font-weight:600">local</span>':'')
       +'</div>'
-      // Tags
-      +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">'
-      +(b.type?'<span class="bib-tag type">'+b.type+'</span>':'')
-      +(dos?'<span class="bib-tag" style="background:'+dos.couleur+'12;color:'+dos.couleur+';border:1px solid '+dos.couleur+'28">'+dos.icone+' '+dos.nom+'</span>':'')
-      +(b.date_doc?'<span class="bib-tag" style="font-family:var(--fm)">'+b.date_doc+'</span>':'')
-      +'</div>'
-      +(b.description?'<div style="font-size:.71rem;color:var(--i3);line-height:1.5">'+b.description+'</div>':'')
+      +(b.date_doc?'<div style="font-size:.67rem;color:var(--i4);margin-bottom:3px">'+b.date_doc+'</div>':'')
+      +(b.description?'<div style="font-size:.71rem;color:var(--i3);line-height:1.5;margin-bottom:4px">'+b.description+'</div>':'')
       // Actions
       +'<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">'
       +previewBtn
-      +(b.url?'<a href="'+b.url+'" target="_blank" style="background:var(--g8);border:1px solid var(--g7);border-radius:7px;padding:3px 9px;font-size:.69rem;font-weight:600;cursor:pointer;color:var(--g2);text-decoration:none">'+(isLocal?'⬇️ Télécharger':'🔗 Ouvrir')+'</a>':'')
-      +'<select onchange="bibMoveTo('+b.id+',this.value)" style="font-size:.67rem;background:var(--g9);border:1px solid var(--w2);border-radius:7px;padding:3px 7px;cursor:pointer;color:var(--i3)">'
-      +'<option value="">📂 '+(dos?dos.icone+' '+dos.nom:'Classer dans…')+'</option>'
-      +BIBLIO_DOSSIERS.filter(function(d){return d.id!==b.dossier_id;}).map(function(d){return '<option value="'+d.id+'">'+d.icone+' '+d.nom+'</option>';}).join('')
-      +(b.dossier_id?'<option value="0">📄 Sans dossier</option>':'')
-      +'</select>'
-      +'<select onchange="bibChangeType('+b.id+',this.value)" style="font-size:.67rem;background:var(--g9);border:1px solid var(--w2);border-radius:7px;padding:3px 7px;cursor:pointer;color:var(--i3)">'
-      +'<option value="">🏷 '+(b.type||'Changer type')+'</option>'
-      +['CR de commission','Délibération','Rapport','Avis','Courrier','Email','Devis','Étude','Procès-verbal','Autre'].map(function(t){return '<option value="'+t+'"'+(b.type===t?' selected':'')+'>'+t+'</option>';}).join('')
-      +'</select>'
-      +'<button onclick="delBiblio('+b.id+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:7px;padding:3px 8px;font-size:.69rem;cursor:pointer;color:#b91c1c">×</button>'
+      +(b.url?'<a href="'+b.url+'" target="_blank" style="background:var(--g8);border:1px solid var(--g7);border-radius:7px;padding:3px 9px;font-size:.69rem;font-weight:600;cursor:pointer;color:var(--g2);text-decoration:none;white-space:nowrap">'+(isLocal?'⬇️ Télécharger':'🔗 Ouvrir')+'</a>':'')
+      +themeSelect
+      +natureSelect
+      +'<button onclick="delBiblio('+b.id+')" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:7px;padding:3px 8px;font-size:.69rem;cursor:pointer;color:#b91c1c;margin-left:auto">×</button>'
       +'</div>'
       +previewZone
       +'</div>'
@@ -3691,19 +3661,13 @@ function renderBiblio(){
 }
 
 function bibTogglePreview(btn,url){
-  var card=btn.closest('.bib-card');
-  if(!card)return;
-  var pz=card.querySelector('.bib-preview');
-  if(!pz)return;
+  var card=btn.closest('.bib-card');if(!card)return;
+  var pz=card.querySelector('.bib-preview');if(!pz)return;
   if(pz.style.display==='none'){
     var iframe=pz.querySelector('iframe');
     if(iframe&&!iframe.src)iframe.src=url;
-    pz.style.display='block';
-    btn.textContent='✕ Fermer';
-  } else {
-    pz.style.display='none';
-    btn.textContent='👁 Prévisualiser';
-  }
+    pz.style.display='block';btn.textContent='✕ Fermer';
+  } else {pz.style.display='none';btn.textContent='👁 Prévisualiser';}
 }
 
 function bibSetDos(id){_bibDosActif=id;renderBiblio();}
@@ -3711,10 +3675,8 @@ function bibSetType(t){_bibTypeFiltre=t;renderBiblio();}
 function bibToggleGrp(key){renderBiblio();}
 
 function bibNewDos(groupe){
-  var nom=prompt('Nom du nouveau dossier :');
-  if(!nom||!nom.trim())return;
-  var icones={'theme':'📁','nature':'📋'};
-  var icone=prompt('Icône (emoji) :',icones[groupe]||'📁')||'📁';
+  var nom=prompt('Nom du nouveau thème :');if(!nom||!nom.trim())return;
+  var icone=prompt('Icône (emoji) :','📁')||'📁';
   var cols=['#1a3a5c','#2d5a87','#c9a227','#16a34a','#d97706','#dc2626','#7c3aed','#0891b2'];
   var couleur=cols[Math.floor(Math.random()*cols.length)];
   apiPost('/api/biblio/dossiers',{nom:nom.trim(),icone:icone,couleur:couleur,groupe:groupe||'theme',ordre:99}).then(function(r){
@@ -3734,7 +3696,7 @@ function bibRenameDos(id){
 function bibDelDos(id){
   var dos=BIBLIO_DOSSIERS.find(function(d){return d.id===id;});if(!dos)return;
   var cnt=BIBLIO.filter(function(b){return b.dossier_id===id;}).length;
-  if(!confirm('Supprimer « '+dos.nom+' » ?'+(cnt?' Les '+cnt+' documents seront déplacés dans Non classé.':'')))return;
+  if(!confirm('Supprimer « '+dos.nom+' » ?'+(cnt?' Les '+cnt+' documents seront déclassés.':'')))return;
   apiDel('/api/biblio/dossiers/'+id).then(function(r){
     if(r&&r.ok){
       BIBLIO_DOSSIERS=BIBLIO_DOSSIERS.filter(function(d){return d.id!==id;});
@@ -3750,7 +3712,7 @@ function bibMoveTo(docId,dosId){
   apiPatch('/api/biblio/'+docId,{dossier_id:did}).then(function(r){
     if(r&&r.ok){var i=BIBLIO.findIndex(function(b){return b.id===docId;});if(i>=0)BIBLIO[i].dossier_id=did;renderBiblio();
       var dos=BIBLIO_DOSSIERS.find(function(d){return d.id===did;});
-      toast(dos?'📁 Déplacé dans « '+dos.nom+' »':'📄 Sorti du dossier');
+      toast(dos?'📁 Classé dans « '+dos.nom+' »':'📄 Déclassé');
     }
   });
 }
@@ -3758,7 +3720,7 @@ function bibMoveTo(docId,dosId){
 function bibChangeType(docId,type){
   if(!type)return;
   apiPatch('/api/biblio/'+docId,{type:type}).then(function(r){
-    if(r&&r.ok){var i=BIBLIO.findIndex(function(b){return b.id===docId;});if(i>=0)BIBLIO[i].type=type;renderBiblio();toast('🏷 Type mis à jour ✓');}
+    if(r&&r.ok){var i=BIBLIO.findIndex(function(b){return b.id===docId;});if(i>=0)BIBLIO[i].type=type;renderBiblio();toast('🏷 Nature mise à jour ✓');}
   });
 }
 
@@ -3768,6 +3730,7 @@ function delBiblio(id){
     if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});renderBiblio();}
   });
 }
+
 
 
 

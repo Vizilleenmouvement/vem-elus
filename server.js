@@ -3708,6 +3708,69 @@ function delBiblio(id){
 
 
 
+function bibSwitchTab(tab){
+  var urlSec=$("bib-url-section"),fileSec=$("bib-file-section");
+  var tabUrl=$("bib-tab-url"),tabFile=$("bib-tab-file");
+  if(tab==='url'){
+    if(urlSec)urlSec.style.display='block'; if(fileSec)fileSec.style.display='none';
+    if(tabUrl){tabUrl.style.background='var(--g3)';tabUrl.style.color='#fff';}
+    if(tabFile){tabFile.style.background='var(--w2)';tabFile.style.color='var(--i2)';}
+  } else {
+    if(urlSec)urlSec.style.display='none'; if(fileSec)fileSec.style.display='block';
+    if(tabUrl){tabUrl.style.background='var(--w2)';tabUrl.style.color='var(--i2)';}
+    if(tabFile){tabFile.style.background='var(--g3)';tabFile.style.color='#fff';}
+  }
+}
+
+function bibFileChosen(input){
+  var file=input.files[0]; if(!file)return;
+  var label=$("bib-file-label");
+  if(label)label.textContent=file.name+' ('+Math.round(file.size/1024)+' Ko)';
+  var ti=$("bib-ti"); if(ti&&!ti.value)ti.value=file.name.replace(/\.[^.]+$/,'');
+}
+
+function svBiblio(){
+  var vis=document.querySelector('input[name="bib-vis"]:checked');
+  var urlSec=$("bib-url-section");
+  var isFileMode=urlSec&&urlSec.style.display==='none';
+  var fileInput=$("bib-file");
+  if(isFileMode&&fileInput&&fileInput.files[0]){
+    var file=fileInput.files[0];
+    var titre=v("bib-ti"); if(!titre){toast("Titre obligatoire");return;}
+    var form=new FormData(); form.append('file',file);
+    var btn=document.querySelector('[onclick="svBiblio()"]');
+    if(btn){btn.disabled=true;btn.textContent='⏳ Upload…';}
+    var xhr=new XMLHttpRequest();
+    xhr.open('POST','/api/upload');
+    xhr.withCredentials=true;
+    xhr.onload=function(){
+      if(btn){btn.disabled=false;btn.textContent='Ajouter';}
+      var r=JSON.parse(xhr.responseText||'{}');
+      if(r.ok){
+        var d={titre:titre,type:v("bib-ty"),commission:v("bib-co"),url:r.url,
+          description:v("bib-desc"),tags:v("bib-tags"),date_doc:v("bib-date"),
+          annee:v("bib-year"),visibilite:vis?vis.value:"public",source:"upload"};
+        apiPost("/api/biblio",d).then(function(res){
+          if(res.ok){BIBLIO.unshift(res.item);renderBiblio();cm();
+            toast(d.visibilite==="prive"?"Fichier privé ajouté 🔒":"Fichier ajouté ✓");}
+          else toast("Erreur d'enregistrement");
+        });
+      } else { toast("Erreur upload: "+(r.error||"?"),4000); }
+    };
+    xhr.onerror=function(){if(btn){btn.disabled=false;btn.textContent='Ajouter';}toast("Erreur réseau",3000);};
+    xhr.send(form);
+  } else {
+    var d={titre:v("bib-ti"),type:v("bib-ty"),commission:v("bib-co"),url:v("bib-url"),
+      description:v("bib-desc"),tags:v("bib-tags"),date_doc:v("bib-date"),
+      annee:v("bib-year"),visibilite:vis?vis.value:"public"};
+    if(!d.titre||(!d.url&&!isFileMode)){toast("Titre et lien obligatoires");return;}
+    apiPost("/api/biblio",d).then(function(r){
+      if(r.ok){BIBLIO.unshift(r.item);renderBiblio();cm();
+        toast(d.visibilite==="prive"?"Document privé ajouté 🔒":"Document ajouté ✓");}
+    });
+  }
+}
+
 function saveCR(){
   var texte=v("cr-gen"); if(!texte.trim()){toast("Aucun document généré");return;}
   var d={titre:"Document généré - "+new Date().toLocaleDateString("fr-FR"),commission:v("ct")||"Autre",date:new Date().toISOString().slice(0,10),redige_par:ME.nom,content:texte};

@@ -1243,7 +1243,7 @@ body{font-family:var(--fn);background:var(--w);color:var(--ink);height:100vh;mar
 .cbdg{width:7px;height:7px;background:var(--red);border-radius:50%;position:absolute;top:-2px;right:-2px;border:1.5px solid var(--g1);display:none;}
 
 /* LAYOUT — division verticale fixe */
-.layout{display:flex;flex-direction:row;width:100%;height:calc(100vh - var(--th));}
+.layout{display:flex;flex-direction:row;width:100%;height:calc(100vh - var(--th));overflow:hidden;}
 
 /* SIDEBAR */
 .sb{width:var(--sw);background:var(--g1);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;z-index:50;}
@@ -1259,7 +1259,7 @@ body{font-family:var(--fn);background:var(--w);color:var(--ink);height:100vh;mar
 .sbf{margin-top:auto;padding:.85rem 1rem;border-top:1px solid rgba(255,255,255,.07);font-size:.63rem;color:rgba(255,255,255,.2);line-height:1.7;}
 
 /* MAIN */
-.main{flex:1;overflow-y:auto;overflow-x:hidden;background:var(--w);min-width:0;}
+.main{flex:1;overflow-y:auto;background:var(--w);}
 .ph{padding:.72rem 1.4rem;background:#fff;border-bottom:1px solid var(--w2);display:flex;align-items:center;gap:12px;box-shadow:var(--s1);}
 .ph-ico{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
 .ph-t{font-size:.94rem;font-weight:700;color:var(--ink);font-family:var(--fd);line-height:1.2;}
@@ -1269,7 +1269,7 @@ body{font-family:var(--fn);background:var(--w);color:var(--ink);height:100vh;mar
 .scr::-webkit-scrollbar{width:4px;}.scr::-webkit-scrollbar-thumb{background:var(--w3);border-radius:2px;}
 
 /* PAGES */
-.page{display:none;}.page.on{display:flex;flex-direction:column;height:100%;}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.page{display:none;}.page.on{display:block;}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 /* CARDS */
 .card{background:#fff;border-radius:var(--R);border:1px solid var(--w2);box-shadow:var(--s1);padding:1.1rem 1.25rem;margin-bottom:12px;}
@@ -1524,7 +1524,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 /* TOAST */
 .toast{position:fixed;bottom:22px;right:22px;background:var(--g1);color:#fff;padding:10px 18px;border-radius:var(--R);font-size:.78rem;font-weight:500;z-index:1000;display:none;box-shadow:var(--s3);border:1px solid rgba(255,255,255,.1);animation:mIn .2s;}
 
-@media(max-width:600px){
+@media(max-width:900px){
   /* Layout adaptatif */
   .ch-row{grid-template-columns:1fr;}
   .cg{grid-template-columns:1fr;}
@@ -1611,7 +1611,7 @@ textarea.fi{resize:vertical;min-height:90px;}
   .grid-tiles{grid-template-columns:repeat(4,1fr)!important;}
   .grid-3-1{grid-template-columns:1fr 1fr 1fr!important;}
 }
-@media(max-width:600px){
+@media(max-width:900px){
   .grid-4{grid-template-columns:1fr 1fr!important;}
   .grid-3{grid-template-columns:1fr!important;}
   .grid-2{grid-template-columns:1fr!important;}
@@ -1651,31 +1651,31 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 <div class="layout">
 <aside class="sb">
-  <div onclick="gp('today',document.querySelector('.sbi-accueil'))" class="sbi-accueil" style="margin:.75rem .65rem .5rem;padding:.7rem 1rem;background:var(--or);color:#fff;border-radius:10px;font-size:.82rem;font-weight:800;font-family:var(--fd);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s;letter-spacing:.01em" onmouseover="this.style.background='#b8891e'" onmouseout="this.style.background='var(--or)'">🏠 <span>Accueil</span></div>
   <div class="sbs">Mon espace</div>
-  <div class="sbi" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
-  <div class="sbi" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
-  <div class="sbi" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
+  <div class="sbi on" onclick="gp('today',this)"><span class="sbi-ic">&#x1F4CB;</span>Aujourd&#x27;hui</div>
+  <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
+  <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
+  <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
 
   <div class="sbs">Le mandat</div>
-  <div class="sbi" onclick="openPanel('agenda')"><span class="sbi-ic">&#x1F4C5;</span>Agenda</div>
-  <div class="sbi" onclick="openPanel('cr')"><span class="sbi-ic">&#x1F4DD;</span>Comptes rendus</div>
-  <div class="sbi" onclick="openPanel('biblio')"><span class="sbi-ic">&#x1F4DA;</span>Biblioth&#xe8;que<span class="sbi-n" id="sb-bib">0</span></div>
-  <div class="sbi" onclick="openPanel('repelus')"><span class="sbi-ic">&#x1F4C2;</span>R&#xe9;pertoire élus</div>
-  <div class="sbi" onclick="openPanel('elus')"><span class="sbi-ic">&#x1F9D1;&#x200D;&#x1F4BC;</span>L&#x27;équipe</div>
+  <div class="sbi" data-panel="agenda" onclick="openPanel('agenda')"><span class="sbi-ic">&#x1F4C5;</span>Agenda</div>
+  <div class="sbi" data-panel="cr" onclick="openPanel('cr')"><span class="sbi-ic">&#x1F4DD;</span>Comptes rendus</div>
+  <div class="sbi" data-panel="biblio" onclick="openPanel('biblio')"><span class="sbi-ic">&#x1F4DA;</span>Biblioth&#xe8;que<span class="sbi-n" id="sb-bib">0</span></div>
+  <div class="sbi" data-panel="repelus" onclick="openPanel('repelus')"><span class="sbi-ic">&#x1F4C2;</span>R&#xe9;pertoire élus</div>
+  <div class="sbi" data-panel="elus" onclick="openPanel('elus')"><span class="sbi-ic">&#x1F9D1;&#x200D;&#x1F4BC;</span>L&#x27;équipe</div>
 
   <div class="sbs">Projets du programme</div>
-  <div class="sbi" onclick="openPanel('comm')"><span class="sbi-ic">&#x1F465;</span>Par commission<span class="sbi-n" id="sb-tot">91</span></div>
-  <div class="sbi" onclick="openPanel('global')"><span class="sbi-ic">&#x1F4CA;</span>Tous les projets</div>
-  <div class="sbi" onclick="openPanel('creer')"><span class="sbi-ic">&#x2795;</span>Nouveau projet</div>
+  <div class="sbi" data-panel="comm" onclick="openPanel('comm')"><span class="sbi-ic">&#x1F465;</span>Par commission<span class="sbi-n" id="sb-tot">91</span></div>
+  <div class="sbi" data-panel="global" onclick="openPanel('global')"><span class="sbi-ic">&#x1F4CA;</span>Tous les projets</div>
+  <div class="sbi" data-panel="creer" onclick="openPanel('creer')"><span class="sbi-ic">&#x2795;</span>Nouveau projet</div>
 
   <div class="sbs">Terrain</div>
-  <div class="sbi" onclick="openPanel('signal')"><span class="sbi-ic">&#x1F534;</span>Signalements<span class="sbi-new" id="sb-sig">!</span></div>
-  <div class="sbi" onclick="openPanel('events')"><span class="sbi-ic">&#x1F3AA;</span>Événements</div>
+  <div class="sbi" data-panel="signal" onclick="openPanel('signal')"><span class="sbi-ic">&#x1F534;</span>Signalements<span class="sbi-new" id="sb-sig">!</span></div>
+  <div class="sbi" data-panel="events" onclick="openPanel('events')"><span class="sbi-ic">&#x1F3AA;</span>Événements</div>
 
   <div class="sbs">Outils</div>
-  <div class="sbi" onclick="openPanel('comms')"><span class="sbi-ic">&#x270D;&#xFE0F;</span>Rédiger un doc</div>
-  <div class="sbi" onclick="openPanel('hist')"><span class="sbi-ic">&#x1F514;</span>Historique</div>
+  <div class="sbi" data-panel="comms" onclick="openPanel('comms')"><span class="sbi-ic">&#x270D;&#xFE0F;</span>Rédiger un doc</div>
+  <div class="sbi" data-panel="hist" onclick="openPanel('hist')"><span class="sbi-ic">&#x1F514;</span>Historique</div>
 
   <div class="sbf">elus.vizilleenmouvement.fr<br>Node.js &#xb7; Infomaniak</div>
 </aside>
@@ -2691,7 +2691,7 @@ function gp(id,ni){
   if(id==="today"){renderHeroAccueil();renderWidgetAgenda();renderWidgetSig();renderCRHome();}
   else if(id==="agenda")renderAg();
   else if(id==="cr")renderCR();
-  else if(id==="biblio"){bibLoadDossiers(function(){apiGet('/api/biblio').then(function(data){BIBLIO=Array.isArray(data)?data:[];el('sb-bib',BIBLIO.length);renderBiblio();});});}
+  else if(id==="biblio"){bibLoadDossiers(renderBiblio);}
   else if(id==="repelus")renderRepElus();
   else if(id==="elus")renderElus();
   else if(id==="signal"){fSig();updSig();}
@@ -2699,62 +2699,81 @@ function gp(id,ni){
   else if(id==="hist")renderNt();
   else if(id==="comm"){buildCG();}
   else if(id==="global"){fG();}
-  else if(id==="cdet"){fCD();}
   else if(id==="creer"){resetNP();}
   else if(id==="budget"){setTimeout(buildBudgetChart,50);}
-  else if(id==="guide"){buildGuides();}
-  else if(id==="ress"){buildRess();}
-  else if(id==="tuto"){}
+  else if(id==="guide"||id==="ress"){
+    // Ress et Guide fusionnés
+    qsa(".page").forEach(function(p){p.classList.remove("on");});
+    var pg=$("p-guide");if(pg)pg.classList.add("on");
+    if(ni)ni.classList.add("on");
+    buildGuides(); buildRess();
+    return;
+  }
 }
 // ── PANNEAU UNIQUE — s'ouvre par-dessus le dashboard ─────────────────────────
 function openPanel(id){
+  // Activer le menu
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
-  var menuEl=document.querySelector("[data-panel='"+id+"']");
-  if(menuEl)menuEl.classList.add("on");
-  var pg=document.getElementById("p-"+id); if(!pg)return;
-  var panel=document.getElementById("main-panel");
+  var menuEl = document.querySelector("[data-panel='" + id + "']");
+  if(menuEl) menuEl.classList.add("on");
+
+  var pg = document.getElementById("p-"+id);
+  if(!pg) return;
+
+  // Créer ou réutiliser le panneau
+  var panel = document.getElementById("main-panel");
   if(!panel){
-    panel=document.createElement("div");
-    panel.id="main-panel";
+    panel = document.createElement("div");
+    panel.id = "main-panel";
+    panel.style.cssText = "position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
     document.body.appendChild(panel);
   }
-  panel.style.cssText="position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);";
-  var phT=pg.querySelector(".ph-t");
-  var title=phT?phT.textContent:id;
-  panel.innerHTML='<div id="panel-body" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;"></div>';
-  var clone=pg.cloneNode(true);
-  clone.id="clone-p-"+id;
-  clone.style.cssText="display:flex;flex-direction:column;flex:1;height:100%;";
+
+  // Barre titre avec ✕
+  var title = "";
+  var phT = pg.querySelector(".ph-t");
+  if(phT) title = phT.textContent;
+  else { var h = pg.querySelector("h2,h3"); if(h) title = h.textContent; else title = id; }
+
+  panel.innerHTML = '<div style="background:var(--g1);color:#fff;padding:.55rem 1rem;display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:.78rem;font-weight:600;font-family:var(--fd);">'
+    + '<span style="flex:1">'+title+'</span>'
+    + '<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:24px;height:24px;cursor:pointer;font-size:.9rem;">&#x2715;</button>'
+    + '</div>'
+    + '<div id="panel-body" style="flex:1;overflow-y:auto;"></div>';
+
+  var clone = pg.cloneNode(true);
+  clone.style.display = "block";
   document.getElementById("panel-body").appendChild(clone);
-  panel.style.display="flex";
-  // Déclencher le rendu dans le contexte panel-body
-  if(id==="agenda")renderAg();
-  else if(id==="cr")renderCR();
-  else if(id==="biblio"){bibLoadDossiers(function(){apiGet("/api/biblio").then(function(data){BIBLIO=Array.isArray(data)?data:[];el("sb-bib",BIBLIO.length);renderBiblio();});});}
-  else if(id==="repelus")renderRepElus();
-  else if(id==="elus")renderElus();
-  else if(id==="comm")buildCG();
-  else if(id==="global")fG();
-  else if(id==="signal"){fSig();updSig();}
-  else if(id==="events")renderEv();
-  else if(id==="guide")buildGuides();
-  else if(id==="ress")buildRess();
-  else if(id==="tuto"){}
-  else if(id==="hist")renderNt();
-  else if(id==="comms"){}
-  else if(id==="creer")resetNP();
-  else if(id==="budget")setTimeout(buildBudgetChart,50);
+  panel.style.display = "flex";
+
+  // Charger données
+  if(id==="agenda") renderAg();
+  else if(id==="cr") renderCR();
+  else if(id==="biblio") renderBiblio();
+  else if(id==="repelus") renderRepElus();
+  else if(id==="elus") renderElus();
+  else if(id==="comm") renderComm();
+  else if(id==="global") renderGlobal();
+  else if(id==="signal") renderSignal();
+  else if(id==="events") renderEvents();
+  else if(id==="guide") renderGuide();
+  else if(id==="ress") renderRess();
+  else if(id==="hist") renderHist();
+  else if(id==="comms") renderComms();
+  else if(id==="creer") renderCreer();
 }
 
 function closePanel(){
-  var panel=document.getElementById("main-panel");
-  if(panel)panel.style.display="none";
+  var panel = document.getElementById("main-panel");
+  if(panel) panel.style.display = "none";
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
+  var first = document.querySelector(".sbi");
+  if(first) first.classList.add("on");
 }
 
 
 function goComm(){openPanel("comm");}
-function goGlobal(){gp("global");}
+function goGlobal(){openPanel("global");}
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 function openProfile(){
@@ -2848,12 +2867,8 @@ function init(){
     renderWidgetMandat();
   });
 
-  bibLoadDossiers(function(){
-    apiGet("/api/biblio").then(function(data){
-      BIBLIO=Array.isArray(data)?data:[];
-      el("sb-bib",BIBLIO.length);
-      renderBiblio();
-    });
+  apiGet("/api/biblio").then(function(data){
+    BIBLIO=data; el("sb-bib",BIBLIO.length); renderBiblio();
   });
 
   apiGet("/api/rep_elus").then(function(data){
@@ -3498,7 +3513,7 @@ var TYPE_COLORS={'PDF':'#dc2626','Word':'#2563eb','Excel':'#16a34a','Email':'#c9
 
 function bibLoadDossiers(cb){
   apiGet('/api/biblio/dossiers').then(function(d){
-    BIBLIO_DOSSIERS=Array.isArray(d)?d:[];
+    BIBLIO_DOSSIERS=d||[];
     if(cb)cb();
   });
 }
@@ -3525,7 +3540,7 @@ function renderBiblio(){
   }
 
   // ── Filtrage ──────────────────────────────────────────────────────────────
-  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';}).sort(function(a,b){return a.nom.localeCompare(b.nom,'fr');});
+  var themes=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='theme';});
   var natures=BIBLIO_DOSSIERS.filter(function(d){return d.groupe==='nature';});
 
   var r=BIBLIO.filter(function(b){
@@ -3712,7 +3727,7 @@ function bibChangeType(docId,type){
 function delBiblio(id){
   if(!confirm('Supprimer ce document ?'))return;
   apiDel('/api/biblio/'+id).then(function(d){
-    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});el('sb-bib',BIBLIO.length);renderBiblio();toast('Document supprimé ✓');}
+    if(d.ok){BIBLIO=BIBLIO.filter(function(b){return b.id!==id;});renderBiblio();}
   });
 }
 
@@ -4103,19 +4118,6 @@ function showCD(idx){
   var to=pp.length,pr=0,ec=0,re=0;
   pp.forEach(function(p){var s=ST[p.id]||p.statut||"";if(s==="Prioritaire")pr++;if(s.indexOf("cours")>=0)ec++;if(s.indexOf("alis")>=0)re++;});
   var statOpts=SLIST.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
-  // Remplir les éléments existants de p-cdet
-  var ico=$("cdet-ico"); if(ico)ico.textContent=ICONS[comm]||"📋";
-  var tit=$("cdet-t"); if(tit)tit.textContent=comm;
-  var sub=$("cdet-s"); if(sub)sub.textContent=themes.join(" · ")+(REFS[comm]?" — "+REFS[comm]:"");
-  var kpis=$("cdet-kpis"); if(kpis)kpis.innerHTML=
-    '<div class="kpi" style="flex:1"><div class="kpiv">'+to+'</div><div class="kpil">Projets</div></div>'
-    +'<div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--red)">'+pr+'</div><div class="kpil">Prioritaires</div></div>'
-    +'<div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--amber)">'+ec+'</div><div class="kpil">En cours</div></div>'
-    +'<div class="kpi" style="flex:1"><div class="kpiv" style="color:var(--g4)">'+re+'</div><div class="kpil">Réalisés</div></div>';
-  var cdSt=$("cd-st"); if(cdSt)cdSt.innerHTML='<option value="">Tous statuts</option>'+statOpts;
-  // Naviguer vers la page cdet
-  openPanel("cdet");
-  return;
   var pb=document.getElementById("panel-body"); if(!pb)return;
   pb.innerHTML=
     '<div style="background:'+col+'18;border-bottom:3px solid '+col+';padding:.85rem 1.4rem;display:flex;align-items:center;gap:12px;flex-shrink:0">'
@@ -4630,7 +4632,7 @@ var _ePid=null;
 function _fpPanel(){
   var p=document.getElementById('main-panel');
   if(!p){p=document.createElement('div');p.id='main-panel';document.body.appendChild(p);}
-  p.style.cssText='position:fixed;left:var(--sw,252px);right:0;top:var(--th,54px);bottom:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
+  p.style.cssText='position:fixed;left:252px;right:0;top:54px;bottom:0;z-index:100;display:flex;flex-direction:column;overflow:hidden;background:var(--w);';
   return p;
 }
 function _fpCss(){

@@ -315,6 +315,7 @@ function stats() {
 
 // ── DOSSIERS BIBLIOTHÈQUE ─────────────────────────────────────────────────────
 try { db.exec("ALTER TABLE biblio ADD COLUMN dossier_id INTEGER DEFAULT NULL;"); } catch(e) {}
+try { db.exec("ALTER TABLE biblio_dossiers ADD COLUMN groupe TEXT DEFAULT 'theme';"); } catch(e) {}
 db.exec(`
   CREATE TABLE IF NOT EXISTS biblio_dossiers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -351,31 +352,38 @@ const DOSSIERS_DEFAUT = [
   {nom:'Urbanisme & PLU',         couleur:'#84CC16', icone:'🗺',  ordre:26},
   {nom:'Administration générale', couleur:'#6B7280', icone:'📁',  ordre:27},
 ];
+// Ajouter groupe si manquant
+DOSSIERS_DEFAUT.forEach(function(d){ if(!d.groupe) d.groupe = d.ordre < 20 ? 'theme' : 'nature'; });
 (function(){
   const cnt = db.prepare('SELECT COUNT(*) as n FROM biblio_dossiers').get().n;
   if(cnt === 0){
-    const stmt = db.prepare('INSERT INTO biblio_dossiers (nom,couleur,icone,ordre) VALUES (?,?,?,?)');
-    DOSSIERS_DEFAUT.forEach(function(d){ stmt.run(d.nom,d.couleur,d.icone,d.ordre); });
+    const stmt = db.prepare('INSERT INTO biblio_dossiers (nom,couleur,icone,ordre,groupe) VALUES (?,?,?,?,?)');
+    DOSSIERS_DEFAUT.forEach(function(d){ stmt.run(d.nom,d.couleur,d.icone,d.ordre,d.groupe||'theme'); });
     console.log('✓ '+DOSSIERS_DEFAUT.length+' dossiers bibliothèque créés');
+  } else {
+    // Migration : mettre à jour le groupe des dossiers existants si null
+    db.prepare("UPDATE biblio_dossiers SET groupe='theme' WHERE groupe IS NULL AND ordre < 20").run();
+    db.prepare("UPDATE biblio_dossiers SET groupe='nature' WHERE groupe IS NULL AND ordre >= 20").run();
   }
 })();
 
 const BiblioDoc = {
-  getDossiers() { return db.prepare('SELECT * FROM biblio_dossiers ORDER BY ordre,nom').all(); },
+  getDossiers() { return db.prepare('SELECT * FROM biblio_dossiers ORDER BY groupe DESC,ordre,nom').all(); },
   insertDossier(d) {
-    const r = db.prepare('INSERT INTO biblio_dossiers (nom,couleur,icone,ordre) VALUES (?,?,?,?)').run(
-      d.nom||'Nouveau dossier', d.couleur||'#6d28d9', d.icone||'📁', d.ordre||0
+    const r = db.prepare('INSERT INTO biblio_dossiers (nom,couleur,icone,ordre,groupe) VALUES (?,?,?,?,?)').run(
+      d.nom||'Nouveau dossier', d.couleur||'#1a3a5c', d.icone||'📁', d.ordre||99, d.groupe||'theme'
     );
     return db.prepare('SELECT * FROM biblio_dossiers WHERE id=?').get(r.lastInsertRowid);
   },
   patchDossier(id, d) {
     const dos = db.prepare('SELECT * FROM biblio_dossiers WHERE id=?').get(id);
     if (!dos) return null;
-    db.prepare('UPDATE biblio_dossiers SET nom=?,couleur=?,icone=?,ordre=? WHERE id=?').run(
+    db.prepare('UPDATE biblio_dossiers SET nom=?,couleur=?,icone=?,ordre=?,groupe=? WHERE id=?').run(
       d.nom!==undefined?d.nom:dos.nom,
       d.couleur!==undefined?d.couleur:dos.couleur,
       d.icone!==undefined?d.icone:dos.icone,
       d.ordre!==undefined?d.ordre:dos.ordre,
+      d.groupe!==undefined?d.groupe:dos.groupe,
       id
     );
     return db.prepare('SELECT * FROM biblio_dossiers WHERE id=?').get(id);

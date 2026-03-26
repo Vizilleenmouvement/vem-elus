@@ -3535,22 +3535,22 @@ function renderBiblio(){
     Array.from(typeBar.querySelectorAll('[data-t]')).forEach(function(btn){
       btn.addEventListener('click',function(){bibSetType(btn.getAttribute('data-t'));});
     });
-    // Boutons dossiers admin (Conseil municipal, Bureau municipal, etc.)
-    var ADMIN_DOS=["Conseil municipal","Bureau municipal","D\u00e9lib\u00e9rations","Proc\u00e8s-verbaux","Rapports & \u00c9tudes","Courriers & Emails","Budget & Finances","March\u00e9s publics","Urbanisme & PLU","Administration g\u00e9n\u00e9rale"];
-    var adminDos=BIBLIO_DOSSIERS.filter(function(d){return ADMIN_DOS.indexOf(d.nom)>=0;});
-    if(adminDos.length){
-      var adminBar=document.createElement('div');
-      adminBar.style.cssText='display:flex;gap:5px;flex-wrap:wrap;padding:.3rem 0 0';
-      adminDos.forEach(function(d){
+    // Ajouter séparateur + boutons dossiers admin dans typeBar
+    var ADMIN_DOS2=["Conseil municipal","Bureau municipal","D\u00e9lib\u00e9rations","Proc\u00e8s-verbaux","Rapports & \u00c9tudes","Courriers & Emails","Budget & Finances","March\u00e9s publics","Urbanisme & PLU","Administration g\u00e9n\u00e9rale"];
+    var adminDos2=BIBLIO_DOSSIERS.filter(function(d){return ADMIN_DOS2.indexOf(d.nom)>=0;});
+    if(adminDos2.length){
+      var sep=document.createElement('div');
+      sep.style.cssText='width:100%;height:1px;background:var(--w2);margin:.3rem 0 .2rem';
+      typeBar.appendChild(sep);
+      adminDos2.forEach(function(d){
         var active=_bibDosActif===d.id;
         var btn=document.createElement('button');
-        btn.setAttribute('data-dos',d.id);
+        btn.setAttribute('data-dos',String(d.id));
         btn.style.cssText='padding:3px 10px;border-radius:20px;border:1.5px solid;font-size:.7rem;font-weight:600;cursor:pointer;white-space:nowrap;'+(active?'background:'+d.couleur+';color:#fff;border-color:'+d.couleur+';':'background:#fff;color:var(--i2);border-color:var(--w2);');
         btn.textContent=(d.icone||'📁')+' '+d.nom;
-        btn.addEventListener('click',function(){bibSetDos(active?null:d.id);});
-        adminBar.appendChild(btn);
+        btn.addEventListener('click',(function(did){return function(){bibSetDos(_bibDosActif===did?null:did);};})(d.id));
+        typeBar.appendChild(btn);
       });
-      typeBar.parentElement.appendChild(adminBar);
     }
   }
 

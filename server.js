@@ -4219,7 +4219,7 @@ function resetChat(){
   var ch=v('chat-ch')||'general';
   var labels={'general':'Général','bureau':'Bureau','culture':'Culture','mobilites':'Mobilités','ecologie':'Écologie','social':'Social','enfance':'Enfance','tranquillite':'Tranquillité','travaux':'Travaux'};
   var lbl=labels[ch]||ch;
-  if(!confirm('Vider le canal « '+lbl+' » ?\nTous les messages seront définitivement supprimés.'))return;
+  if(!confirm('Vider le canal '+lbl+' ? Tous les messages seront supprimés.'))return;
   fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include'})
     .then(function(r){return r.json();})
     .then(function(d){

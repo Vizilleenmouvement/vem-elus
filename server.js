@@ -1853,6 +1853,7 @@ textarea.fi{resize:vertical;min-height:90px;}
             <option value="travaux">&#x1F3D7; Travaux</option>
           </select>
           <div id="wg-chat-badge" style="width:8px;height:8px;border-radius:50%;background:var(--red);display:none;flex-shrink:0"></div>
+          <button onclick="wgResetChat('wg-chat-ch')" title="Archiver ce canal" style="background:none;border:none;cursor:pointer;font-size:.8rem;color:var(--i4);padding:0 2px" title="Archiver">📦</button>
         </div>
         <div id="wg-chat-msgs" style="flex:1;overflow-y:auto;padding:.65rem .9rem;display:flex;flex-direction:column;gap:6px;background:var(--w);min-height:140px;max-height:220px"></div>
         <div style="padding:.6rem .9rem;border-top:1px solid var(--w2);display:flex;gap:7px;background:#fff">
@@ -3133,6 +3134,23 @@ function wgSwitchCh() {
   });
 }
 
+function wgResetChat(selId){
+  var sel=document.getElementById(selId);
+  var ch=sel?sel.value:'general';
+  if(!confirm('Vider ce canal ?'))return;
+  fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        // Vider le widget
+        var msgsId=selId==='wg-chat-ch'?'wg-chat-msgs':'wg-chat-msgs2';
+        var el=document.getElementById(msgsId);if(el)el.innerHTML='';
+        // Vider aussi le panel tchat si sur le meme canal
+        if(v('chat-ch')===ch){CHAT=[];renderChatMsgs([]);}
+        toast('🗑 Canal vidé');
+      }
+    });
+}
 function wgSendMsg() {
   var inp = $("wg-chat-inp"), txt = inp ? inp.value.trim() : "";
   if(!txt) return;
@@ -4217,14 +4235,20 @@ function openVisio(){window.open("https://kmeet.infomaniak.com/vizilleenmouvemen
 function switchChannel(){CHAT=[];renderChatMsgs([]);pollChat();}
 function resetChat(){
   var ch=v('chat-ch')||'general';
-  var labels={'general':'Général','bureau':'Bureau','culture':'Culture','mobilites':'Mobilités','ecologie':'Écologie','social':'Social','enfance':'Enfance','tranquillite':'Tranquillité','travaux':'Travaux'};
-  var lbl=labels[ch]||ch;
-  if(!confirm('Vider le canal '+lbl+' ? Tous les messages seront supprimés.'))return;
+  if(!confirm('Vider ce canal ? Les messages seront supprimés.'))return;
   fetch('/api/chat?channel='+ch,{method:'DELETE',credentials:'include'})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(d.ok){CHAT=[];renderChatMsgs([]);toast('🗑 Canal vidé');}
-      else{toast('Erreur',3000);}
+      if(d.ok){
+        CHAT=[];
+        renderChatMsgs([]);
+        // Vider aussi les widgets du dashboard sur le même canal
+        var wgCh=v('wg-chat-ch');
+        if(wgCh===ch){var wm=$('wg-chat-msgs');if(wm)wm.innerHTML='';}
+        var wgCh2=v('wg-chat-ch2');
+        if(wgCh2===ch){var wm2=$('wg-chat-msgs2');if(wm2)wm2.innerHTML='';}
+        toast('🗑 Canal vidé');
+      } else {toast('Erreur',3000);}
     });
 }
 

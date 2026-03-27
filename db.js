@@ -315,7 +315,6 @@ function stats() {
 
 // ── DOSSIERS BIBLIOTHÈQUE ─────────────────────────────────────────────────────
 try { db.exec("ALTER TABLE biblio ADD COLUMN dossier_id INTEGER DEFAULT NULL;"); } catch(e) {}
-try { db.exec("ALTER TABLE biblio_dossiers ADD COLUMN groupe TEXT DEFAULT 'theme';"); } catch(e) {}
 db.exec(`
   CREATE TABLE IF NOT EXISTS biblio_dossiers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -326,6 +325,7 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);
+try { db.exec("ALTER TABLE biblio_dossiers ADD COLUMN groupe TEXT DEFAULT 'theme';"); } catch(e) {}
 // Dossiers préétablis — créés au 1er démarrage si table vide
 const DOSSIERS_DEFAUT = [
   // Thèmes

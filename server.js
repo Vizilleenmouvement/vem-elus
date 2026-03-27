@@ -1892,8 +1892,8 @@ textarea.fi{resize:vertical;min-height:90px;}
       </div>
     </div>
 
-    <!-- LIGNE 3 : Annonces | Tchat | CR | Tchat canal -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px">
+    <!-- LIGNE 3 : Annonces | Tchat | CR -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
 
       <!-- WIDGET ANNONCES -->
       <div class="wg" style="background:#fff;border-radius:18px;border:1px solid var(--w2);box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;display:flex;flex-direction:column">
@@ -1948,29 +1948,6 @@ textarea.fi{resize:vertical;min-height:90px;}
         </div>
       </div>
 
-      <!-- WIDGET TCHAT PLEIN (remplace baromètre) -->
-      <div class="wg" style="background:#fff;border-radius:18px;border:1px solid var(--w2);box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;display:flex;flex-direction:column">
-        <div class="wg-h" style="padding:.85rem 1.1rem .65rem;border-bottom:1px solid var(--w2);display:flex;align-items:center;gap:8px">
-          <div style="width:28px;height:28px;border-radius:8px;background:var(--g2);display:flex;align-items:center;justify-content:center;font-size:.9rem">&#x1F4AC;</div>
-          <div style="font-size:.78rem;font-weight:700;font-family:var(--fd);color:var(--ink);flex:1">Tchat &#x2014; canal</div>
-          <select id="wg-chat-ch2" onchange="wgSwitchCh2()" style="font-size:.65rem;padding:2px 6px;border:1px solid var(--w2);border-radius:6px;background:#fff;color:var(--i2);font-family:var(--fn)">
-            <option value="general">&#x1F4AC; G&#xe9;n&#xe9;ral</option>
-            <option value="bureau">&#x1F3DB; Bureau</option>
-            <option value="culture">&#x1F3AD; Culture</option>
-            <option value="mobilites">&#x1F6B2; Mobilit&#xe9;s</option>
-            <option value="ecologie">&#x1F33F; &#xc9;cologie</option>
-            <option value="social">&#x1F91D; Social</option>
-            <option value="enfance">&#x1F466; Enfance</option>
-            <option value="tranquillite">&#x1F6E1; Tranquillit&#xe9;</option>
-            <option value="travaux">&#x1F3D7; Travaux</option>
-          </select>
-        </div>
-        <div id="wg-chat-msgs2" style="flex:1;overflow-y:auto;padding:.65rem .9rem;display:flex;flex-direction:column;gap:6px;background:var(--w);min-height:140px;max-height:220px"></div>
-        <div style="padding:.6rem .9rem;border-top:1px solid var(--w2);display:flex;gap:7px;background:#fff">
-          <input id="wg-chat-inp2" class="fi" placeholder="Message&#x2026;" style="flex:1;font-size:.74rem;padding:6px 9px" onkeydown="if(event.key===&#39;Enter&#39;)wgSendMsg2()">
-          <button class="btn btn-p btn-sm" onclick="wgSendMsg2()" style="flex-shrink:0;background:var(--g2);border-color:var(--g2)">&#x2192;</button>
-        </div>
-      </div>
     </div>
 
 

@@ -702,6 +702,16 @@ const server=http.createServer(function(req,res){
   });
   if(p.match(/^\/api\/document\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());documents=documents.filter(d=>d.id!==id);save('documents.json',documents);return J(res,{ok:true});}
 
+  if(p==='/api/access-logs'&&m==='GET'){
+    if(ME.id!==0)return J(res,{ok:false},403);
+    const logs=db.prepare('SELECT * FROM access_logs ORDER BY id DESC LIMIT 30').all();
+    const stats=db.prepare('SELECT success, COUNT(*) as n FROM access_logs GROUP BY success').all();
+    const total=db.prepare('SELECT COUNT(*) as n FROM access_logs').get().n;
+    const s={total,success:0,failed:0,last7:0};
+    stats.forEach(function(r){if(r.success)s.success=r.n;else s.failed=r.n;});
+    s.last7=db.prepare("SELECT COUNT(*) as n FROM access_logs WHERE created_at >= datetime('now','-7 days','localtime')").get().n;
+    return J(res,{ok:true,stats:s,logs});
+  }
   // BIBLIOTHÈQUE DOCUMENTAIRE
   if(p==='/api/biblio'&&m==='GET')return J(res,Biblio.getAll(ME.id,ME.id===0));
   if(p==='/api/biblio'&&m==='POST')return body(req,function(err,d){
@@ -1673,11 +1683,15 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div class="sbi" data-panel="signal" onclick="openPanel('signal')"><span class="sbi-ic">&#x1F534;</span>Signalements<span class="sbi-new" id="sb-sig">!</span></div>
   <div class="sbi" data-panel="events" onclick="openPanel('events')"><span class="sbi-ic">&#x1F3AA;</span>Événements</div>
 
+  <div id="sb-audit-section" style="display:none">
+  <div class="sbs">Administration</div>
+  <div class="sbi" onclick="openPanel('audit')"><span class="sbi-ic">📊</span>Audit mandat</div>
+  </div>
   <div class="sbs">Outils</div>
   <div class="sbi" data-panel="comms" onclick="openPanel('comms')"><span class="sbi-ic">&#x270D;&#xFE0F;</span>Rédiger un doc</div>
   <div class="sbi" data-panel="hist" onclick="openPanel('hist')"><span class="sbi-ic">&#x1F514;</span>Historique</div>
 
-  <div class="sbf">elus.vizilleenmouvement.fr<br>Node.js &#xb7; Infomaniak</div>
+  <div class="sbf"><a href="#" onclick="openPanel('confidentialite');return false;" style="color:var(--i4);text-decoration:none">Confidentialité</a><br>elus.vizilleenmouvement.fr · Node.js · Infomaniak</div>
 </aside>
 
 <main class="main">
@@ -2044,6 +2058,26 @@ textarea.fi{resize:vertical;min-height:90px;}
       </div>
       <div style="padding:.5rem 1rem 1rem" id="bib-list"></div>
     </div>
+  </div>
+</div>
+
+<!-- AUDIT ADMIN -->
+<div class="page" id="p-audit">
+  <div class="ph"><div class="ph-ico" style="background:var(--g8)">📊</div><div><div class="ph-t">Audit du mandat</div><div class="ph-s">Vue administrateur — 91 projets</div></div><div class="ph-a"><button class="btn btn-s btn-sm" onclick="renderAudit()">🔄 Actualiser</button></div></div>
+  <div class="scr" id="audit-body" style="padding:1.25rem 1.5rem"></div>
+</div>
+
+<!-- POLITIQUE DE CONFIDENTIALITÉ -->
+<div class="page" id="p-confidentialite">
+  <div class="ph"><div class="ph-ico" style="background:#e0f2fe">🔒</div><div><div class="ph-t">Politique de confidentialité</div><div class="ph-s">Conformité RGPD — Espace élus Vizille en Mouvement</div></div></div>
+  <div class="scr" style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem">
+    <div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem"><div style="font-size:.82rem;font-weight:700;margin-bottom:.4rem">Responsable du traitement</div><div style="font-size:.78rem;color:var(--i2);line-height:1.6">Commune de Vizille — Place du Château, 38220 Vizille<br>Représentée par Catherine Troton, Maire<br>Contact : mairie@ville-vizille.fr · 04 76 78 06 00</div></div>
+    <div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem"><div style="font-size:.82rem;font-weight:700;margin-bottom:.4rem">Données collectées</div><div style="font-size:.78rem;color:var(--i2);line-height:1.6">Identité (nom, initiales, email pro), rôle municipal, activité (connexions, documents, projets, messages), journalisation de sécurité 90 jours. Aucune donnée sensible au sens RGPD.</div></div>
+    <div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem"><div style="font-size:.82rem;font-weight:700;margin-bottom:.4rem">Base légale</div><div style="font-size:.78rem;color:var(--i2);line-height:1.6">Mission d'intérêt public (art. 6.1.e RGPD) — mandat municipal 2026-2032.</div></div>
+    <div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem"><div style="font-size:.82rem;font-weight:700;margin-bottom:.4rem">Hébergement et sécurité</div><div style="font-size:.78rem;color:var(--i2);line-height:1.6">Infomaniak Network SA (Genève, Suisse) — ISO 27001. Accès par authentification individuelle et TLS. Aucun cookie publicitaire, aucun tracker, aucune transmission à des tiers.</div></div>
+    <div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem"><div style="font-size:.82rem;font-weight:700;margin-bottom:.4rem">Conservation</div><div style="font-size:.78rem;color:var(--i2);line-height:1.6">Données de compte : durée du mandat (jusqu'au 31 mars 2032). Journaux de connexion : 90 jours. Documents et projets : archivés à l'issue du mandat.</div></div>
+    <div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem"><div style="font-size:.82rem;font-weight:700;margin-bottom:.4rem">Vos droits (RGPD)</div><div style="font-size:.78rem;color:var(--i2);line-height:1.6">Accès, rectification, effacement, opposition — contact : mairie@ville-vizille.fr<br>Réclamation : CNIL — cnil.fr</div></div>
+    <div style="font-size:.68rem;color:var(--i4);text-align:center;padding:.5rem">Mise à jour : mars 2026 · Responsable technique : Michel Thuillier</div>
   </div>
 </div>
 
@@ -2747,9 +2781,11 @@ function openPanel(id){
   else if(id==="comms"){}
   else if(id==="creer") resetNP();
   else if(id==="cdet") fCD();
+  else if(id==="audit") renderAudit();
+  else if(id==="confidentialite"){}
 }
 
-function closePanel(){
+function closePanel(){_auditBack=false;
   var panel = document.getElementById("main-panel");
   if(panel) panel.style.display = "none";
   qsa(".sbi").forEach(function(n){n.classList.remove("on");});
@@ -2823,6 +2859,7 @@ function init(){
       if(repT)repT.textContent="Mon répertoire personnel";
       var repS=document.querySelector("#p-repelus .ph-s");
       if(repS)repS.textContent="Vos documents privés — visibles uniquement par vous";
+      if(ME.id===0){var _as=document.getElementById("sb-audit-section");if(_as)_as.style.display="";}
     }
     SIGN=d.signalements||[]; EVTS=d.evenements||[];
     CRS=d.comptes_rendus||[]; ELUS_DATA=d.elus||[];
@@ -4636,7 +4673,7 @@ function navToAgenda(){gp("agenda",qsa(".sbi")[3]);}
 
 
 // ── ÉDITION PROJET ──────────────────────────────────────────────────────────
-var _ePid=null;
+var _ePid=null, _auditBack=false;
 
 // ── FICHE PROJET v3 ──────────────────────────────────────────────────────────
 function _fpPanel(){
@@ -4651,7 +4688,11 @@ function _fpCss(){
   s.textContent='.fpt{background:none;border:none;padding:.55rem 1rem;font-size:.75rem;font-weight:600;color:var(--i3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:var(--fd)}.fpt.on{color:var(--g1);border-bottom-color:var(--g1);background:#fff}';
   document.head.appendChild(s);
 }
+
+function goAudit(){_auditBack=false;openPanel("audit");}
+function oProjAudit(pid){_auditBack=true;oProj(pid);}
 function oProj(pid){
+  if(!_auditBack)_auditBack=false; // reset si appelé directement
   var p=P.find(function(x){return x.id===pid;}); if(!p)return;
   _ePid=pid; window._fpPid=pid;
   var statut=ST[pid]||p.statut||'ND';
@@ -4665,6 +4706,7 @@ function oProj(pid){
     '<div style="background:var(--g1);color:#fff;padding:.6rem 1rem;display:flex;align-items:center;gap:10px;flex-shrink:0">'
     +'<div style="width:8px;height:8px;border-radius:50%;background:'+col+'"></div>'
     +'<span style="flex:1;font-size:.78rem;font-weight:700;font-family:var(--fd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.titre+'</span>'
+    +(_auditBack?'<button onclick="goAudit()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:0 10px;height:26px;cursor:pointer;font-size:.72rem;font-weight:700;flex-shrink:0;white-space:nowrap">← Audit</button>':'')
     +'<button onclick="closePanel()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:1rem;flex-shrink:0">✕</button></div>'
     +'<div style="display:flex;background:var(--g8);border-bottom:1px solid var(--w2);flex-shrink:0;overflow-x:auto">'+th+'</div>'
     +'<div id="fp-body" style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem"></div>';
@@ -5133,6 +5175,89 @@ function applyRoles(){
       var tc=document.querySelector(".tbtn-c");if(tc)tc.before(b);
     }
   }
+}
+
+
+function auditToggle(id){
+  var el=document.getElementById(id);
+  var ico=document.getElementById(id+'-ico');
+  if(!el)return;
+  var open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  if(ico)ico.textContent=open?'▼':'▶';
+}
+
+function renderAudit(){
+  var body=$('audit-body'); if(!body)return;
+  var total=P.length;
+  if(!total){body.innerHTML='<div class="empty"><div class="empty-ico">📊</div><div class="empty-t">Aucun projet chargé</div></div>';return;}
+  var counts={};SLIST.forEach(function(s){counts[s]=0;});counts['ND']=0;
+  P.forEach(function(p){var s=ST[p.id]||p.statut||'ND';counts[s]=(counts[s]||0)+1;});
+  var stC={Prioritaire:'#dc2626',Programmé:'#2563eb',Planifié:'#7c3aed','En cours':'#d97706',Réalisé:'#16a34a',Étude:'#0891b2',ND:'#9ca3af'};
+  var realises=counts['Réalisé']||0,pct=total?Math.round(realises/total*100):0;
+  var h='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem">';
+  h+='<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:.85rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#16a34a">'+realises+'</div><div style="font-size:.82rem;color:#166534;font-weight:600">Réalisés</div></div>';
+  h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:.85rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#d97706">'+(counts['En cours']||0)+'</div><div style="font-size:.82rem;color:#92400e;font-weight:600">En cours</div></div>';
+  h+='<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:.85rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#2563eb">'+(counts['Programmé']||0)+'</div><div style="font-size:.82rem;color:#1e40af;font-weight:600">Programmés</div></div>';
+  h+='<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:.85rem;text-align:center"><div style="font-size:2rem;font-weight:800;color:#dc2626">'+(counts['Prioritaire']||0)+'</div><div style="font-size:.82rem;color:#991b1b;font-weight:600">Prioritaires</div></div></div>';
+  h+='<div style="background:var(--g8);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem">';
+  h+='<div style="display:flex;justify-content:space-between;font-size:.88rem;font-weight:700;margin-bottom:.5rem"><span>Avancement global — mandat 2026-2032</span><span style="color:var(--g3)">'+pct+'% réalisés</span></div>';
+  h+='<div style="background:var(--w2);border-radius:8px;height:12px;overflow:hidden;display:flex">';
+  SLIST.forEach(function(s){var n=counts[s]||0,w=total?Math.round(n/total*100):0;if(w>0)h+='<div title="'+s+' : '+n+'" style="width:'+w+'%;background:'+(stC[s]||'#ccc')+';height:100%"></div>';});
+  h+='</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:.5rem">';
+  SLIST.forEach(function(s){var n=counts[s]||0;if(n>0)h+='<span style="font-size:.75rem;display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:'+(stC[s]||'#ccc')+';display:inline-block"></span>'+s+' ('+n+')</span>';});
+  h+='</div></div>';
+  h+='<div style="margin-bottom:1rem"><div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:.6rem">Par commission</div><div style="display:flex;flex-direction:column;gap:5px">';
+  Object.keys(COMM).forEach(function(comm,ci){
+    var themes=COMM[comm],col=COLORS[comm]||'var(--g3)',icon=ICONS[comm]||'📋';
+    var pp=P.filter(function(p){return themes.indexOf(p.theme)>=0;});
+    var tot=pp.length,ok=pp.filter(function(p){return(ST[p.id]||p.statut||'')==='Réalisé';}).length;
+    var pr=pp.filter(function(p){return(ST[p.id]||p.statut||'')==='Prioritaire';}).length;
+    var pctC=tot?Math.round(ok/tot*100):0,cid='auc'+ci;
+    h+='<div style="border:1px solid '+col+'30;border-radius:10px;overflow:hidden">';
+    h+='<div onclick="auditToggle(&quot;'+cid+'&quot;)" style="display:flex;align-items:center;gap:8px;padding:.65rem .85rem;background:'+col+'10;cursor:pointer">';
+    h+=icon+' <span style="flex:1;font-size:.84rem;font-weight:700">'+comm+'</span>';
+    if(pr>0)h+='<span style="font-size:.72rem;background:#fef2f2;color:#dc2626;border-radius:5px;padding:1px 6px;font-weight:700">⚠ '+pr+'</span>';
+    h+='<div style="width:70px;background:var(--w2);border-radius:4px;height:6px;overflow:hidden;margin:0 6px"><div style="width:'+pctC+'%;background:'+col+';height:100%"></div></div>';
+    h+='<span style="font-size:.7rem;font-weight:700;color:'+col+'">'+pctC+'%</span>';
+    h+='<span id="'+cid+'-ico" style="font-size:.75rem;margin-left:4px;color:var(--i3)">▶</span></div>';
+    h+='<div id="'+cid+'" style="display:none;padding:.5rem .75rem">';
+    themes.forEach(function(theme){
+      var tp=pp.filter(function(p){return p.theme===theme;});if(!tp.length)return;
+      h+='<div style="font-size:.78rem;font-weight:800;color:'+col+';text-transform:uppercase;padding:.25rem 0 .15rem">'+theme+'</div>';
+      tp.forEach(function(p){
+        var s=ST[p.id]||p.statut||'ND';
+        h+='<div onclick="oProjAudit('+p.id+')" style="display:flex;align-items:center;gap:8px;padding:.28rem .35rem;border-radius:5px;cursor:pointer">';
+        h+='<span style="font-size:.82rem;flex:1">'+p.titre+'</span><span class="b '+bc(s)+'" style="font-size:.6rem">'+s+'</span></div>';
+      });
+    });
+    h+='</div></div>';
+  });
+  h+='</div>';
+  h+='<div><div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:.6rem">Journaux de connexion</div>';
+  h+='<div id="audit-logs"><div style="font-size:.85rem;color:var(--i3)">Chargement…</div></div></div>';
+  body.innerHTML=h;
+  apiGet('/api/access-logs').then(function(d){
+    var lb=$('audit-logs');if(!lb)return;
+    if(!d||!d.ok){lb.innerHTML='<div style="font-size:.72rem;color:var(--i3)">Non disponible</div>';return;}
+    var s=d.stats;
+    var lh='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.6rem">';
+    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:var(--g8);text-align:center"><div style="font-size:1.2rem;font-weight:800">'+s.total+'</div><div style="font-size:.85rem;color:var(--i3)">Total</div></div>';
+    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:#f0fdf4;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:#16a34a">'+s.success+'</div><div style="font-size:.85rem;color:var(--i3)">Réussies</div></div>';
+    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:#fef2f2;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:#dc2626">'+s.failed+'</div><div style="font-size:.85rem;color:var(--i3)">Échouées</div></div>';
+    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:#eff6ff;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:#2563eb">'+s.last7+'</div><div style="font-size:.85rem;color:var(--i3)">7 jours</div></div></div>';
+    lh+='<div style="display:flex;flex-direction:column;gap:3px">';
+    d.logs.forEach(function(l){
+      lh+='<div style="display:flex;align-items:center;gap:8px;padding:.4rem .65rem;background:var(--g8);border-radius:7px;font-size:.82rem">';
+      lh+='<span style="width:7px;height:7px;border-radius:50%;background:'+(l.success?'#16a34a':'#dc2626')+';flex-shrink:0"></span>';
+      lh+='<span style="color:var(--i4);font-size:.76rem;white-space:nowrap">'+l.created_at+'</span>';
+      lh+='<span style="font-weight:600">'+l.nom+'</span>';
+      lh+='<span style="color:var(--i4)">'+l.username+'</span>';
+      lh+='<span style="color:var(--i4);font-size:.73rem;margin-left:auto">'+l.ip+'</span></div>';
+    });
+    lh+='</div>';
+    lb.innerHTML=lh;
+  });
 }
 
 init();

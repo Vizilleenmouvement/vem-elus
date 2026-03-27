@@ -1346,6 +1346,7 @@ body{font-family:var(--fn);background:var(--w);color:var(--ink);height:100vh;mar
 .ph-a{margin-left:auto;display:flex;gap:8px;align-items:center;}
 .scr{padding:1.2rem 1.4rem;}
 .scr::-webkit-scrollbar{width:4px;}.scr::-webkit-scrollbar-thumb{background:var(--w3);border-radius:2px;}
+.wg{min-height:200px;}
 
 /* PAGES */
 .page{display:none;}.page.on{display:block;}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -1786,7 +1787,7 @@ textarea.fi{resize:vertical;min-height:90px;}
     </div>
 
     <!-- LIGNE 1 : Agenda | Tâches | Signalements -->
-    <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
 
 
       <!-- WIDGET AGENDA -->
@@ -1851,7 +1852,7 @@ textarea.fi{resize:vertical;min-height:90px;}
     </div>
 
 <!-- LIGNE 2 : 4 tuiles accès rapide -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
 
       <!-- BIBLIO -->
       <div class="wg-tile" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6);border-radius:16px;padding:1.1rem 1rem;color:#fff;box-shadow:0 4px 16px rgba(109,40,217,.3);cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:.5rem" onclick="openPanel('biblio')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(109,40,217,.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 16px rgba(109,40,217,.3)'">
@@ -1891,8 +1892,8 @@ textarea.fi{resize:vertical;min-height:90px;}
       </div>
     </div>
 
-    <!-- LIGNE 3 : Annonces | Tchat | CR | Baromètre -->
-    <div style="display:grid;grid-template-columns:1fr 1.2fr 1fr 1.1fr;gap:12px">
+    <!-- LIGNE 3 : Annonces | Tchat | CR | Tchat canal -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px">
 
       <!-- WIDGET ANNONCES -->
       <div class="wg" style="background:#fff;border-radius:18px;border:1px solid var(--w2);box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;display:flex;flex-direction:column">

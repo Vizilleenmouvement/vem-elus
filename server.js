@@ -565,20 +565,25 @@ const server=http.createServer(function(req,res){
         var resetUrl=proto+'://'+host+'/reset-password?token='+token;
         var eluNom=ACCOUNTS[user].nom||user;
         // Envoyer l'email à l'admin
+        var emailText='Demande de reinitialisation de mot de passe\n\n'
+          +eluNom+' (identifiant : '+user+') a demande une reinitialisation de mot de passe.\n\n'
+          +'Transmettez-lui ce lien (valable 1 heure) :\n'+resetUrl+'\n';
+        var emailHtml='<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">'
+          +'<h2 style="color:#1a3a5c">Demande de r&eacute;initialisation de mot de passe</h2>'
+          +'<p><strong>'+eluNom+'</strong> (identifiant : <code>'+user+'</code>) a demand&eacute; une r&eacute;initialisation de mot de passe.</p>'
+          +'<p>Transmettez-lui ce lien (valable 1 heure) :</p>'
+          +'<p style="background:#f0fdf4;border:1px solid #b8d9c4;border-radius:8px;padding:12px;word-break:break-all"><a href="'+resetUrl+'">'+resetUrl+'</a></p>'
+          +'<p style="font-size:12px;color:#888">Ce lien expire dans 1 heure.</p>'
+          +'</div>';
         mailTransporter.sendMail({
-          from:'"VeM Espace Élus" <'+GMAIL_USER+'>',
+          from:'VeM Espace Elus <'+GMAIL_USER+'>',
           to:ADMIN_EMAIL,
-          subject:'🔑 Demande de réinitialisation — '+eluNom,
-          html:'<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">'
-            +'<h2 style="color:#1a3a5c">Demande de réinitialisation de mot de passe</h2>'
-            +'<p><strong>'+eluNom+'</strong> (identifiant : <code>'+user+'</code>) a demandé une réinitialisation de mot de passe.</p>'
-            +'<p>Transmettez-lui ce lien (valable 1 heure) :</p>'
-            +'<p style="background:#f0fdf4;border:1px solid #b8d9c4;border-radius:8px;padding:12px;word-break:break-all"><a href="'+resetUrl+'">'+resetUrl+'</a></p>'
-            +'<p style="font-size:.8rem;color:#888">Ce lien expire dans 1 heure.</p>'
-            +'</div>'
+          subject:'Demande de reinitialisation mot de passe - '+eluNom,
+          text:emailText,
+          html:emailHtml
         },function(err){
           if(err)console.log('Erreur envoi email reset:',err.message);
-          else console.log('Email reset envoyé à '+ADMIN_EMAIL+' pour '+user);
+          else console.log('Email reset envoye a '+ADMIN_EMAIL+' pour '+user);
         });
         res.writeHead(302,{'Location':'/forgot-password?msg=ok'});
         res.end();

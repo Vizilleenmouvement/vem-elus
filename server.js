@@ -3345,7 +3345,7 @@ function toggleGuide(el){
   if(arr) arr.style.transform=el.classList.contains("open")?"rotate(90deg)":"none";
 }
 function fmtGuide(txt){
-  function lk(s){var p=[];var i=0;var re=/(https?:\/\/[^\s<),]+)/g;var m;while((m=re.exec(s))!==null){if(m.index>i)p.push(s.slice(i,m.index));p.push('<a href="'+m[1]+'" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">'+m[1]+'</a>');i=re.lastIndex;}if(i<s.length)p.push(s.slice(i));return p.join('');}
+  function lk(s){var p=[];var i=0;var re=/(https?:\/\/[^\s<),]+)/g;var m;while((m=re.exec(s))!==null){if(m.index>i)p.push(s.slice(i,m.index));p.push('<a href="'+m[1]+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">'+m[1]+'</a>');i=re.lastIndex;}if(i<s.length)p.push(s.slice(i));return p.join('');}
   return txt.split(String.fromCharCode(10)).map(function(line){
     var t=line.trim();
     if(!t) return '<div style="height:.4rem"></div>';

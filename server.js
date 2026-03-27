@@ -1885,7 +1885,8 @@ textarea.fi{resize:vertical;min-height:90px;}
 
   <div id="sb-audit-section" style="display:none">
   <div class="sbs">Administration</div>
-  <div class="sbi" onclick="openPanel('audit')"><span class="sbi-ic">📊</span>Audit mandat</div>
+  <div class="sbi" data-panel="audit" onclick="openPanel('audit')"><span class="sbi-ic">📊</span>Avancement mandat</div>
+  <div class="sbi" data-panel="connexions" onclick="openPanel('connexions')"><span class="sbi-ic">🔐</span>Connexions</div>
   </div>
   <div class="sbs">Outils</div>
   <div class="sbi" data-panel="comms" onclick="openPanel('comms')"><span class="sbi-ic">&#x270D;&#xFE0F;</span>Rédiger un doc</div>
@@ -2261,10 +2262,16 @@ textarea.fi{resize:vertical;min-height:90px;}
   </div>
 </div>
 
-<!-- AUDIT ADMIN -->
+<!-- AVANCEMENT MANDAT (ADMIN) -->
 <div class="page" id="p-audit">
-  <div class="ph"><div class="ph-ico" style="background:var(--g8)">📊</div><div><div class="ph-t">Audit du mandat</div><div class="ph-s">Vue administrateur — 91 projets</div></div><div class="ph-a"><button class="btn btn-s btn-sm" onclick="renderAudit()">🔄 Actualiser</button></div></div>
+  <div class="ph"><div class="ph-ico" style="background:var(--g8)">📊</div><div><div class="ph-t">Avancement du mandat</div><div class="ph-s">Vue administrateur — suivi des projets</div></div><div class="ph-a"><button class="btn btn-s btn-sm" onclick="renderAudit()">🔄 Actualiser</button></div></div>
   <div class="scr" id="audit-body" style="padding:1.25rem 1.5rem"></div>
+</div>
+
+<!-- CONNEXIONS (ADMIN) -->
+<div class="page" id="p-connexions">
+  <div class="ph"><div class="ph-ico" style="background:#eff6ff">🔐</div><div><div class="ph-t">Journaux de connexion</div><div class="ph-s">Historique des accès — sécurité</div></div><div class="ph-a"><button class="btn btn-s btn-sm" onclick="renderConnexions()">🔄 Actualiser</button></div></div>
+  <div class="scr" id="connexions-body" style="padding:1.25rem 1.5rem"></div>
 </div>
 
 <!-- POLITIQUE DE CONFIDENTIALITÉ -->
@@ -2982,6 +2989,7 @@ function openPanel(id){
   else if(id==="creer") resetNP();
   else if(id==="cdet") fCD();
   else if(id==="audit") renderAudit();
+  else if(id==="connexions") renderConnexions();
   else if(id==="confidentialite"){}
 }
 
@@ -5434,18 +5442,20 @@ function renderAudit(){
     h+='</div></div>';
   });
   h+='</div>';
-  h+='<div><div style="font-size:.78rem;font-weight:800;color:var(--ink);margin-bottom:.6rem">Journaux de connexion</div>';
-  h+='<div id="audit-logs"><div style="font-size:.85rem;color:var(--i3)">Chargement…</div></div></div>';
   body.innerHTML=h;
+}
+
+function renderConnexions(){
+  var body=$('connexions-body');if(!body)return;
+  body.innerHTML='<div style="font-size:.85rem;color:var(--i3)">Chargement…</div>';
   apiGet('/api/access-logs').then(function(d){
-    var lb=$('audit-logs');if(!lb)return;
-    if(!d||!d.ok){lb.innerHTML='<div style="font-size:.72rem;color:var(--i3)">Non disponible</div>';return;}
+    if(!d||!d.ok){body.innerHTML='<div style="font-size:.72rem;color:var(--i3)">Non disponible</div>';return;}
     var s=d.stats;
-    var lh='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.6rem">';
-    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:var(--g8);text-align:center"><div style="font-size:1.2rem;font-weight:800">'+s.total+'</div><div style="font-size:.85rem;color:var(--i3)">Total</div></div>';
-    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:#f0fdf4;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:#16a34a">'+s.success+'</div><div style="font-size:.85rem;color:var(--i3)">Réussies</div></div>';
-    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:#fef2f2;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:#dc2626">'+s.failed+'</div><div style="font-size:.85rem;color:var(--i3)">Échouées</div></div>';
-    lh+='<div style="padding:.4rem .7rem;border-radius:8px;background:#eff6ff;text-align:center"><div style="font-size:1.2rem;font-weight:800;color:#2563eb">'+s.last7+'</div><div style="font-size:.85rem;color:var(--i3)">7 jours</div></div></div>';
+    var lh='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem">';
+    lh+='<div style="padding:.85rem;border-radius:12px;background:var(--g8);text-align:center"><div style="font-size:2rem;font-weight:800">'+s.total+'</div><div style="font-size:.82rem;color:var(--i3);font-weight:600">Total</div></div>';
+    lh+='<div style="padding:.85rem;border-radius:12px;background:#f0fdf4;border:1px solid #bbf7d0;text-align:center"><div style="font-size:2rem;font-weight:800;color:#16a34a">'+s.success+'</div><div style="font-size:.82rem;color:#166534;font-weight:600">Réussies</div></div>';
+    lh+='<div style="padding:.85rem;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;text-align:center"><div style="font-size:2rem;font-weight:800;color:#dc2626">'+s.failed+'</div><div style="font-size:.82rem;color:#991b1b;font-weight:600">Échouées</div></div>';
+    lh+='<div style="padding:.85rem;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;text-align:center"><div style="font-size:2rem;font-weight:800;color:#2563eb">'+s.last7+'</div><div style="font-size:.82rem;color:#1e40af;font-weight:600">7 derniers jours</div></div></div>';
     lh+='<div style="display:flex;flex-direction:column;gap:3px">';
     d.logs.forEach(function(l){
       lh+='<div style="display:flex;align-items:center;gap:8px;padding:.4rem .65rem;background:var(--g8);border-radius:7px;font-size:.82rem">';
@@ -5456,7 +5466,7 @@ function renderAudit(){
       lh+='<span style="color:var(--i4);font-size:.73rem;margin-left:auto">'+l.ip+'</span></div>';
     });
     lh+='</div>';
-    lb.innerHTML=lh;
+    body.innerHTML=lh;
   });
 }
 

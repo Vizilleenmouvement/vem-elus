@@ -52,7 +52,7 @@ body{font-family:var(--fn);background:var(--w);color:var(--ink);height:100vh;mar
 .sb{width:var(--sw);background:linear-gradient(180deg,#1a3a2a 0%,#1e4030 100%);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;z-index:50;}
 .sb::-webkit-scrollbar{width:3px;}.sb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px;}
 .sbs{padding:.85rem 1.1rem .25rem;font-size:.78rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;}
-.sbi{display:flex;align-items:center;gap:11px;padding:.65rem 1.1rem .65rem 1.2rem;cursor:pointer;color:rgba(255,255,255,.6);font-size:1rem;border-left:3px solid transparent;transition:all .15s;user-select:none;}
+.sbi{display:flex;align-items:center;gap:11px;padding:.65rem 1.1rem .65rem 1.2rem;cursor:pointer;color:rgba(255,255,255,.6);font-size:.88rem;border-left:3px solid transparent;transition:all .15s;user-select:none;}
 .sbi:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.92);}
 .sbi.on{background:rgba(255,255,255,.12);color:#fff;border-left:3px solid var(--or);font-weight:700;}
 .sbi-ic{width:22px;text-align:center;font-size:1.1rem;flex-shrink:0;}

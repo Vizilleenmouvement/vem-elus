@@ -3,8 +3,8 @@ const nodemailer=require('nodemailer');
 const PORT=process.env.PORT||3000, DIR=__dirname;
 
 // ── CONFIG EMAIL (Gmail) ────────────────────────────────────────────────────
-const GMAIL_USER=process.env.GMAIL_USER||'';
-const GMAIL_PASS=process.env.GMAIL_PASS||'';
+const GMAIL_USER=process.env.GMAIL_USER||'mth144443@gmail.com';
+const GMAIL_PASS=process.env.GMAIL_PASS||'vhpd jinu qhvf meet';
 const ADMIN_EMAIL=process.env.ADMIN_EMAIL||'thuilliermichel@mac.com';
 const mailTransporter=nodemailer.createTransport({
   service:'gmail',

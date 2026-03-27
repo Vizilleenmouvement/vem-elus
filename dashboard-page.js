@@ -2073,7 +2073,15 @@ function toggleGuide(el){
 function fmtGuide(txt){
   // Transformer URLs en liens cliquables
   function linkify(s){
-    return s.replace(/(https?:\/\/[^\s<),]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">$1</a>');
+    var parts=[];var last=0;
+    var re=/(https?:\/\/[^\s<),]+)/g;var m2;
+    while((m2=re.exec(s))!==null){
+      if(m2.index>last) parts.push(s.slice(last,m2.index));
+      parts.push('<a href="'+m2[1]+'" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">'+m2[1]+'</a>');
+      last=re.lastIndex;
+    }
+    if(last<s.length) parts.push(s.slice(last));
+    return parts.join('');
   }
   // Transformer le texte brut en HTML lisible
   return txt.split(String.fromCharCode(10)).map(function(line){

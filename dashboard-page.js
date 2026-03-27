@@ -2073,9 +2073,7 @@ function toggleGuide(el){
 function fmtGuide(txt){
   // Transformer URLs en liens cliquables
   function linkify(s){
-    return s.replace(/(https?:\/\/[^\s<),]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">$1</a>')
-      .replace(/\(([a-z0-9.-]+\.(fr|com|gouv\.fr|org|eu))\)/g,'(<a href="https://$1" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">$1</a>)')
-      .replace(/([a-z0-9.-]+\.(gouv\.fr|asso\.fr))/g,function(m){return s.indexOf('href')>=0?m:'<a href="https://'+m+'" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">'+m+'</a>';});
+    return s.replace(/(https?:\/\/[^\s<),]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">$1</a>');
   }
   // Transformer le texte brut en HTML lisible
   return txt.split(String.fromCharCode(10)).map(function(line){

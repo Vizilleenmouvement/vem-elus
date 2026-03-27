@@ -2071,6 +2071,12 @@ function toggleGuide(el){
   if(arr) arr.style.transform=el.classList.contains("open")?"rotate(90deg)":"none";
 }
 function fmtGuide(txt){
+  // Transformer URLs en liens cliquables
+  function linkify(s){
+    return s.replace(/(https?:\/\/[^\s<),]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">$1</a>')
+      .replace(/\(([a-z0-9.-]+\.(fr|com|gouv\.fr|org|eu))\)/g,'(<a href="https://$1" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">$1</a>)')
+      .replace(/([a-z0-9.-]+\.(gouv\.fr|asso\.fr))/g,function(m){return s.indexOf('href')>=0?m:'<a href="https://'+m+'" target="_blank" rel="noopener" style="color:var(--g3);font-weight:600;text-decoration:underline;text-underline-offset:2px">'+m+'</a>';});
+  }
   // Transformer le texte brut en HTML lisible
   return txt.split(String.fromCharCode(10)).map(function(line){
     var t=line.trim();
@@ -2081,17 +2087,17 @@ function fmtGuide(txt){
     }
     // Bullet • ou →
     if(t.startsWith('•')){
-      return '<div style="display:flex;gap:7px;margin:.2rem 0"><span style="color:var(--g4);flex-shrink:0;margin-top:.05rem">•</span><span style="font-size:.77rem;color:var(--i2);line-height:1.55">'+t.slice(1).trim()+'</span></div>';
+      return '<div style="display:flex;gap:7px;margin:.2rem 0"><span style="color:var(--g4);flex-shrink:0;margin-top:.05rem">•</span><span style="font-size:.77rem;color:var(--i2);line-height:1.55">'+linkify(t.slice(1).trim())+'</span></div>';
     }
     if(t.startsWith('→')){
-      return '<div style="display:flex;gap:7px;margin:.3rem 0;background:var(--g8);border-radius:6px;padding:.45rem .6rem"><span style="color:var(--g3);flex-shrink:0">→</span><span style="font-size:.77rem;color:var(--g2);line-height:1.55;font-weight:600">'+t.slice(1).trim()+'</span></div>';
+      return '<div style="display:flex;gap:7px;margin:.3rem 0;background:var(--g8);border-radius:6px;padding:.45rem .6rem"><span style="color:var(--g3);flex-shrink:0">→</span><span style="font-size:.77rem;color:var(--g2);line-height:1.55;font-weight:600">'+linkify(t.slice(1).trim())+'</span></div>';
     }
     // Numérotation 1. 2. ...
     if(/^[0-9]+\./.test(t)){
       var num=t.match(/^([0-9]+)\.(.*)$/);
-      return '<div style="display:flex;gap:8px;margin:.25rem 0"><span style="min-width:18px;height:18px;background:var(--g3);color:#fff;border-radius:50%;font-size:.62rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem">'+num[1]+'</span><span style="font-size:.77rem;color:var(--i2);line-height:1.55">'+num[2].trim()+'</span></div>';
+      return '<div style="display:flex;gap:8px;margin:.25rem 0"><span style="min-width:18px;height:18px;background:var(--g3);color:#fff;border-radius:50%;font-size:.62rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem">'+num[1]+'</span><span style="font-size:.77rem;color:var(--i2);line-height:1.55">'+linkify(num[2].trim())+'</span></div>';
     }
-    return '<p style="font-size:.77rem;color:var(--i2);line-height:1.6;margin:.2rem 0">'+t+'</p>';
+    return '<p style="font-size:.77rem;color:var(--i2);line-height:1.6;margin:.2rem 0">'+linkify(t)+'</p>';
   }).join('');
 }
 

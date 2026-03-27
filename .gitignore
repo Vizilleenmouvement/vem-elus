@@ -7,6 +7,11 @@ rep_elus.json
 uploads/*
 !uploads/.gitkeep
 
+# Base SQLite
+vem.db
+vem.db-shm
+vem.db-wal
+
 # Système
 .DS_Store
 node_modules/

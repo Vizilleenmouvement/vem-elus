@@ -1640,6 +1640,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 
 /* TOAST */
 .tuto-card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(26,58,42,.12) !important;border-color:var(--g5);}
+.art-card{transition:all .2s;}.art-card:hover{box-shadow:var(--s2) !important;border-color:var(--g5) !important;}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--g1);color:#fff;padding:10px 18px;border-radius:var(--R);font-size:.78rem;font-weight:500;z-index:1000;display:none;box-shadow:var(--s3);border:1px solid rgba(255,255,255,.1);animation:mIn .2s;}
 
 @media(max-width:900px){
@@ -2035,7 +2036,7 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div class="ph">
     <div class="ph-ico" style="background:#fef3c7">📰</div>
     <div><div class="ph-t">Veille &amp; Articles</div><div class="ph-s">Articles utiles pour les élus</div></div>
-    <div class="ph-a"><button class="btn btn-p btn-sm" onclick="om('article')">+ Publier un article</button></div>
+    <div class="ph-a" id="art-pub-btn" style="display:none"><button class="btn btn-p btn-sm" onclick="om('article')">+ Publier un article</button></div>
   </div>
   <div class="scr" style="padding:1.25rem 1.5rem">
     <div id="articles-list"></div>
@@ -3382,6 +3383,7 @@ function buildRess(){
 }
 var ARTICLES=[];
 function loadArticles(){
+  if(ME.id===0){var pb=document.getElementById('art-pub-btn');if(pb)pb.style.display='';}
   apiGet('/api/articles').then(function(data){
     ARTICLES=Array.isArray(data)?data:[];
     renderArticles();
@@ -3397,7 +3399,7 @@ function renderArticles(){
     var date=a.created_at?a.created_at.split(' ')[0]:'';
     var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
     return '<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin-bottom:12px">'
-      +'<div style="background:#fff;border-radius:14px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1);transition:all .2s;cursor:pointer" onmouseover="this.style.boxShadow=\'var(--s2)\';this.style.borderColor=\'var(--g5)\'" onmouseout="this.style.boxShadow=\'var(--s1)\';this.style.borderColor=\'var(--w2)\'">'
+      +'<div class="art-card" style="background:#fff;border-radius:14px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1);cursor:pointer">'
       +'<div style="display:flex;align-items:flex-start;gap:12px">'
       +'<div style="width:44px;height:44px;border-radius:12px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">📄</div>'
       +'<div style="flex:1">'

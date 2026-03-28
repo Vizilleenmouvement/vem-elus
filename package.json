@@ -14,7 +14,6 @@
   "author": "Vizille en Mouvement",
   "license": "UNLICENSED",
   "dependencies": {
-    "better-sqlite3": "^12.8.0",
-    "nodemailer": "^8.0.4"
+    "better-sqlite3": "^12.8.0"
   }
 }

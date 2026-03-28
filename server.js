@@ -1,12 +1,12 @@
 const http=require('http'),https=require('https'),fs=require('fs'),path=require('path');
-const nodemailer=require('nodemailer');
 const PORT=process.env.PORT||3000, DIR=__dirname;
 
 // ── CONFIG EMAIL ────────────────────────────────────────────────────────────
 const GMAIL_USER=process.env.GMAIL_USER||'mth144443@gmail.com';
 const GMAIL_PASS=process.env.GMAIL_PASS||'vhpd jinu qhvf meet';
 const ADMIN_EMAIL=process.env.ADMIN_EMAIL||'thuilliermichel@mac.com';
-const mailTransporter=nodemailer.createTransport({service:'gmail',auth:{user:GMAIL_USER,pass:GMAIL_PASS}});
+var mailTransporter=null;
+try{var nm=require('nodemailer');mailTransporter=nm.createTransport({service:'gmail',auth:{user:GMAIL_USER,pass:GMAIL_PASS}});console.log('Nodemailer OK');}catch(e){console.log('Nodemailer non disponible — emails désactivés');}
 const RESET_TOKENS={};
 
 // ── ANTI-BRUTE-FORCE ────────────────────────────────────────────────────────
@@ -518,7 +518,7 @@ const server=http.createServer(function(req,res){
       var proto=req.headers['x-forwarded-proto']||'http';
       var resetUrl=proto+'://'+host+'/reset-password?token='+tk;
       var eluNom=ACCOUNTS[user].nom||user;
-      mailTransporter.sendMail({from:'VeM Espace Elus <'+GMAIL_USER+'>',to:ADMIN_EMAIL,subject:'Demande reinitialisation mdp - '+eluNom,text:eluNom+' ('+user+') demande une reinitialisation.\nLien (1h) : '+resetUrl,html:'<p><strong>'+eluNom+'</strong> ('+user+') demande une reinitialisation de mot de passe.</p><p>Lien (valable 1h) :</p><p style="background:#f0fdf4;border:1px solid #b8d9c4;border-radius:8px;padding:12px;word-break:break-all"><a href="'+resetUrl+'">'+resetUrl+'</a></p>'},function(err){if(err)console.log('Erreur email:',err.message);else console.log('Email reset envoye pour '+user);});
+      if(mailTransporter){mailTransporter.sendMail({from:'VeM Espace Elus <'+GMAIL_USER+'>',to:ADMIN_EMAIL,subject:'Demande reinitialisation mdp - '+eluNom,text:eluNom+' ('+user+') demande une reinitialisation.\nLien (1h) : '+resetUrl,html:'<p><strong>'+eluNom+'</strong> ('+user+') demande une reinitialisation de mot de passe.</p><p>Lien (valable 1h) :</p><p style="background:#f0fdf4;border:1px solid #b8d9c4;border-radius:8px;padding:12px;word-break:break-all"><a href="'+resetUrl+'">'+resetUrl+'</a></p>'},function(err){if(err)console.log('Erreur email:',err.message);else console.log('Email reset envoye pour '+user);});}else{console.log('Lien reset pour '+user+' : '+resetUrl);}
       res.writeHead(302,{'Location':'/forgot-password?msg=ok'});res.end();
     }catch(e){res.writeHead(302,{'Location':'/forgot-password'});res.end();}});return;
   }

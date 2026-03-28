@@ -323,11 +323,11 @@ try {
     const af = path.join(DIR,'accounts.json');
     if(require('fs').existsSync(af)){
       var loaded=JSON.parse(require('fs').readFileSync(af,'utf8'));
-      // Ignorer si les mots de passe sont hashés (bcrypt)
+      // Ignorer si les mots de passe sont hashés (bcrypt, scrypt, ou trop longs)
       var firstPwd=Object.values(loaded)[0]&&Object.values(loaded)[0].pwd;
-      if(firstPwd&&firstPwd.startsWith('$2')){
+      if(firstPwd&&(firstPwd.startsWith('$2')||firstPwd.length>30||firstPwd.includes(':')||firstPwd.includes('$'))){
         console.log('accounts.json contient des hashs — ignoré, suppression');
-        require('fs').unlinkSync(af);
+        try{require('fs').unlinkSync(af);}catch(e){}
       } else {
         ACCOUNTS=loaded;
       }

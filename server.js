@@ -1837,6 +1837,21 @@ textarea.fi{resize:vertical;min-height:90px;}
       <div id="sb-cal-fete" style="font-size:.65rem;color:rgba(255,255,255,.7);font-style:italic"></div>
       <div id="sb-cal-sem" style="font-size:.58rem;color:rgba(255,255,255,.45);margin-top:2px"></div>
     </div>
+    <div onclick="togglePonts()" style="background:rgba(255,255,255,.06);padding:.4rem;text-align:center;cursor:pointer;font-size:.6rem;color:rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.05)">📅 Ponts &amp; jours fériés 2026 ▾</div>
+    <div id="sb-ponts" style="display:none;padding:.5rem;background:rgba(0,0,0,.15);font-size:.55rem;color:rgba(255,255,255,.7);line-height:1.8">
+      <div style="display:flex;justify-content:space-between;padding:2px 4px;background:rgba(201,162,39,.25);border-radius:3px;margin-bottom:2px"><span>🎆 Nouvel An</span><span>jeu 01/01</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px"><span>🐣 Lundi de Pâques</span><span>lun 06/04</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px;background:rgba(201,162,39,.25);border-radius:3px;margin-bottom:2px"><span>✊ Fête du Travail</span><span>ven 01/05</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px"><span>🕊 Victoire 1945</span><span>ven 08/05</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px;background:rgba(201,162,39,.25);border-radius:3px;margin-bottom:2px"><span>✝ Ascension</span><span>jeu 14/05</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px"><span>🕊 Pentecôte</span><span>lun 25/05</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px;background:rgba(201,162,39,.25);border-radius:3px;margin-bottom:2px"><span>🇫🇷 Fête nationale</span><span>mar 14/07</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px"><span>🙏 Assomption</span><span>sam 15/08</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px;background:rgba(201,162,39,.25);border-radius:3px;margin-bottom:2px"><span>👼 Toussaint</span><span>dim 01/11</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px"><span>🕊 Armistice</span><span>mer 11/11</span></div>
+      <div style="display:flex;justify-content:space-between;padding:2px 4px;background:rgba(201,162,39,.25);border-radius:3px"><span>🎄 Noël</span><span>ven 25/12</span></div>
+      <div style="margin-top:4px;padding:3px 4px;background:rgba(106,184,138,.2);border-radius:3px;text-align:center;font-weight:600;color:rgba(255,255,255,.6)">🌉 Ponts possibles : Ascension (15/05), Noël (24/12)</div>
+    </div>
   </div>
 
   <div class="sbf"><a href="#" onclick="openPanel('confidentialite');return false;" style="color:var(--i4);text-decoration:none">Confidentialité</a><br>elus.vizilleenmouvement.fr · Node.js · Infomaniak</div>
@@ -5493,6 +5508,7 @@ function toggleTuto(el){
   var cf=document.getElementById('sb-cal-fete');var skey=(m+1)+'/'+n;if(cf)cf.textContent=saints[skey]||'';
   var cs=document.getElementById('sb-cal-sem');if(cs)cs.textContent='Semaine '+sem;
 })();
+function togglePonts(){var p=document.getElementById('sb-ponts');if(p)p.style.display=p.style.display==='none'?'block':'none';}
 
 init();
 

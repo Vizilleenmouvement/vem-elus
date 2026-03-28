@@ -2055,7 +2055,7 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div class="ph">
     <div class="ph-ico" style="background:#fef3c7">📰</div>
     <div><div class="ph-t">Veille &amp; Articles</div><div class="ph-s">Articles utiles pour les élus</div></div>
-    <div class="ph-a" id="art-pub-btn" style="display:none"><button class="btn btn-p btn-sm" onclick="om('article')">+ Publier un article</button></div>
+    <div class="ph-a"><button class="btn btn-p btn-sm" onclick="om('article')">+ Publier un article</button></div>
   </div>
   <div class="scr" style="padding:1.25rem 1.5rem">
     <div id="articles-list"></div>
@@ -3403,7 +3403,6 @@ function buildRess(){
 }
 var ARTICLES=[];
 function loadArticles(){
-  try{if(isAdmin()){var pb=document.getElementById('art-pub-btn');if(pb)pb.style.display='';var pb2=document.querySelector('#panel-body #art-pub-btn');if(pb2)pb2.style.display='';}}catch(e){}
   apiGet('/api/articles').then(function(data){
     ARTICLES=Array.isArray(data)?data:[];
     renderArticles();
@@ -3428,7 +3427,7 @@ function renderArticles(){
     var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
     var col=ART_COLORS[idx%ART_COLORS.length];
     var ico=ART_ICONS[idx%ART_ICONS.length];
-    var delBtn=isAdmin()?'<div style="position:absolute;top:6px;right:6px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:rgba(0,0,0,.3);border:none;color:#fff;font-size:.6rem;cursor:pointer;border-radius:5px;padding:2px 6px">✕</button></div>':'';
+    var delBtn='<div style="position:absolute;top:6px;right:6px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:rgba(220,38,38,.85);border:none;color:#fff;font-size:.7rem;cursor:pointer;border-radius:6px;padding:4px 10px;font-weight:600">Supprimer</button></div>';
     html+='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block">'
       +'<div class="art-card" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--s1);cursor:pointer;position:relative;height:100%;display:flex;flex-direction:column">'
       +delBtn
@@ -3454,7 +3453,7 @@ function renderArticles(){
     for(var j=0;j<anciens.length;j++){
       var b=anciens[j];
       var bdate=b.created_at?b.created_at.split(' ')[0]:'';
-      var bdel=isAdmin()?'<button onclick="event.preventDefault();event.stopPropagation();delArticle('+b.id+')" style="background:none;border:none;font-size:.6rem;color:var(--i4);cursor:pointer;margin-left:4px">✕</button>':'';
+      var bdel='<button onclick="event.preventDefault();event.stopPropagation();delArticle('+b.id+')" style="background:#fee2e2;border:none;font-size:.62rem;color:#dc2626;cursor:pointer;margin-left:4px;border-radius:4px;padding:2px 6px">suppr.</button>';
       html+='<a href="'+(b.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:flex;align-items:center;gap:8px;padding:.45rem .7rem;background:#fff;border-radius:8px;border:1px solid var(--w2);font-size:.75rem;transition:background .15s" class="art-card">'
         +'<span style="color:var(--i4);font-size:.65rem;white-space:nowrap">'+bdate+'</span>'
         +'<span style="font-weight:600;color:var(--ink);flex:1">'+b.titre+'</span>'

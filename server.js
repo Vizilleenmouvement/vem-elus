@@ -3427,10 +3427,9 @@ function renderArticles(){
     var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
     var col=ART_COLORS[idx%ART_COLORS.length];
     var ico=ART_ICONS[idx%ART_ICONS.length];
-    var delBtn='<div style="position:absolute;top:6px;right:6px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:rgba(220,38,38,.85);border:none;color:#fff;font-size:.7rem;cursor:pointer;border-radius:6px;padding:4px 10px;font-weight:600">Supprimer</button></div>';
+    var delBtn='<div style="padding:.5rem 1rem;border-top:1px solid var(--w2)"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;font-size:.7rem;cursor:pointer;border-radius:8px;padding:4px 12px;font-weight:600;width:100%">Supprimer cet article</button></div>';
     html+='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block">'
       +'<div class="art-card" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--s1);cursor:pointer;position:relative;height:100%;display:flex;flex-direction:column">'
-      +delBtn
       +'<div style="background:linear-gradient(135deg,'+col+','+col+'cc);padding:1rem;color:#fff;position:relative;overflow:hidden">'
       +'<div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.08)"></div>'
       +'<div style="font-size:1.3rem;margin-bottom:.5rem">'+ico+'</div>'
@@ -3442,7 +3441,9 @@ function renderArticles(){
       +(a.source?'<span style="font-weight:600;color:var(--g3);background:var(--g8);padding:1px 6px;border-radius:4px">'+a.source+'</span>':'')
       +'<span>'+date+'</span>'
       +'<span style="margin-left:auto;color:var(--g3);font-weight:600">Lire →</span>'
-      +'</div></div></div></a>';
+      +'</div></div>'
+      +delBtn
+      +'</div></a>';
   }
   html+='</div>';
   // Liste compacte pour les anciens

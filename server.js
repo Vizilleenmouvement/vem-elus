@@ -318,8 +318,13 @@ const ACCOUNTS_DEFAULT = {
 };
 let ACCOUNTS = ACCOUNTS_DEFAULT;
 try {
-  if(process.env.ACCOUNTS_JSON) ACCOUNTS = JSON.parse(process.env.ACCOUNTS_JSON);
-  else {
+  if(process.env.ACCOUNTS_JSON){
+    var envAcc=JSON.parse(process.env.ACCOUNTS_JSON);
+    var envPwd=Object.values(envAcc)[0]&&Object.values(envAcc)[0].pwd;
+    if(envPwd&&(envPwd.startsWith('$2')||envPwd.length>30||envPwd.includes(':')||envPwd.includes('$'))){
+      console.log('ACCOUNTS_JSON contient des hashs — ignoré');
+    } else { ACCOUNTS=envAcc; }
+  } else {
     const af = path.join(DIR,'accounts.json');
     if(require('fs').existsSync(af)){
       var loaded=JSON.parse(require('fs').readFileSync(af,'utf8'));

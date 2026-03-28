@@ -321,7 +321,17 @@ try {
   if(process.env.ACCOUNTS_JSON) ACCOUNTS = JSON.parse(process.env.ACCOUNTS_JSON);
   else {
     const af = path.join(DIR,'accounts.json');
-    if(require('fs').existsSync(af)) ACCOUNTS = JSON.parse(require('fs').readFileSync(af,'utf8'));
+    if(require('fs').existsSync(af)){
+      var loaded=JSON.parse(require('fs').readFileSync(af,'utf8'));
+      // Ignorer si les mots de passe sont hashés (bcrypt)
+      var firstPwd=Object.values(loaded)[0]&&Object.values(loaded)[0].pwd;
+      if(firstPwd&&firstPwd.startsWith('$2')){
+        console.log('accounts.json contient des hashs — ignoré, suppression');
+        require('fs').unlinkSync(af);
+      } else {
+        ACCOUNTS=loaded;
+      }
+    }
   }
 } catch(e) { console.log('Comptes par défaut utilisés'); }
 // ── SESSIONS ─────────────────────────────────────────────────────────────────

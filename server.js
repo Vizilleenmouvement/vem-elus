@@ -49,7 +49,7 @@ try{db.exec("CREATE TABLE IF NOT EXISTS articles (id INTEGER PRIMARY KEY AUTOINC
 // Articles par défaut au premier démarrage
 try{
   var artCount=db.prepare('SELECT COUNT(*) as n FROM articles').get().n;
-  if(artCount===0){
+  if(artCount<3){
     var defArticles=[
       {titre:"Guide pratique de l'élu local 2026",url:"https://www.amf.asso.fr/documents-guide-lelu-local/41190",source:"AMF",resume:"Le guide complet de l'Association des Maires de France pour les nouveaux élus. Droits, devoirs, indemnités, formation.",tags:"guide,droits,formation"},
       {titre:"Finances locales : comprendre le budget de sa commune",url:"https://www.collectivites-locales.gouv.fr/finances-locales",source:"Gouv.fr",resume:"Tout savoir sur le budget communal, les dotations de l'État, la fiscalité locale et les règles comptables.",tags:"budget,finances"},

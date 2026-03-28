@@ -1329,7 +1329,7 @@ return `<!DOCTYPE html>
   --sw:260px;--th:58px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:17px;}
+html{font-size:15.5px;}
 body{font-family:var(--fn);background:var(--w);color:var(--ink);height:100vh;margin:0;overflow:hidden;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;}
 
 /* TOPBAR */

@@ -1,5 +1,5 @@
 const http=require('http'),https=require('https'),fs=require('fs'),path=require('path');
-var nodemailer;try{nodemailer=require('nodemailer');}catch(e){nodemailer=null;}
+var nodemailer=null;try{nodemailer=require('node'+'mailer');}catch(e){}
 const PORT=process.env.PORT||3000, DIR=__dirname;
 
 // ── CONFIG EMAIL ────────────────────────────────────────────────────────────

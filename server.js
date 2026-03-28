@@ -46,6 +46,25 @@ function recordAttempt(ip,ok){if(ok){delete LOGIN_ATTEMPTS[ip];return;}if(!LOGIN
 const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db,ProjetJalons,ProjetPartenaires,ProjetContacts,ProjetDocs,ProjetPresse,ProjetJournal,BiblioDoc} = require('./db.js');
 try{db.exec("CREATE TABLE IF NOT EXISTS access_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, nom TEXT, ip TEXT, success INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now','localtime')))");}catch(e){}
 try{db.exec("CREATE TABLE IF NOT EXISTS articles (id INTEGER PRIMARY KEY AUTOINCREMENT, titre TEXT NOT NULL, url TEXT DEFAULT '', source TEXT DEFAULT '', resume TEXT DEFAULT '', tags TEXT DEFAULT '', auteur_id INTEGER DEFAULT 0, auteur_nom TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now','localtime')))");}catch(e){}
+// Articles par défaut au premier démarrage
+try{
+  var artCount=db.prepare('SELECT COUNT(*) as n FROM articles').get().n;
+  if(artCount===0){
+    var defArticles=[
+      {titre:"Guide pratique de l'élu local 2026",url:"https://www.amf.asso.fr/documents-guide-lelu-local/41190",source:"AMF",resume:"Le guide complet de l'Association des Maires de France pour les nouveaux élus. Droits, devoirs, indemnités, formation.",tags:"guide,droits,formation"},
+      {titre:"Finances locales : comprendre le budget de sa commune",url:"https://www.collectivites-locales.gouv.fr/finances-locales",source:"Gouv.fr",resume:"Tout savoir sur le budget communal, les dotations de l'État, la fiscalité locale et les règles comptables.",tags:"budget,finances"},
+      {titre:"Transition écologique : les leviers des communes",url:"https://www.ecologie.gouv.fr/politiques-publiques/transition-ecologique-collectivites",source:"Min. Écologie",resume:"Plan de transition écologique pour les collectivités. Rénovation énergétique, mobilités douces, biodiversité.",tags:"écologie,transition"},
+      {titre:"Urbanisme et PLU : guide pour les élus",url:"https://www.cohesion-territoires.gouv.fr/plan-local-durbanisme-plu",source:"Gouv.fr",resume:"Comprendre le Plan Local d'Urbanisme, les permis de construire et les outils de maîtrise foncière.",tags:"urbanisme,PLU"},
+      {titre:"Commande publique : les marchés pour les petites communes",url:"https://www.economie.gouv.fr/daj/commande-publique",source:"Min. Économie",resume:"Les règles de la commande publique simplifiées. Seuils, procédures, dématérialisation des marchés.",tags:"marchés publics"},
+      {titre:"RGPD et collectivités : obligations et bonnes pratiques",url:"https://www.cnil.fr/fr/collectivites-territoriales",source:"CNIL",resume:"Protection des données personnelles dans les communes. Registre des traitements, DPO, droits des administrés.",tags:"RGPD,données"},
+      {titre:"Grenoble-Alpes Métropole : compétences et financements",url:"https://www.grenoblealpesmetropole.fr",source:"Métropole",resume:"Les compétences transférées à la Métropole, les contrats de territoire et les dispositifs de financement.",tags:"métropole,financement"},
+      {titre:"Déontologie de l'élu : prévenir les conflits d'intérêts",url:"https://www.hatvp.fr/la-deontologie/",source:"HATVP",resume:"Haute Autorité pour la Transparence de la Vie Publique. Déclarations d'intérêts, déport, lanceurs d'alerte.",tags:"déontologie,transparence"}
+    ];
+    var stmt=db.prepare('INSERT INTO articles (titre,url,source,resume,tags,auteur_nom) VALUES (?,?,?,?,?,?)');
+    defArticles.forEach(function(a){stmt.run(a.titre,a.url,a.source,a.resume,a.tags,'Administrateur');});
+    console.log('✓ '+defArticles.length+' articles de veille créés');
+  }
+}catch(e){}
 
 // Comptes élus — peuvent être surchargés via ACCOUNTS_JSON env var
 const ACCOUNTS_DEFAULT = {
@@ -797,7 +816,7 @@ const server=http.createServer(function(req,res){
   if(p.match(/^\/api\/document\/\d+$/)&&m==='DELETE'){const id=parseInt(p.split('/').pop());documents=documents.filter(d=>d.id!==id);save('documents.json',documents);return J(res,{ok:true});}
 
   if(p==='/api/access-logs'&&m==='GET'){
-    if(ME.id!==0)return J(res,{ok:false},403);
+    if(ME.id!==0&&ME.id!==20)return J(res,{ok:false},403);
     const logs=db.prepare('SELECT * FROM access_logs ORDER BY id DESC LIMIT 30').all();
     const stats=db.prepare('SELECT success, COUNT(*) as n FROM access_logs GROUP BY success').all();
     const total=db.prepare('SELECT COUNT(*) as n FROM access_logs').get().n;
@@ -843,7 +862,7 @@ const server=http.createServer(function(req,res){
 
   // RÉPERTOIRE ÉLUS — privé par utilisateur
   if(p==='/api/rep_elus'&&m==='GET'){
-    if(ME.id===0){const id=qs.elu_id;return J(res,id?RepElus.get(id):RepElus.getAll());}
+    if(ME.id===0||ME.id===20){const id=qs.elu_id;return J(res,id?RepElus.get(id):RepElus.getAll());}
     return J(res,RepElus.get(ME.id));
   }
   if(p==='/api/rep_elus'&&m==='POST')return body(req,function(err,d){
@@ -2723,6 +2742,7 @@ var MOIS=["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","D
 var _ci=0,_sigId=null,_crId=null,_repEluId=null,_chatLast=0,_chatOpen=false,_chatTimer=null;
 var chT=null,chS=null;
 var ME={nom:"Chargement...",avatar:"?",id:0,role:"",color:"var(--g3)",username:""};
+function isAdmin(){return ME.id===0||ME.id===20;}
 var _auth=""; // Sera mis à jour avec les credentials réels
 
 // ── UTILITAIRES ──────────────────────────────────────────────────────────────
@@ -2912,7 +2932,7 @@ function init(){
       if(repT)repT.textContent="Mon répertoire personnel";
       var repS=document.querySelector("#p-repelus .ph-s");
       if(repS)repS.textContent="Vos documents privés — visibles uniquement par vous";
-      if(ME.id===0){var _as=document.getElementById("sb-audit-section");if(_as)_as.style.display="";}
+      if(isAdmin()){var _as=document.getElementById("sb-audit-section");if(_as)_as.style.display="";}
     }
     SIGN=d.signalements||[]; EVTS=d.evenements||[];
     CRS=d.comptes_rendus||[]; ELUS_DATA=d.elus||[];
@@ -3383,42 +3403,51 @@ function buildRess(){
 }
 var ARTICLES=[];
 function loadArticles(){
-  try{if(ME.id===0){var pb=document.getElementById('art-pub-btn');if(pb)pb.style.display='';var pb2=document.querySelector('#panel-body #art-pub-btn');if(pb2)pb2.style.display='';}}catch(e){}
+  try{if(isAdmin()){var pb=document.getElementById('art-pub-btn');if(pb)pb.style.display='';var pb2=document.querySelector('#panel-body #art-pub-btn');if(pb2)pb2.style.display='';}}catch(e){}
   apiGet('/api/articles').then(function(data){
     ARTICLES=Array.isArray(data)?data:[];
     renderArticles();
   }).catch(function(e){console.log('Erreur chargement articles:',e);});
 }
+var ART_COLORS=['#1a3a2a','#6d28d9','#0891b2','#b45309','#dc2626','#2563eb','#9333ea','#065f46','#c2410c','#1d4ed8'];
+var ART_ICONS=['📰','📋','💡','⚖️','🏛','🌿','💶','🏗','🤝','📊'];
 function renderArticles(){
   var el=$('articles-list');if(!el)return;
   if(!ARTICLES.length){
-    el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--i3)"><div style="font-size:1.5rem;margin-bottom:.5rem">📰</div><div style="font-size:.82rem">Aucun article publié pour le moment</div><div style="font-size:.72rem;margin-top:.3rem">Cliquez <b>+ Publier un article</b> pour partager une ressource utile</div></div>';
+    var msg=isAdmin()?'Cliquez <b>+ Publier un article</b> pour partager une ressource':'Les articles de veille apparaîtront ici';
+    el.innerHTML='<div style="text-align:center;padding:3rem 1rem;color:var(--i3)"><div style="font-size:2.5rem;margin-bottom:.75rem">📰</div><div style="font-size:.88rem;font-weight:600">Aucun article pour le moment</div><div style="font-size:.78rem;margin-top:.4rem">'+msg+'</div></div>';
     return;
   }
-  el.innerHTML=ARTICLES.map(function(a){
+  el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+ARTICLES.map(function(a,idx){
     var date=a.created_at?a.created_at.split(' ')[0]:'';
     var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
+    var col=ART_COLORS[idx%ART_COLORS.length];
+    var ico=ART_ICONS[idx%ART_ICONS.length];
     var tagsHtml='';
-    if(a.tags){var tArr=a.tags.split(',');for(var ti=0;ti<tArr.length;ti++){tagsHtml+='<span style="font-size:.62rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px">'+tArr[ti].trim()+'</span>';}}
-    var delBtn=ME.id===0?'<div style="text-align:right;margin-top:-8px;margin-bottom:4px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:none;border:none;font-size:.65rem;color:var(--i4);cursor:pointer">supprimer</button></div>':'';
-    var h='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin-bottom:12px">'
-      +'<div class="art-card" style="background:#fff;border-radius:14px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1);cursor:pointer">'
-      +'<div style="display:flex;align-items:flex-start;gap:12px">'
-      +'<div style="width:44px;height:44px;border-radius:12px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">📄</div>'
-      +'<div style="flex:1">'
-      +'<div style="font-size:.88rem;font-weight:700;color:var(--ink);font-family:var(--fd);margin-bottom:3px">'+a.titre+'</div>'
-      +(a.resume?'<div style="font-size:.78rem;color:var(--i2);line-height:1.6;margin-bottom:6px">'+a.resume+'</div>':'')
-      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      +(a.source?'<span style="font-size:.68rem;font-weight:600;color:var(--g3);background:var(--g8);padding:2px 8px;border-radius:6px">'+a.source+'</span>':'')
-      +(domain?'<span style="font-size:.65rem;color:var(--i4)">'+domain+'</span>':'')
-      +'<span style="font-size:.65rem;color:var(--i4)">'+date+'</span>'
-      +(a.auteur_nom?'<span style="font-size:.65rem;color:var(--i4)">par '+a.auteur_nom+'</span>':'')
+    if(a.tags){var tArr=a.tags.split(',');for(var ti=0;ti<tArr.length;ti++){tagsHtml+='<span style="font-size:.65rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-right:4px">'+tArr[ti].trim()+'</span>';}}
+    var delBtn=isAdmin()?'<div style="position:absolute;top:8px;right:8px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:rgba(0,0,0,.3);border:none;color:#fff;font-size:.65rem;cursor:pointer;border-radius:6px;padding:2px 8px">✕</button></div>':'';
+    var h='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block">'
+      +'<div class="art-card" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--s1);cursor:pointer;position:relative">'
+      +delBtn
+      +'<div style="background:linear-gradient(135deg,'+col+','+col+'cc);padding:1.2rem 1.25rem;color:#fff;position:relative;overflow:hidden">'
+      +'<div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08)"></div>'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:.6rem">'
+      +'<span style="font-size:1.4rem">'+ico+'</span>'
+      +(a.source?'<span style="font-size:.7rem;font-weight:700;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:12px">'+a.source+'</span>':'')
       +tagsHtml
-      +'</div></div>'
-      +'<div style="color:var(--g5);font-size:.8rem;flex-shrink:0;margin-top:2px">↗</div>'
-      +'</div></div></a>'+delBtn;
+      +'</div>'
+      +'<div style="font-size:.95rem;font-weight:700;font-family:var(--fd);line-height:1.35">'+a.titre+'</div>'
+      +'</div>'
+      +'<div style="padding:1rem 1.25rem">'
+      +(a.resume?'<div style="font-size:.8rem;color:var(--i2);line-height:1.65;margin-bottom:.6rem">'+a.resume+'</div>':'')
+      +'<div style="display:flex;align-items:center;gap:8px;font-size:.68rem;color:var(--i4)">'
+      +(domain?'<span>'+domain+'</span><span>·</span>':'')
+      +'<span>'+date+'</span>'
+      +(a.auteur_nom?'<span>·</span><span>par '+a.auteur_nom+'</span>':'')
+      +'<span style="margin-left:auto;color:var(--g3);font-weight:600">Lire →</span>'
+      +'</div></div></div></a>';
     return h;
-  }).join('');
+  }).join('')+'</div>';
 }
 function saveArticle(){
   var titre=v('art-titre'),url=v('art-url'),source=v('art-source'),resume=v('art-resume'),tags=v('art-tags');

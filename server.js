@@ -51,19 +51,25 @@ try{
   var artCount=db.prepare('SELECT COUNT(*) as n FROM articles').get().n;
   if(artCount<3){
     var defArticles=[
-      {titre:"Guide pratique de l'élu local 2026",url:"https://www.amf.asso.fr/documents-guide-lelu-local/41190",source:"AMF",resume:"Le guide complet de l'Association des Maires de France pour les nouveaux élus. Droits, devoirs, indemnités, formation.",tags:"guide,droits,formation"},
-      {titre:"Finances locales : comprendre le budget de sa commune",url:"https://www.collectivites-locales.gouv.fr/finances-locales",source:"Gouv.fr",resume:"Tout savoir sur le budget communal, les dotations de l'État, la fiscalité locale et les règles comptables.",tags:"budget,finances"},
-      {titre:"Transition écologique : les leviers des communes",url:"https://www.ecologie.gouv.fr/politiques-publiques/transition-ecologique-collectivites",source:"Min. Écologie",resume:"Plan de transition écologique pour les collectivités. Rénovation énergétique, mobilités douces, biodiversité.",tags:"écologie,transition"},
-      {titre:"Urbanisme et PLU : guide pour les élus",url:"https://www.cohesion-territoires.gouv.fr/plan-local-durbanisme-plu",source:"Gouv.fr",resume:"Comprendre le Plan Local d'Urbanisme, les permis de construire et les outils de maîtrise foncière.",tags:"urbanisme,PLU"},
+      {titre:"Guide pratique de l'élu local 2026",url:"https://www.amf.asso.fr/page-guide-du-maire/40",source:"AMF",resume:"Le guide complet de l'Association des Maires de France pour les nouveaux élus. Droits, devoirs, indemnités, formation.",tags:"guide,droits,formation"},
+      {titre:"Finances locales : comprendre le budget de sa commune",url:"https://www.collectivites-locales.gouv.fr/finances-locales/budgets-locaux",source:"Gouv.fr",resume:"Tout savoir sur le budget communal, les dotations de l'État, la fiscalité locale et les règles comptables.",tags:"budget,finances"},
+      {titre:"Transition écologique : les leviers des communes",url:"https://www.ecologie.gouv.fr/collectivites-et-transition-ecologique",source:"Min. Écologie",resume:"Plan de transition écologique pour les collectivités. Rénovation énergétique, mobilités douces, biodiversité.",tags:"écologie,transition"},
+      {titre:"Urbanisme et PLU : guide pour les élus",url:"https://www.cohesion-territoires.gouv.fr/plan-local-durbanisme-intercommunal-plui-et-plan-local-durbanisme-plu",source:"Gouv.fr",resume:"Comprendre le Plan Local d'Urbanisme, les permis de construire et les outils de maîtrise foncière.",tags:"urbanisme,PLU"},
       {titre:"Commande publique : les marchés pour les petites communes",url:"https://www.economie.gouv.fr/daj/commande-publique",source:"Min. Économie",resume:"Les règles de la commande publique simplifiées. Seuils, procédures, dématérialisation des marchés.",tags:"marchés publics"},
       {titre:"RGPD et collectivités : obligations et bonnes pratiques",url:"https://www.cnil.fr/fr/collectivites-territoriales",source:"CNIL",resume:"Protection des données personnelles dans les communes. Registre des traitements, DPO, droits des administrés.",tags:"RGPD,données"},
-      {titre:"Grenoble-Alpes Métropole : compétences et financements",url:"https://www.grenoblealpesmetropole.fr",source:"Métropole",resume:"Les compétences transférées à la Métropole, les contrats de territoire et les dispositifs de financement.",tags:"métropole,financement"},
-      {titre:"Déontologie de l'élu : prévenir les conflits d'intérêts",url:"https://www.hatvp.fr/la-deontologie/",source:"HATVP",resume:"Haute Autorité pour la Transparence de la Vie Publique. Déclarations d'intérêts, déport, lanceurs d'alerte.",tags:"déontologie,transparence"}
+      {titre:"Grenoble-Alpes Métropole : compétences et financements",url:"https://www.grenoblealpesmetropole.fr/11-competences.htm",source:"Métropole",resume:"Les compétences transférées à la Métropole, les contrats de territoire et les dispositifs de financement.",tags:"métropole,financement"},
+      {titre:"Conflits d'intérêts : guide pour les élus locaux",url:"https://www.observatoire-collectivites.org/spip.php?article9143",source:"Observatoire",resume:"Guide pratique sur la prévention des conflits d'intérêts dans les collectivités. Déport, déclarations, cas concrets.",tags:"déontologie,conflits"}
     ];
     var stmt=db.prepare('INSERT INTO articles (titre,url,source,resume,tags,auteur_nom) VALUES (?,?,?,?,?,?)');
     defArticles.forEach(function(a){stmt.run(a.titre,a.url,a.source,a.resume,a.tags,'Administrateur');});
     console.log('✓ '+defArticles.length+' articles de veille créés');
   }
+  // Mettre à jour les URLs corrigées
+  var urlFixes={"https://www.amf.asso.fr/documents-guide-lelu-local/41190":"https://www.amf.asso.fr/page-guide-du-maire/40","https://www.collectivites-locales.gouv.fr/finances-locales":"https://www.collectivites-locales.gouv.fr/finances-locales/budgets-locaux","https://www.ecologie.gouv.fr/politiques-publiques/transition-ecologique-collectivites":"https://www.ecologie.gouv.fr/collectivites-et-transition-ecologique","https://www.cohesion-territoires.gouv.fr/plan-local-durbanisme-plu":"https://www.cohesion-territoires.gouv.fr/plan-local-durbanisme-intercommunal-plui-et-plan-local-durbanisme-plu","https://www.grenoblealpesmetropole.fr":"https://www.grenoblealpesmetropole.fr/11-competences.htm","https://www.hatvp.fr/la-deontologie/":"https://www.observatoire-collectivites.org/spip.php?article9143"};
+  var upd=db.prepare('UPDATE articles SET url=? WHERE url=?');
+  Object.keys(urlFixes).forEach(function(old){upd.run(urlFixes[old],old);});
+  // Mettre à jour le titre/source de l'article HATVP → Observatoire
+  db.prepare("UPDATE articles SET titre='Conflits d''intérêts : guide pour les élus locaux',source='Observatoire',resume='Guide pratique sur la prévention des conflits d''intérêts dans les collectivités. Déport, déclarations, cas concrets.',tags='déontologie,conflits' WHERE url='https://www.observatoire-collectivites.org/spip.php?article9143'").run();
 }catch(e){}
 
 // Comptes élus — peuvent être surchargés via ACCOUNTS_JSON env var
@@ -3427,9 +3433,9 @@ function renderArticles(){
     var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
     var col=ART_COLORS[idx%ART_COLORS.length];
     var ico=ART_ICONS[idx%ART_ICONS.length];
-    var delBtn='<div style="padding:.5rem 1rem;border-top:1px solid var(--w2)"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;font-size:.7rem;cursor:pointer;border-radius:8px;padding:4px 12px;font-weight:600;width:100%">Supprimer cet article</button></div>';
-    html+='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block">'
-      +'<div class="art-card" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--s1);cursor:pointer;position:relative;height:100%;display:flex;flex-direction:column">'
+    var delBtn='<div style="padding:.4rem .75rem .6rem;border-top:1px solid var(--w2)"><button onclick="delArticle('+a.id+')" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;font-size:.7rem;cursor:pointer;border-radius:8px;padding:5px 12px;font-weight:600;width:100%">🗑 Supprimer</button></div>';
+    html+='<div class="art-card" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--s1);height:100%;display:flex;flex-direction:column">'
+      +'<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:flex;flex-direction:column;flex:1;cursor:pointer">'
       +'<div style="background:linear-gradient(135deg,'+col+','+col+'cc);padding:1rem;color:#fff;position:relative;overflow:hidden">'
       +'<div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.08)"></div>'
       +'<div style="font-size:1.3rem;margin-bottom:.5rem">'+ico+'</div>'
@@ -3441,9 +3447,9 @@ function renderArticles(){
       +(a.source?'<span style="font-weight:600;color:var(--g3);background:var(--g8);padding:1px 6px;border-radius:4px">'+a.source+'</span>':'')
       +'<span>'+date+'</span>'
       +'<span style="margin-left:auto;color:var(--g3);font-weight:600">Lire →</span>'
-      +'</div></div>'
+      +'</div></div></a>'
       +delBtn
-      +'</div></a>';
+      +'</div>';
   }
   html+='</div>';
   // Liste compacte pour les anciens

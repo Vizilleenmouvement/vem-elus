@@ -1,12 +1,41 @@
-const http=require('http'),https=require('https'),fs=require('fs'),path=require('path');
+const http=require('http'),https=require('https'),fs=require('fs'),path=require('path'),tls=require('tls');
 const PORT=process.env.PORT||3000, DIR=__dirname;
 
-// ── CONFIG EMAIL ────────────────────────────────────────────────────────────
+// ── ENVOI EMAIL SMTP GMAIL (sans nodemailer) ────────────────────────────────
 const GMAIL_USER=process.env.GMAIL_USER||'mth144443@gmail.com';
 const GMAIL_PASS=process.env.GMAIL_PASS||'vhpd jinu qhvf meet';
 const ADMIN_EMAIL=process.env.ADMIN_EMAIL||'thuilliermichel@mac.com';
-var mailTransporter=null;
-try{var nm=require('nodemailer');mailTransporter=nm.createTransport({service:'gmail',auth:{user:GMAIL_USER,pass:GMAIL_PASS}});console.log('Nodemailer OK');}catch(e){console.log('Nodemailer non disponible — emails désactivés');}
+
+function sendEmail(to,subject,textBody,htmlBody,cb){
+  cb=cb||function(){};
+  var commands=[],step=0,socket=null;
+  var msg='From: VeM Espace Elus <'+GMAIL_USER+'>\r\nTo: '+to+'\r\nSubject: =?UTF-8?B?'+Buffer.from(subject).toString('base64')+'?=\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary="vem_boundary"\r\n\r\n--vem_boundary\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n'+(textBody||'')+'\r\n--vem_boundary\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n'+(htmlBody||'')+'\r\n--vem_boundary--\r\n.\r\n';
+  commands=['EHLO localhost\r\n','AUTH LOGIN\r\n',Buffer.from(GMAIL_USER).toString('base64')+'\r\n',Buffer.from(GMAIL_PASS).toString('base64')+'\r\n','MAIL FROM:<'+GMAIL_USER+'>\r\n','RCPT TO:<'+to+'>\r\n','DATA\r\n',msg,'QUIT\r\n'];
+  var net=require('net');
+  var sock=net.createConnection(587,'smtp.gmail.com',function(){
+    sock.on('data',function(data){
+      var r=data.toString();
+      if(r.startsWith('220')&&step===0){sock.write(commands[step++]);return;}
+      if(r.includes('STARTTLS')){sock.write('STARTTLS\r\n');return;}
+      if(r.startsWith('220')&&step===1){
+        socket=tls.connect({socket:sock,host:'smtp.gmail.com'},function(){
+          socket.write(commands[0]);step=1;
+          socket.on('data',function(d2){
+            var r2=d2.toString();
+            if(step<commands.length){socket.write(commands[step++]);}
+            if(r2.startsWith('235')){/* auth ok */}
+            if(r2.startsWith('221')){socket.end();cb(null);}
+            if(r2.startsWith('5')){socket.end();cb(new Error(r2.trim()));}
+          });
+        });
+        return;
+      }
+      if(step<commands.length){sock.write(commands[step++]);}
+    });
+  });
+  sock.on('error',function(e){cb(e);});
+  sock.setTimeout(15000,function(){sock.destroy();cb(new Error('Timeout SMTP'));});
+}
 const RESET_TOKENS={};
 
 // ── ANTI-BRUTE-FORCE ────────────────────────────────────────────────────────
@@ -518,7 +547,8 @@ const server=http.createServer(function(req,res){
       var proto=req.headers['x-forwarded-proto']||'http';
       var resetUrl=proto+'://'+host+'/reset-password?token='+tk;
       var eluNom=ACCOUNTS[user].nom||user;
-      if(mailTransporter){mailTransporter.sendMail({from:'VeM Espace Elus <'+GMAIL_USER+'>',to:ADMIN_EMAIL,subject:'Demande reinitialisation mdp - '+eluNom,text:eluNom+' ('+user+') demande une reinitialisation.\nLien (1h) : '+resetUrl,html:'<p><strong>'+eluNom+'</strong> ('+user+') demande une reinitialisation de mot de passe.</p><p>Lien (valable 1h) :</p><p style="background:#f0fdf4;border:1px solid #b8d9c4;border-radius:8px;padding:12px;word-break:break-all"><a href="'+resetUrl+'">'+resetUrl+'</a></p>'},function(err){if(err)console.log('Erreur email:',err.message);else console.log('Email reset envoye pour '+user);});}else{console.log('Lien reset pour '+user+' : '+resetUrl);}
+      sendEmail(ADMIN_EMAIL,'Demande reinitialisation mdp - '+eluNom,eluNom+' ('+user+') demande une reinitialisation.\nLien (1h) : '+resetUrl,'<p><strong>'+eluNom+'</strong> ('+user+') demande une reinitialisation de mot de passe.</p><p>Lien (valable 1h) :</p><p style="background:#f0fdf4;border:1px solid #b8d9c4;border-radius:8px;padding:12px;word-break:break-all"><a href="'+resetUrl+'">'+resetUrl+'</a></p>',function(err){if(err)console.log('Erreur email:',err.message);else console.log('Email reset envoye pour '+user);});
+      console.log('Lien reset pour '+user+' : '+resetUrl);
       res.writeHead(302,{'Location':'/forgot-password?msg=ok'});res.end();
     }catch(e){res.writeHead(302,{'Location':'/forgot-password'});res.end();}});return;
   }

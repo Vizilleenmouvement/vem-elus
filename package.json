@@ -14,8 +14,10 @@
   "author": "Vizille en Mouvement",
   "license": "UNLICENSED",
   "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  },
+  "optionalDependencies": {
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.8.0",
     "nodemailer": "^8.0.4"
   }
 }

@@ -2001,21 +2001,6 @@ textarea.fi{resize:vertical;min-height:90px;}
   </div>
 </div>
 
-<!-- Modal tuto (en dehors du panel pour éviter duplication d'IDs) -->
-<div class="ov" id="ov-tuto-detail">
-  <div class="modal" style="max-width:640px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
-      <div id="tuto-modal-ico" style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0"></div>
-      <div>
-        <div id="tuto-modal-titre" style="font-size:1.05rem;font-weight:700;color:var(--ink);font-family:var(--fd)"></div>
-        <div id="tuto-modal-sub" style="font-size:.78rem;color:var(--i3)"></div>
-      </div>
-      <button onclick="cm()" style="margin-left:auto;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--i3);padding:4px">✕</button>
-    </div>
-    <div id="tuto-modal-body" style="font-size:.82rem;color:var(--i2);line-height:1.8"></div>
-  </div>
-</div>
-
 <div class="page" id="p-guide">
   <div class="ph">
     <div class="ph-ico" style="background:#fef9c3">&#x1F4D6;</div>
@@ -5304,26 +5289,36 @@ var TUTO_CARDS=[
   {ico:"❓",bg:"#fef3c7",color:"#92400e",titre:"Besoin d'aide",resume:"Contacter l'administrateur",detail:"<b>En cas de problème</b>, contactez l'administrateur technique :<br><br>📧 <a href='mailto:thuilliermichel@mac.com' style='color:var(--g3);font-weight:600'>thuilliermichel@mac.com</a><br><br>Vous pouvez aussi utiliser le <b>tchat interne</b> (canal Général) pour poser vos questions aux autres élus."}
 ];
 function renderTutoCards(){
-  var c=$('tuto-cards');if(!c)return;
+  var c=document.getElementById('panel-body');
+  if(c){var t=c.querySelector('#tuto-cards');if(t)c=t;else return;}
+  else{c=$('tuto-cards');if(!c)return;}
   c.innerHTML=TUTO_CARDS.map(function(t,i){
-    return '<div onclick="openTutoDetail('+i+')" class="tuto-card" style="background:#fff;border-radius:16px;border:1px solid var(--w2);padding:1.1rem 1.25rem;box-shadow:var(--s1);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;gap:.6rem">'
-      +'<div style="display:flex;align-items:center;gap:10px">'
+    return '<div class="tuto-card" style="background:#fff;border-radius:16px;border:1px solid var(--w2);box-shadow:var(--s1);overflow:hidden">'
+      +'<div onclick="toggleTuto(this)" style="padding:1.1rem 1.25rem;cursor:pointer;display:flex;align-items:center;gap:10px">'
       +'<div style="width:44px;height:44px;border-radius:12px;background:'+t.bg+';display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">'+t.ico+'</div>'
       +'<div style="flex:1">'
       +'<div style="font-size:.88rem;font-weight:700;color:var(--ink);font-family:var(--fd)">'+t.titre+'</div>'
       +'<div style="font-size:.72rem;color:var(--i3)">'+t.resume+'</div>'
       +'</div>'
-      +'<div style="color:var(--i4);font-size:.8rem">›</div>'
+      +'<div class="tuto-arr" style="color:var(--i4);font-size:.9rem;transition:transform .2s">▶</div>'
+      +'</div>'
+      +'<div class="tuto-body" style="display:none;padding:0 1.25rem 1.1rem;border-top:1px solid var(--w2)">'
+      +'<div style="padding-top:.85rem;font-size:.82rem;color:var(--i2);line-height:1.8">'+t.detail+'</div>'
       +'</div></div>';
   }).join('');
 }
-function openTutoDetail(i){
-  var t=TUTO_CARDS[i];if(!t)return;
-  var ico=$('tuto-modal-ico');if(ico){ico.textContent=t.ico;ico.style.background=t.bg;}
-  var ti=$('tuto-modal-titre');if(ti)ti.textContent=t.titre;
-  var su=$('tuto-modal-sub');if(su)su.textContent=t.resume;
-  var bo=$('tuto-modal-body');if(bo)bo.innerHTML=t.detail;
-  om('tuto-detail');
+function toggleTuto(el){
+  var card=el.parentNode;
+  var body=card.querySelector('.tuto-body');
+  var arr=card.querySelector('.tuto-arr');
+  if(!body)return;
+  if(body.style.display==='none'){
+    body.style.display='block';
+    if(arr)arr.style.transform='rotate(90deg)';
+  } else {
+    body.style.display='none';
+    if(arr)arr.style.transform='none';
+  }
 }
 
 init();

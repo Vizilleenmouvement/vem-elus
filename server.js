@@ -360,6 +360,17 @@ const ACCOUNTS_DEFAULT = {
     "pwd": "sla2026",
     "email": "stephane.LASSERRE@ville-vizille.fr"
   },
+  "olivier.baret": {
+    "id": 27,
+    "nom": "Olivier Baret",
+    "role": "RSSI",
+    "delegation": "",
+    "avatar": "OB",
+    "color": "#0d9488",
+    "photo": "",
+    "pwd": "oba2026",
+    "email": "Olivier.Baret@Ville-vizille.fr"
+  },
   "admin": {
     "id": 0,
     "nom": "Administrateur",

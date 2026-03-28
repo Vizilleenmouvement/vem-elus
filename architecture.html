@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Architecture — VeM Espace Élus</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,sans-serif;color:#1a2520;background:#fff;padding:2rem 3rem;max-width:1100px;margin:auto;font-size:14px;line-height:1.7}
+  h1{font-size:1.8rem;color:#1a3a2a;margin-bottom:.5rem}
+  h2{font-size:1.1rem;color:#2d5a40;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid #e0f5ea}
+  h3{font-size:.9rem;color:#3d7a5a;margin:1.2rem 0 .5rem}
+  .sub{font-size:.85rem;color:#5a7068;margin-bottom:2rem}
+  .box{background:linear-gradient(135deg,#1a3a2a,#2d5a40);border-radius:16px;padding:1.5rem 2rem;color:#fff;margin:1.5rem 0}
+  .box h3{color:#fff;margin:0 0 .8rem}
+  pre{background:#f4f8f6;border:1px solid #ddd8ce;border-radius:10px;padding:1rem 1.2rem;font-size:.78rem;line-height:1.8;overflow-x:auto;font-family:'JetBrains Mono',monospace;color:#2d3d35}
+  table{width:100%;border-collapse:collapse;margin:.8rem 0;font-size:.8rem}
+  th{background:#e0f5ea;color:#1a3a2a;text-align:left;padding:.5rem .7rem;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+  td{padding:.4rem .7rem;border-bottom:1px solid #f0ece4}
+  tr:hover td{background:#f0faf4}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:1rem 0}
+  .card{background:#fff;border:1px solid #e0f5ea;border-radius:12px;padding:1rem;box-shadow:0 2px 8px rgba(26,58,42,.06)}
+  .card-t{font-size:.82rem;font-weight:700;color:#1a3a2a;margin-bottom:.3rem}
+  .card-d{font-size:.72rem;color:#5a7068;line-height:1.6}
+  .badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.7rem;font-weight:700}
+  .badge-green{background:#e0f5ea;color:#1a3a2a}
+  .badge-amber{background:#fef3c7;color:#92400e}
+  .badge-blue{background:#dbeafe;color:#1e40af}
+  .badge-red{background:#fee2e2;color:#991b1b}
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:.5rem 0}
+  .flow-item{background:#e0f5ea;color:#1a3a2a;padding:6px 14px;border-radius:10px;font-size:.78rem;font-weight:600}
+  .flow-arrow{color:#8a9e96;font-size:1.1rem}
+  .footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #ddd8ce;font-size:.72rem;color:#8a9e96;text-align:center}
+  @media print{body{padding:1rem}h1{font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<h1>🏛 Architecture technique</h1>
+<div class="sub">VeM Espace Élus — Vizille en Mouvement · Mandat 2026–2032</div>
+
+<div class="box">
+<h3>Vue d'ensemble</h3>
+<pre style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff">
+Navigateur (Chrome/Safari)
+     │ HTTPS
+     ▼
+Infomaniak — elus.vizilleenmouvement.fr
+     │
+     ├── server.js (Node.js)
+     │     ├── Sessions (mémoire, cookie HttpOnly)
+     │     ├── Anti-brute-force (5 tentatives / 15 min)
+     │     └── Email SMTP Gmail (envoi natif)
+     │
+     ├── db.js (couche d'accès SQLite)
+     │
+     ├── vem.db (base de données SQLite, 20+ tables)
+     │
+     └── uploads/ (fichiers PDF, Word, images…)
+
+Services externes :
+     ├── GitHub (code source + déploiement)
+     ├── Gmail SMTP (emails réinitialisation mdp)
+     └── Anthropic Claude API (rédaction IA)
+</pre>
+</div>
+
+<h2>📊 Base de données (SQLite)</h2>
+<div class="grid">
+  <div class="card"><div class="card-t">👥 Élus</div><div class="card-d">26 conseillers municipaux. Nom, rôle, photo, email, commission.</div></div>
+  <div class="card"><div class="card-t">📁 Projets</div><div class="card-d">91 projets du programme. Statut, avancement, thème, jalons, contacts, documents, presse, journal.</div></div>
+  <div class="card"><div class="card-t">📅 Agenda</div><div class="card-d">Réunions : bureau, commissions, conseil. Date, heure, lieu, type.</div></div>
+  <div class="card"><div class="card-t">📝 Comptes rendus</div><div class="card-d">CR de réunions avec participants, ODJ, contenu, fichiers joints.</div></div>
+  <div class="card"><div class="card-t">📚 Bibliothèque</div><div class="card-d">Documents classés par dossiers thématiques et types. Public/privé.</div></div>
+  <div class="card"><div class="card-t">💬 Chat</div><div class="card-d">Messagerie par canaux (Général, Bureau, commissions). Archivage.</div></div>
+  <div class="card"><div class="card-t">📰 Articles</div><div class="card-d">Veille documentaire. Titre, URL, source, résumé, tags.</div></div>
+  <div class="card"><div class="card-t">🔴 Signalements</div><div class="card-d">Incidents terrain. Type, urgence, lieu, historique de statut.</div></div>
+  <div class="card"><div class="card-t">🔐 Connexions</div><div class="card-d">Journal d'accès. IP, date, succès/échec. Rétention 90 jours.</div></div>
+</div>
+
+<h2>🔀 Routes API</h2>
+<table>
+  <tr><th>Route</th><th>Méthode</th><th>Description</th></tr>
+  <tr><td><code>/</code></td><td>GET</td><td>Page publique d'accueil</td></tr>
+  <tr><td><code>/login</code></td><td>GET/POST</td><td>Page de connexion</td></tr>
+  <tr><td><code>/espace</code></td><td>GET</td><td>Dashboard (authentifié)</td></tr>
+  <tr><td><code>/forgot-password</code></td><td>GET/POST</td><td>Mot de passe oublié</td></tr>
+  <tr><td><code>/reset-password</code></td><td>GET/POST</td><td>Réinitialisation mot de passe</td></tr>
+  <tr><td><code>/api/all</code></td><td>GET</td><td>Toutes les données de l'accueil</td></tr>
+  <tr><td><code>/api/projets</code></td><td>GET</td><td>Liste des 91 projets</td></tr>
+  <tr><td><code>/api/projet/:id</code></td><td>PATCH/DELETE</td><td>Modifier / supprimer un projet</td></tr>
+  <tr><td><code>/api/projet/:id/fiche</code></td><td>GET</td><td>Fiche détaillée (jalons, contacts, docs…)</td></tr>
+  <tr><td><code>/api/agenda</code></td><td>GET/POST</td><td>Réunions</td></tr>
+  <tr><td><code>/api/cr</code></td><td>GET/POST</td><td>Comptes rendus</td></tr>
+  <tr><td><code>/api/biblio</code></td><td>GET/POST</td><td>Bibliothèque documentaire</td></tr>
+  <tr><td><code>/api/chat</code></td><td>GET/POST</td><td>Messagerie interne</td></tr>
+  <tr><td><code>/api/articles</code></td><td>GET/POST/DELETE</td><td>Veille & Articles</td></tr>
+  <tr><td><code>/api/signalements</code></td><td>GET/POST</td><td>Signalements terrain</td></tr>
+  <tr><td><code>/api/evenements</code></td><td>GET/POST</td><td>Événements</td></tr>
+  <tr><td><code>/api/elus</code></td><td>GET/PATCH</td><td>Fiches élus</td></tr>
+  <tr><td><code>/api/upload</code></td><td>POST</td><td>Upload de fichier</td></tr>
+  <tr><td><code>/api/genere</code></td><td>POST</td><td>Génération IA (Claude)</td></tr>
+  <tr><td><code>/api/access-logs</code></td><td>GET</td><td>Journal de connexions (admin)</td></tr>
+</table>
+
+<h2>🔐 Sécurité</h2>
+<div class="grid" style="grid-template-columns:1fr 1fr">
+  <div class="card">
+    <div class="card-t">Authentification</div>
+    <div class="card-d">
+      • Cookie session HttpOnly (durée 7 jours)<br>
+      • Identifiant : <code>prenom.nom</code><br>
+      • Support Basic Auth pour les appels API<br>
+      • Déconnexion auto après 30 min d'inactivité
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-t">Protection</div>
+    <div class="card-d">
+      • Anti-brute-force : 5 tentatives / 15 min par IP<br>
+      • Journalisation de toutes les connexions<br>
+      • Token de réinitialisation temporaire (1h)<br>
+      • Upload : noms de fichiers assainis
+    </div>
+  </div>
+</div>
+
+<h2>👥 Comptes et rôles</h2>
+<table>
+  <tr><th>Rôle</th><th>Login</th><th>ID</th><th>Droits admin</th></tr>
+  <tr><td><span class="badge badge-red">Admin</span></td><td><code>admin</code></td><td>0</td><td>Oui</td></tr>
+  <tr><td><span class="badge badge-amber">Admin</span></td><td><code>michel.thuillier</code></td><td>20</td><td>Oui</td></tr>
+  <tr><td><span class="badge badge-green">Élu</span></td><td><code>catherine.troton</code></td><td>1</td><td>Non</td></tr>
+  <tr><td><span class="badge badge-green">Élu</span></td><td><code>prenom.nom</code> (×26)</td><td>1–26</td><td>Non</td></tr>
+</table>
+
+<h2>🚀 Flux de déploiement</h2>
+<div class="flow">
+  <div class="flow-item">Code modifié</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">git push origin main</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">GitHub</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">Infomaniak tire le code</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">npm install</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">node server.js</div>
+</div>
+
+<h2>🗂 Parcours utilisateur</h2>
+<div class="flow">
+  <div class="flow-item">Élu ouvre Chrome</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">elus.vizilleenmouvement.fr</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">Login</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-item">Dashboard</div>
+</div>
+<br>
+<div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr">
+  <div class="card"><div class="card-t">📋 Accueil</div><div class="card-d">Agenda, tâches, chat, signalements, annonces</div></div>
+  <div class="card"><div class="card-t">📁 Projets</div><div class="card-d">91 projets, fiches détaillées, journal de bord</div></div>
+  <div class="card"><div class="card-t">📚 Bibliothèque</div><div class="card-d">Documents, dossiers, filtres</div></div>
+  <div class="card"><div class="card-t">📰 Veille</div><div class="card-d">Articles, sources, archives</div></div>
+</div>
+
+<div class="footer">
+  VeM Espace Élus — Vizille en Mouvement · Mandat 2026–2032<br>
+  Hébergé par Infomaniak (Genève, Suisse) · Node.js · SQLite · GitHub
+</div>
+
+</body>
+</html>

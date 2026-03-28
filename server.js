@@ -316,29 +316,10 @@ const ACCOUNTS_DEFAULT = {
     "pwd": "vem@dmin2026"
   }
 };
-let ACCOUNTS = ACCOUNTS_DEFAULT;
-try {
-  if(process.env.ACCOUNTS_JSON){
-    var envAcc=JSON.parse(process.env.ACCOUNTS_JSON);
-    var envPwd=Object.values(envAcc)[0]&&Object.values(envAcc)[0].pwd;
-    if(envPwd&&(envPwd.startsWith('$2')||envPwd.length>30||envPwd.includes(':')||envPwd.includes('$'))){
-      console.log('ACCOUNTS_JSON contient des hashs — ignoré');
-    } else { ACCOUNTS=envAcc; }
-  } else {
-    const af = path.join(DIR,'accounts.json');
-    if(require('fs').existsSync(af)){
-      var loaded=JSON.parse(require('fs').readFileSync(af,'utf8'));
-      // Ignorer si les mots de passe sont hashés (bcrypt, scrypt, ou trop longs)
-      var firstPwd=Object.values(loaded)[0]&&Object.values(loaded)[0].pwd;
-      if(firstPwd&&(firstPwd.startsWith('$2')||firstPwd.length>30||firstPwd.includes(':')||firstPwd.includes('$'))){
-        console.log('accounts.json contient des hashs — ignoré, suppression');
-        try{require('fs').unlinkSync(af);}catch(e){}
-      } else {
-        ACCOUNTS=loaded;
-      }
-    }
-  }
-} catch(e) { console.log('Comptes par défaut utilisés'); }
+let ACCOUNTS = JSON.parse(JSON.stringify(ACCOUNTS_DEFAULT));
+// Supprimer accounts.json s'il existe (éviter les mdp hashés)
+try{var af=path.join(DIR,'accounts.json');if(fs.existsSync(af)){fs.unlinkSync(af);console.log('accounts.json supprimé');}}catch(e){}
+console.log('Comptes par défaut utilisés — '+Object.keys(ACCOUNTS).length+' comptes');
 // ── SESSIONS ─────────────────────────────────────────────────────────────────
 const SESSIONS = {}; // token → {username, expires}
 function makeToken(){ return require('crypto').randomBytes(24).toString('hex'); }

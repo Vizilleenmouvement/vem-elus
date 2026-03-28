@@ -3398,7 +3398,10 @@ function renderArticles(){
   el.innerHTML=ARTICLES.map(function(a){
     var date=a.created_at?a.created_at.split(' ')[0]:'';
     var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
-    return '<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin-bottom:12px">'
+    var tagsHtml='';
+    if(a.tags){var tArr=a.tags.split(',');for(var ti=0;ti<tArr.length;ti++){tagsHtml+='<span style="font-size:.62rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px">'+tArr[ti].trim()+'</span>';}}
+    var delBtn=ME.id===0?'<div style="text-align:right;margin-top:-8px;margin-bottom:4px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:none;border:none;font-size:.65rem;color:var(--i4);cursor:pointer">supprimer</button></div>':'';
+    var h='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin-bottom:12px">'
       +'<div class="art-card" style="background:#fff;border-radius:14px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1);cursor:pointer">'
       +'<div style="display:flex;align-items:flex-start;gap:12px">'
       +'<div style="width:44px;height:44px;border-radius:12px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">📄</div>'
@@ -3410,12 +3413,11 @@ function renderArticles(){
       +(domain?'<span style="font-size:.65rem;color:var(--i4)">'+domain+'</span>':'')
       +'<span style="font-size:.65rem;color:var(--i4)">'+date+'</span>'
       +(a.auteur_nom?'<span style="font-size:.65rem;color:var(--i4)">par '+a.auteur_nom+'</span>':'')
-      +(a.tags?a.tags.split(',').map(function(t){return '<span style="font-size:.62rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px">'+t.trim()+'</span>';}).join(''):'')
-      +'</div>'
-      +'</div>'
+      +tagsHtml
+      +'</div></div>'
       +'<div style="color:var(--g5);font-size:.8rem;flex-shrink:0;margin-top:2px">↗</div>'
-      +'</div></div></a>'
-      +(ME.id===0?'<div style="text-align:right;margin-top:-8px;margin-bottom:4px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:none;border:none;font-size:.65rem;color:var(--i4);cursor:pointer">supprimer</button></div>':'');
+      +'</div></div></a>'+delBtn;
+    return h;
   }).join('');
 }
 function saveArticle(){

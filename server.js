@@ -3418,36 +3418,53 @@ function renderArticles(){
     el.innerHTML='<div style="text-align:center;padding:3rem 1rem;color:var(--i3)"><div style="font-size:2.5rem;margin-bottom:.75rem">📰</div><div style="font-size:.88rem;font-weight:600">Aucun article pour le moment</div><div style="font-size:.78rem;margin-top:.4rem">'+msg+'</div></div>';
     return;
   }
-  el.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+ARTICLES.map(function(a,idx){
+  var recents=ARTICLES.slice(0,12);
+  var anciens=ARTICLES.slice(12);
+  // Grille 4 colonnes pour les 12 plus récents
+  var html='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">';
+  for(var idx=0;idx<recents.length;idx++){
+    var a=recents[idx];
     var date=a.created_at?a.created_at.split(' ')[0]:'';
     var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
     var col=ART_COLORS[idx%ART_COLORS.length];
     var ico=ART_ICONS[idx%ART_ICONS.length];
-    var tagsHtml='';
-    if(a.tags){var tArr=a.tags.split(',');for(var ti=0;ti<tArr.length;ti++){tagsHtml+='<span style="font-size:.65rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-right:4px">'+tArr[ti].trim()+'</span>';}}
-    var delBtn=isAdmin()?'<div style="position:absolute;top:8px;right:8px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:rgba(0,0,0,.3);border:none;color:#fff;font-size:.65rem;cursor:pointer;border-radius:6px;padding:2px 8px">✕</button></div>':'';
-    var h='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block">'
-      +'<div class="art-card" style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--s1);cursor:pointer;position:relative">'
+    var delBtn=isAdmin()?'<div style="position:absolute;top:6px;right:6px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:rgba(0,0,0,.3);border:none;color:#fff;font-size:.6rem;cursor:pointer;border-radius:5px;padding:2px 6px">✕</button></div>':'';
+    html+='<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block">'
+      +'<div class="art-card" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:var(--s1);cursor:pointer;position:relative;height:100%;display:flex;flex-direction:column">'
       +delBtn
-      +'<div style="background:linear-gradient(135deg,'+col+','+col+'cc);padding:1.2rem 1.25rem;color:#fff;position:relative;overflow:hidden">'
-      +'<div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08)"></div>'
-      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:.6rem">'
-      +'<span style="font-size:1.4rem">'+ico+'</span>'
-      +(a.source?'<span style="font-size:.7rem;font-weight:700;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:12px">'+a.source+'</span>':'')
-      +tagsHtml
+      +'<div style="background:linear-gradient(135deg,'+col+','+col+'cc);padding:1rem;color:#fff;position:relative;overflow:hidden">'
+      +'<div style="position:absolute;top:-15px;right:-15px;width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.08)"></div>'
+      +'<div style="font-size:1.3rem;margin-bottom:.5rem">'+ico+'</div>'
+      +'<div style="font-size:.82rem;font-weight:700;font-family:var(--fd);line-height:1.3">'+a.titre+'</div>'
       +'</div>'
-      +'<div style="font-size:.95rem;font-weight:700;font-family:var(--fd);line-height:1.35">'+a.titre+'</div>'
-      +'</div>'
-      +'<div style="padding:1rem 1.25rem">'
-      +(a.resume?'<div style="font-size:.8rem;color:var(--i2);line-height:1.65;margin-bottom:.6rem">'+a.resume+'</div>':'')
-      +'<div style="display:flex;align-items:center;gap:8px;font-size:.68rem;color:var(--i4)">'
-      +(domain?'<span>'+domain+'</span><span>·</span>':'')
+      +'<div style="padding:.75rem 1rem;flex:1;display:flex;flex-direction:column">'
+      +(a.resume?'<div style="font-size:.72rem;color:var(--i2);line-height:1.55;margin-bottom:.5rem;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">'+a.resume+'</div>':'<div style="flex:1"></div>')
+      +'<div style="display:flex;align-items:center;gap:6px;font-size:.62rem;color:var(--i4)">'
+      +(a.source?'<span style="font-weight:600;color:var(--g3);background:var(--g8);padding:1px 6px;border-radius:4px">'+a.source+'</span>':'')
       +'<span>'+date+'</span>'
-      +(a.auteur_nom?'<span>·</span><span>par '+a.auteur_nom+'</span>':'')
       +'<span style="margin-left:auto;color:var(--g3);font-weight:600">Lire →</span>'
       +'</div></div></div></a>';
-    return h;
-  }).join('')+'</div>';
+  }
+  html+='</div>';
+  // Liste compacte pour les anciens
+  if(anciens.length>0){
+    html+='<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--w2)">';
+    html+='<div style="font-size:.72rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem">📦 Archives ('+anciens.length+' articles)</div>';
+    html+='<div style="display:flex;flex-direction:column;gap:4px">';
+    for(var j=0;j<anciens.length;j++){
+      var b=anciens[j];
+      var bdate=b.created_at?b.created_at.split(' ')[0]:'';
+      var bdel=isAdmin()?'<button onclick="event.preventDefault();event.stopPropagation();delArticle('+b.id+')" style="background:none;border:none;font-size:.6rem;color:var(--i4);cursor:pointer;margin-left:4px">✕</button>':'';
+      html+='<a href="'+(b.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:flex;align-items:center;gap:8px;padding:.45rem .7rem;background:#fff;border-radius:8px;border:1px solid var(--w2);font-size:.75rem;transition:background .15s" class="art-card">'
+        +'<span style="color:var(--i4);font-size:.65rem;white-space:nowrap">'+bdate+'</span>'
+        +'<span style="font-weight:600;color:var(--ink);flex:1">'+b.titre+'</span>'
+        +(b.source?'<span style="font-size:.6rem;color:var(--g3);background:var(--g8);padding:1px 5px;border-radius:3px">'+b.source+'</span>':'')
+        +'<span style="color:var(--g4);font-size:.7rem">↗</span>'
+        +bdel+'</a>';
+    }
+    html+='</div></div>';
+  }
+  el.innerHTML=html;
 }
 function saveArticle(){
   var titre=v('art-titre'),url=v('art-url'),source=v('art-source'),resume=v('art-resume'),tags=v('art-tags');

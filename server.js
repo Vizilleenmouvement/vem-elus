@@ -45,6 +45,7 @@ function recordAttempt(ip,ok){if(ok){delete LOGIN_ATTEMPTS[ip];return;}if(!LOGIN
 
 const {Elus,Agenda,Projets,Statuts,CR,Biblio,Signalements,Evenements,Chat,Annonces,Tasks,Notifs,RepElus,stats:dbStats,ts,db,ProjetJalons,ProjetPartenaires,ProjetContacts,ProjetDocs,ProjetPresse,ProjetJournal,BiblioDoc} = require('./db.js');
 try{db.exec("CREATE TABLE IF NOT EXISTS access_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, nom TEXT, ip TEXT, success INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now','localtime')))");}catch(e){}
+try{db.exec("CREATE TABLE IF NOT EXISTS articles (id INTEGER PRIMARY KEY AUTOINCREMENT, titre TEXT NOT NULL, url TEXT DEFAULT '', source TEXT DEFAULT '', resume TEXT DEFAULT '', tags TEXT DEFAULT '', auteur_id INTEGER DEFAULT 0, auteur_nom TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now','localtime')))");}catch(e){}
 
 // Comptes élus — peuvent être surchargés via ACCOUNTS_JSON env var
 const ACCOUNTS_DEFAULT = {
@@ -927,6 +928,18 @@ const server=http.createServer(function(req,res){
     return J(res,{ok:true,updated:updated});
   });
 
+  // ARTICLES / VEILLE
+  if(p==='/api/articles'&&m==='GET'){
+    var arts=db.prepare('SELECT * FROM articles ORDER BY id DESC').all();
+    return J(res,arts);
+  }
+  if(p==='/api/articles'&&m==='POST')return body(req,function(err,d){
+    if(err)return J(res,{ok:false},400);
+    var r=db.prepare('INSERT INTO articles (titre,url,source,resume,tags,auteur_id,auteur_nom) VALUES (?,?,?,?,?,?,?)').run(d.titre||'',d.url||'',d.source||'',d.resume||'',d.tags||'',ME.id,ME.nom);
+    return J(res,{ok:true,item:db.prepare('SELECT * FROM articles WHERE id=?').get(r.lastInsertRowid)});
+  });
+  if(p.match(/^\/api\/articles\/\d+$/)&&m==='DELETE'){db.prepare('DELETE FROM articles WHERE id=?').run(parseInt(p.split('/').pop()));return J(res,{ok:true});}
+
   // CLAUDE AI
   if(p==='/api/genere'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false,error:'Données invalides'},400);
@@ -1760,7 +1773,7 @@ textarea.fi{resize:vertical;min-height:90px;}
   <div class="sbs">Mon espace</div>
   <div class="sbi" data-panel="tuto" onclick="openPanel('tuto')"><span class="sbi-ic">🎓</span>Guide d'utilisation</div>
   <div class="sbi" data-panel="guide" onclick="openPanel('guide')"><span class="sbi-ic">&#x1F4D6;</span>Guide de l&#x27;élu</div>
-  <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">&#x1F517;</span>Ressources</div>
+  <div class="sbi" data-panel="ress" onclick="openPanel('ress')"><span class="sbi-ic">📰</span>Veille &amp; Articles</div>
 
   <div class="sbs">Le mandat</div>
   <div class="sbi" data-panel="agenda" onclick="openPanel('agenda')"><span class="sbi-ic">&#x1F4C5;</span>Agenda</div>
@@ -2020,10 +2033,35 @@ textarea.fi{resize:vertical;min-height:90px;}
 <!-- RESSOURCES (alias vers guide) -->
 <div class="page" id="p-ress">
   <div class="ph">
-    <div class="ph-ico" style="background:var(--g8)">&#x1F517;</div>
-    <div><div class="ph-t">Ressources utiles</div><div class="ph-s">Liens essentiels pour votre mandat</div></div>
+    <div class="ph-ico" style="background:#fef3c7">📰</div>
+    <div><div class="ph-t">Veille &amp; Articles</div><div class="ph-s">Articles utiles pour les élus</div></div>
+    <div class="ph-a"><button class="btn btn-p btn-sm" onclick="om('article')">+ Publier un article</button></div>
   </div>
-  <div class="scr"><div id="ress-list-2" class="ress-g"></div></div>
+  <div class="scr" style="padding:1.25rem 1.5rem">
+    <div id="articles-list"></div>
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--w2)">
+      <div style="font-size:.72rem;font-weight:700;color:var(--i3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.75rem">&#x1F517; Liens permanents</div>
+      <div id="ress-list-2" class="ress-g"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ajout article -->
+<div class="ov" id="ov-article">
+  <div class="modal">
+    <div style="font-size:.9rem;font-weight:700;color:var(--ink);margin-bottom:1rem;font-family:var(--fd)">📰 Publier un article</div>
+    <div class="ff"><label>Titre *</label><input class="fi" id="art-titre" placeholder="Titre de l'article"></div>
+    <div class="ff"><label>URL du lien *</label><input class="fi" id="art-url" placeholder="https://..."></div>
+    <div class="fr2">
+      <div class="ff"><label>Source</label><input class="fi" id="art-source" placeholder="Le Monde, AMF, Maire-Info..."></div>
+      <div class="ff"><label>Tags</label><input class="fi" id="art-tags" placeholder="budget, urbanisme..."></div>
+    </div>
+    <div class="ff"><label>Résumé</label><textarea class="fi" id="art-resume" placeholder="En quelques lignes, de quoi parle cet article..." rows="3"></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-s" onclick="cm()">Annuler</button>
+      <button class="btn btn-p" onclick="saveArticle()">Publier</button>
+    </div>
+  </div>
 </div>
 
 
@@ -3339,6 +3377,56 @@ function buildRess(){
   }).join("");
   var rl=$("ress-list"); if(rl) rl.innerHTML=html;
   var rl2=$("ress-list-2"); if(rl2) rl2.innerHTML=html;
+  // Charger les articles
+  loadArticles();
+}
+var ARTICLES=[];
+function loadArticles(){
+  apiGet('/api/articles').then(function(data){
+    ARTICLES=Array.isArray(data)?data:[];
+    renderArticles();
+  });
+}
+function renderArticles(){
+  var el=$('articles-list');if(!el)return;
+  if(!ARTICLES.length){
+    el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--i3)"><div style="font-size:1.5rem;margin-bottom:.5rem">📰</div><div style="font-size:.82rem">Aucun article publié pour le moment</div><div style="font-size:.72rem;margin-top:.3rem">Cliquez <b>+ Publier un article</b> pour partager une ressource utile</div></div>';
+    return;
+  }
+  el.innerHTML=ARTICLES.map(function(a){
+    var date=a.created_at?a.created_at.split(' ')[0]:'';
+    var domain='';try{domain=new URL(a.url).hostname.replace('www.','');}catch(e){}
+    return '<a href="'+(a.url||'#')+'" target="_blank" rel="noopener" style="text-decoration:none;display:block;margin-bottom:12px">'
+      +'<div style="background:#fff;border-radius:14px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1);transition:all .2s;cursor:pointer" onmouseover="this.style.boxShadow=\'var(--s2)\';this.style.borderColor=\'var(--g5)\'" onmouseout="this.style.boxShadow=\'var(--s1)\';this.style.borderColor=\'var(--w2)\'">'
+      +'<div style="display:flex;align-items:flex-start;gap:12px">'
+      +'<div style="width:44px;height:44px;border-radius:12px;background:var(--g8);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">📄</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:.88rem;font-weight:700;color:var(--ink);font-family:var(--fd);margin-bottom:3px">'+a.titre+'</div>'
+      +(a.resume?'<div style="font-size:.78rem;color:var(--i2);line-height:1.6;margin-bottom:6px">'+a.resume+'</div>':'')
+      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +(a.source?'<span style="font-size:.68rem;font-weight:600;color:var(--g3);background:var(--g8);padding:2px 8px;border-radius:6px">'+a.source+'</span>':'')
+      +(domain?'<span style="font-size:.65rem;color:var(--i4)">'+domain+'</span>':'')
+      +'<span style="font-size:.65rem;color:var(--i4)">'+date+'</span>'
+      +(a.auteur_nom?'<span style="font-size:.65rem;color:var(--i4)">par '+a.auteur_nom+'</span>':'')
+      +(a.tags?a.tags.split(',').map(function(t){return '<span style="font-size:.62rem;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px">'+t.trim()+'</span>';}).join(''):'')
+      +'</div>'
+      +'</div>'
+      +'<div style="color:var(--g5);font-size:.8rem;flex-shrink:0;margin-top:2px">↗</div>'
+      +'</div></div></a>'
+      +(ME.id===0?'<div style="text-align:right;margin-top:-8px;margin-bottom:4px"><button onclick="event.preventDefault();event.stopPropagation();delArticle('+a.id+')" style="background:none;border:none;font-size:.65rem;color:var(--i4);cursor:pointer">supprimer</button></div>':'');
+  }).join('');
+}
+function saveArticle(){
+  var titre=v('art-titre'),url=v('art-url'),source=v('art-source'),resume=v('art-resume'),tags=v('art-tags');
+  if(!titre||!url){toast('Titre et URL requis');return;}
+  apiPost('/api/articles',{titre:titre,url:url,source:source,resume:resume,tags:tags}).then(function(r){
+    if(r.ok){cm();ARTICLES.unshift(r.item);renderArticles();toast('Article publié !');
+    ['art-titre','art-url','art-source','art-resume','art-tags'].forEach(function(id){var e=$(id);if(e)e.value='';});}
+  });
+}
+function delArticle(id){
+  if(!confirm('Supprimer cet article ?'))return;
+  apiDel('/api/articles/'+id).then(function(r){if(r.ok){ARTICLES=ARTICLES.filter(function(a){return a.id!==id;});renderArticles();toast('Article supprimé');}});
 }
 
 // ── AGENDA ───────────────────────────────────────────────────────────────────

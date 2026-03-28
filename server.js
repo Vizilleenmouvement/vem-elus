@@ -1626,6 +1626,7 @@ textarea.fi{resize:vertical;min-height:90px;}
 .empty-s{font-size:.74rem;color:var(--i4);}
 
 /* TOAST */
+.tuto-card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(26,58,42,.12) !important;border-color:var(--g5);}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--g1);color:#fff;padding:10px 18px;border-radius:var(--R);font-size:.78rem;font-weight:500;z-index:1000;display:none;box-shadow:var(--s3);border:1px solid rgba(255,255,255,.1);animation:mIn .2s;}
 
 @media(max-width:900px){
@@ -1997,20 +1998,21 @@ textarea.fi{resize:vertical;min-height:90px;}
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px" id="tuto-cards"></div>
 
-    <!-- Modal détail -->
-    <div class="ov" id="ov-tuto-detail">
-      <div class="modal" style="max-width:640px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
-          <div id="tuto-modal-ico" style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0"></div>
-          <div>
-            <div id="tuto-modal-titre" style="font-size:1.05rem;font-weight:700;color:var(--ink);font-family:var(--fd)"></div>
-            <div id="tuto-modal-sub" style="font-size:.78rem;color:var(--i3)"></div>
-          </div>
-          <button onclick="cm()" style="margin-left:auto;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--i3);padding:4px">✕</button>
-        </div>
-        <div id="tuto-modal-body" style="font-size:.82rem;color:var(--i2);line-height:1.8"></div>
+  </div>
+</div>
+
+<!-- Modal tuto (en dehors du panel pour éviter duplication d'IDs) -->
+<div class="ov" id="ov-tuto-detail">
+  <div class="modal" style="max-width:640px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+      <div id="tuto-modal-ico" style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0"></div>
+      <div>
+        <div id="tuto-modal-titre" style="font-size:1.05rem;font-weight:700;color:var(--ink);font-family:var(--fd)"></div>
+        <div id="tuto-modal-sub" style="font-size:.78rem;color:var(--i3)"></div>
       </div>
+      <button onclick="cm()" style="margin-left:auto;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--i3);padding:4px">✕</button>
     </div>
+    <div id="tuto-modal-body" style="font-size:.82rem;color:var(--i2);line-height:1.8"></div>
   </div>
 </div>
 
@@ -5304,7 +5306,7 @@ var TUTO_CARDS=[
 function renderTutoCards(){
   var c=$('tuto-cards');if(!c)return;
   c.innerHTML=TUTO_CARDS.map(function(t,i){
-    return '<div onclick="openTutoDetail('+i+')" style="background:#fff;border-radius:16px;border:1px solid var(--w2);padding:1.1rem 1.25rem;box-shadow:var(--s1);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;gap:.6rem" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 6px 20px rgba(26,58,42,.12)\'" onmouseout="this.style.transform=\'none\';this.style.boxShadow=\'var(--s1)\'">'
+    return '<div onclick="openTutoDetail('+i+')" class="tuto-card" style="background:#fff;border-radius:16px;border:1px solid var(--w2);padding:1.1rem 1.25rem;box-shadow:var(--s1);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;gap:.6rem">'
       +'<div style="display:flex;align-items:center;gap:10px">'
       +'<div style="width:44px;height:44px;border-radius:12px;background:'+t.bg+';display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">'+t.ico+'</div>'
       +'<div style="flex:1">'

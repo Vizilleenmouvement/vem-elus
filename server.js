@@ -1985,84 +1985,31 @@ textarea.fi{resize:vertical;min-height:90px;}
     <div class="ph-ico" style="background:#ede9fe">🎓</div>
     <div>
       <div class="ph-t">Guide d'utilisation</div>
-      <div class="ph-s">Comment utiliser l'espace élus VeM</div>
+      <div class="ph-s">Cliquez sur une carte pour voir les instructions détaillées</div>
     </div>
   </div>
   <div class="scr" style="padding:1.25rem 1.5rem">
 
-    <!-- Accueil -->
     <div style="background:linear-gradient(135deg,#1a3a2a,#2d5a40);border-radius:14px;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem">
       <div style="font-size:1rem;font-weight:700;margin-bottom:.4rem">🌿 Bienvenue dans l'espace élus Vizille en Mouvement</div>
-      <div style="font-size:.78rem;opacity:.85;line-height:1.7">Cet espace est votre outil de travail pour le mandat 2026–2032. Retrouvez ici les projets du programme, les comptes rendus, le tchat de l'équipe et tous vos documents de travail.</div>
+      <div style="font-size:.78rem;opacity:.85;line-height:1.7">Cet espace est votre outil de travail pour le mandat 2026–2032. Chaque section est expliquée ci-dessous — cliquez sur une carte pour en savoir plus.</div>
     </div>
 
-    <!-- Sections -->
-    <div style="display:flex;flex-direction:column;gap:1rem">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px" id="tuto-cards"></div>
 
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📋 Aujourd'hui</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Votre tableau de bord personnel. Retrouvez un résumé de l'activité récente, les prochaines réunions à l'agenda et les dernières notifications.</div>
-      </div>
-
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📁 Projets du programme</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
-          <b>Par commission</b> → vue groupée par thème (Mobilités, Travaux, Culture…)<br>
-          <b>Tous les projets</b> → liste complète avec statut, avancement et élu référent modifiables directement<br><br>
-          Cliquer sur un projet ouvre la <b>fiche détaillée</b> avec 5 onglets :<br>
-          • <b>📋 Infos</b> — statut, avancement, description<br>
-          • <b>📒 Journal</b> — main courante : noter une observation, une étape franchie, joindre un document<br>
-          • <b>👥 Contacts</b> — interlocuteurs et organismes partenaires du projet<br>
-          • <b>📄 Documents</b> — classement des pièces liées au projet<br>
-          • <b>📰 Presse</b> — articles et références médias
+    <!-- Modal détail -->
+    <div class="ov" id="ov-tuto-detail">
+      <div class="modal" style="max-width:640px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+          <div id="tuto-modal-ico" style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0"></div>
+          <div>
+            <div id="tuto-modal-titre" style="font-size:1.05rem;font-weight:700;color:var(--ink);font-family:var(--fd)"></div>
+            <div id="tuto-modal-sub" style="font-size:.78rem;color:var(--i3)"></div>
+          </div>
+          <button onclick="cm()" style="margin-left:auto;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--i3);padding:4px">✕</button>
         </div>
+        <div id="tuto-modal-body" style="font-size:.82rem;color:var(--i2);line-height:1.8"></div>
       </div>
-
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📒 Journal de bord (main courante)</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
-          Dans chaque fiche projet, le journal vous permet de consigner en temps réel :<br>
-          • Un <b>objet</b> (titre de l'entrée, ex : "Réunion Métropole du 25/03")<br>
-          • Un <b>texte libre</b> (compte rendu, décision, observation…)<br>
-          • Un <b>fichier joint</b> optionnel (PDF, Word, email…)<br><br>
-          La date et l'heure sont enregistrées automatiquement. Les brouillons sont sauvegardés automatiquement si vous quittez la page accidentellement.
-        </div>
-      </div>
-
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📄 Comptes rendus</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Rédigez et archivez les comptes rendus de réunions (bureau, commissions, conseil). Vous pouvez joindre un fichier PDF ou un lien ou lien URL. Tous les élus peuvent consulter les CR publics.</div>
-      </div>
-
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">📚 Bibliothèque documentaire</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Classement centralisé de tous les documents de la mandature. Organisez-les par <b>dossiers thématiques</b> que vous créez librement. Vous pouvez déplacer un document d'un dossier à l'autre ou changer son type directement dans la liste.</div>
-      </div>
-
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">💬 Tchat de l'équipe</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
-          Messagerie instantanée par canal thématique (Général, Bureau, Commissions…)<br>
-          • Bouton <b>📅</b> → consulter les messages archivés par date<br>
-          • Bouton <b>📦</b> → archiver les messages du jour (ils restent consultables)
-        </div>
-      </div>
-
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">🔐 Connexion &amp; sécurité</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">
-          Identifiant : <b>prenom.nom</b> (ex : <code style="background:var(--g8);padding:1px 6px;border-radius:4px">michel.thuillier</code>)<br>
-          Mot de passe : communiqué par l'administrateur<br><br>
-          La session dure <b>7 jours</b>. Déconnexion automatique après 30 minutes d'inactivité avec avertissement à 25 min.<br>
-          Pour changer votre mot de passe : menu Répertoire élus → votre fiche → Changer le mot de passe.
-        </div>
-      </div>
-
-      <div style="background:#fff;border-radius:12px;border:1px solid var(--w2);padding:1rem 1.25rem;box-shadow:var(--s1)">
-        <div style="font-size:.8rem;font-weight:700;color:var(--g1);margin-bottom:.6rem">❓ Besoin d'aide</div>
-        <div style="font-size:.78rem;color:var(--i2);line-height:1.7">Contacter l'administrateur technique : <a href="mailto:thuilliermichel@mac.com" style="color:var(--g3)">thuilliermichel@mac.com</a></div>
-      </div>
-
     </div>
   </div>
 </div>
@@ -2857,6 +2804,7 @@ function openPanel(id){
   else if(id==="ress") buildRess();
   else if(id==="hist") renderNt();
   else if(id==="comms"){}
+  else if(id==="tuto") renderTutoCards();
   else if(id==="creer") resetNP();
   else if(id==="cdet") fCD();
   else if(id==="audit") renderAudit();
@@ -5335,6 +5283,45 @@ function renderConnexions(){
     lh+='</div>';
     body.innerHTML=lh;
   });
+}
+
+// ── GUIDE D'UTILISATION — CARTES ────────────────────────────────────────────
+var TUTO_CARDS=[
+  {ico:"🏠",bg:"#e0f5ea",color:"#1a3a2a",titre:"Accueil",resume:"Votre tableau de bord quotidien",detail:"<b>La page d'accueil</b> affiche un résumé de votre activité :<br><br>• <b>Agenda</b> — les prochaines réunions de la semaine avec un mini-calendrier<br>• <b>Mes tâches</b> — votre to-do list personnelle<br>• <b>Signalements</b> — les incidents remontés du terrain<br>• <b>Annonces</b> — les communications internes<br>• <b>Tchat</b> — les derniers messages de l'équipe<br>• <b>Comptes rendus</b> — les derniers CR publiés<br><br>Les 3 tuiles colorées donnent un accès rapide à la <b>Bibliothèque</b>, votre <b>Dossier personnel</b> et la <b>Visioconférence kMeet</b>."},
+  {ico:"📅",bg:"#dbeafe",color:"#1e40af",titre:"Agenda",resume:"Réunions, bureaux, conseils",detail:"<b>L'agenda</b> centralise toutes les réunions :<br><br>1. Cliquez <b>+ Ajouter</b> pour créer une réunion<br>2. Renseignez le <b>titre</b>, la <b>date</b>, l'<b>heure</b>, le <b>lieu</b><br>3. Choisissez le <b>type</b> : conseil, bureau, commission, autre<br>4. Ajoutez des <b>notes</b> si nécessaire<br><br>Les réunions de type <b>conseil</b> apparaissent aussi sur la page publique du site.<br><br>Pour modifier une réunion, cliquez directement dessus dans la liste."},
+  {ico:"📝",bg:"#fef3c7",color:"#92400e",titre:"Comptes rendus",resume:"Rédiger et archiver les CR",detail:"<b>Les comptes rendus</b> permettent de garder une trace de chaque réunion :<br><br>1. Cliquez <b>+ Nouveau CR</b><br>2. Renseignez : <b>titre</b>, <b>commission</b>, <b>date</b>, <b>rédigé par</b><br>3. Listez les <b>participants</b> et l'<b>ordre du jour</b><br>4. Rédigez le <b>contenu</b> du compte rendu<br>5. Notez les <b>prochaines étapes</b><br>6. Joignez un <b>fichier</b> ou un <b>lien</b> si besoin<br><br>Tous les élus peuvent consulter les CR publiés."},
+  {ico:"📚",bg:"#ede9fe",color:"#6d28d9",titre:"Bibliothèque",resume:"Documents officiels classés",detail:"<b>La bibliothèque</b> centralise tous les documents du mandat :<br><br>• Organisez par <b>dossiers thématiques</b> (Conseil municipal, Budget, Urbanisme…)<br>• Filtrez par <b>type</b> (Délibération, PV, Rapport, Courrier…)<br>• <b>Ajoutez un document</b> : titre, type, fichier ou lien, description<br>• <b>Déplacez</b> un document d'un dossier à l'autre en un clic<br>• <b>Changez le type</b> directement dans la liste<br>• Les documents <b>privés</b> ne sont visibles que par leur auteur<br><br>Formats acceptés : PDF, Word, Excel, images, vidéos."},
+  {ico:"🔒",bg:"#fef3c7",color:"#92400e",titre:"Répertoire élus",resume:"Votre espace privé",detail:"<b>Le répertoire élus</b> est votre carnet d'adresses personnel :<br><br>• Ajoutez vos <b>contacts</b> liés au mandat (nom, URL, notes)<br>• Ces contacts sont <b>privés</b> — visibles uniquement par vous<br>• L'administrateur peut voir tous les répertoires<br><br>C'est aussi ici que vous pouvez <b>changer votre mot de passe</b> :<br>Ouvrez votre fiche → cliquez <b>Changer le mot de passe</b>."},
+  {ico:"👥",bg:"#e0f5ea",color:"#1a3a2a",titre:"L'équipe",resume:"Les 27 élus du mandat",detail:"<b>L'équipe</b> affiche la liste complète des 27 conseillers municipaux :<br><br>• Photo, nom, rôle (Maire, Adjoint, Conseiller délégué…)<br>• Email et téléphone<br>• Commission de rattachement<br><br>L'administrateur peut <b>modifier les fiches</b> (photo, rôle, contacts)."},
+  {ico:"📊",bg:"#dbeafe",color:"#1e40af",titre:"Par commission",resume:"Projets groupés par thème",detail:"<b>Vue par commission</b> — les 91 projets du programme regroupés par thème :<br><br>• 12 commissions : Mobilités, Culture, Transition écologique…<br>• Chaque projet affiche son <b>statut</b> (Programmé, En cours, Réalisé…)<br>• Cliquez sur un projet pour ouvrir sa <b>fiche détaillée</b><br>• La barre de progression montre l'avancement par commission<br><br>Un compteur en haut indique le nombre de projets par statut."},
+  {ico:"📋",bg:"#f0fdf4",color:"#166534",titre:"Tous les projets",resume:"Liste complète avec filtres",detail:"<b>Tous les projets</b> — vue en liste avec filtres et recherche :<br><br>• <b>Recherche</b> par titre ou mot-clé<br>• <b>Filtres</b> par statut, commission, année, importance<br>• Changez le <b>statut</b> directement dans la liste<br>• Cliquez pour ouvrir la <b>fiche projet</b> complète avec 5 onglets :<br><br>&nbsp;&nbsp;📋 <b>Infos</b> — statut, avancement, description<br>&nbsp;&nbsp;📒 <b>Journal</b> — main courante, observations, documents joints<br>&nbsp;&nbsp;👥 <b>Contacts</b> — interlocuteurs et partenaires<br>&nbsp;&nbsp;📄 <b>Documents</b> — pièces liées au projet<br>&nbsp;&nbsp;📰 <b>Presse</b> — articles et références médias"},
+  {ico:"🔴",bg:"#fee2e2",color:"#991b1b",titre:"Signalements",resume:"Incidents terrain à suivre",detail:"<b>Les signalements</b> permettent de remonter des problèmes du terrain :<br><br>1. Cliquez <b>+ Nouveau</b><br>2. Renseignez : <b>titre</b>, <b>type</b> (voirie, propreté…), <b>urgence</b>, <b>lieu</b><br>3. Ajoutez une <b>description</b> et le <b>service concerné</b><br><br>Chaque signalement a un <b>historique de statut</b> :<br>Nouveau → En cours → Résolu / Fermé<br><br>L'administrateur peut mettre à jour le statut et ajouter un commentaire."},
+  {ico:"🎪",bg:"#fce7f3",color:"#9d174d",titre:"Événements",resume:"Vie locale et agenda public",detail:"<b>Les événements</b> sont les manifestations de la vie locale :<br><br>• Créez un événement : <b>titre</b>, <b>date</b>, <b>heure</b>, <b>lieu</b>, <b>type</b><br>• Types : municipal, associatif, culturel, sportif, commémoration…<br>• Les événements <b>publics</b> apparaissent sur la page d'accueil du site<br>• Les événements <b>privés</b> sont visibles uniquement par les élus"},
+  {ico:"💬",bg:"#e0f5ea",color:"#1a3a2a",titre:"Tchat",resume:"Messagerie interne par canal",detail:"<b>Le tchat</b> est la messagerie instantanée de l'équipe :<br><br>• <b>Canaux</b> : Général, Bureau, Culture, Mobilités, Écologie, Social, Enfance, Tranquillité, Travaux<br>• Tapez votre message et appuyez <b>Entrée</b> pour envoyer<br>• Bouton <b>📦</b> pour archiver les messages d'un canal<br>• Les messages archivés restent consultables<br><br>Le tchat est aussi accessible via le bouton <b>Tchat</b> dans la barre du haut."},
+  {ico:"🔐",bg:"#f0fdf4",color:"#166534",titre:"Connexion",resume:"Identifiants et sécurité",detail:"<b>Votre connexion</b> :<br><br>• Identifiant : <b>prenom.nom</b> (ex : <code style='background:var(--g8);padding:2px 8px;border-radius:4px'>michel.thuillier</code>)<br>• Mot de passe : communiqué par l'administrateur<br>• La session dure <b>7 jours</b><br>• Déconnexion automatique après <b>30 min d'inactivité</b> (avertissement à 25 min)<br><br><b>Mot de passe oublié ?</b><br>Cliquez le lien sur la page de connexion. L'administrateur recevra un email et vous transmettra un lien de réinitialisation.<br><br><b>Changer son mot de passe :</b><br>Menu Répertoire élus → votre fiche → Changer le mot de passe."},
+  {ico:"❓",bg:"#fef3c7",color:"#92400e",titre:"Besoin d'aide",resume:"Contacter l'administrateur",detail:"<b>En cas de problème</b>, contactez l'administrateur technique :<br><br>📧 <a href='mailto:thuilliermichel@mac.com' style='color:var(--g3);font-weight:600'>thuilliermichel@mac.com</a><br><br>Vous pouvez aussi utiliser le <b>tchat interne</b> (canal Général) pour poser vos questions aux autres élus."}
+];
+function renderTutoCards(){
+  var c=$('tuto-cards');if(!c)return;
+  c.innerHTML=TUTO_CARDS.map(function(t,i){
+    return '<div onclick="openTutoDetail('+i+')" style="background:#fff;border-radius:16px;border:1px solid var(--w2);padding:1.1rem 1.25rem;box-shadow:var(--s1);cursor:pointer;transition:all .25s;display:flex;flex-direction:column;gap:.6rem" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 6px 20px rgba(26,58,42,.12)\'" onmouseout="this.style.transform=\'none\';this.style.boxShadow=\'var(--s1)\'">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<div style="width:44px;height:44px;border-radius:12px;background:'+t.bg+';display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">'+t.ico+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:.88rem;font-weight:700;color:var(--ink);font-family:var(--fd)">'+t.titre+'</div>'
+      +'<div style="font-size:.72rem;color:var(--i3)">'+t.resume+'</div>'
+      +'</div>'
+      +'<div style="color:var(--i4);font-size:.8rem">›</div>'
+      +'</div></div>';
+  }).join('');
+}
+function openTutoDetail(i){
+  var t=TUTO_CARDS[i];if(!t)return;
+  var ico=$('tuto-modal-ico');if(ico){ico.textContent=t.ico;ico.style.background=t.bg;}
+  var ti=$('tuto-modal-titre');if(ti)ti.textContent=t.titre;
+  var su=$('tuto-modal-sub');if(su)su.textContent=t.resume;
+  var bo=$('tuto-modal-body');if(bo)bo.innerHTML=t.detail;
+  om('tuto-detail');
 }
 
 init();

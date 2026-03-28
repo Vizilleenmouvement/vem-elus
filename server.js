@@ -2530,7 +2530,7 @@ textarea.fi{resize:vertical;min-height:90px;}
       <input class="fi" id="bib-url" placeholder="https://&#x2026;" type="url">
     </div>
     <div id="bib-file-section" style="display:none">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:.65rem .85rem;border:2px dashed var(--w3);border-radius:var(--r);background:var(--w);transition:.15s" onmouseover="this.style.borderColor='var(--g5)'" onmouseout="this.style.borderColor='var(--w3)'">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:.65rem .85rem;border:2px dashed var(--w3);border-radius:var(--r);background:var(--w);transition:.15s">
         <span style="font-size:1.4rem">&#x1F4C2;</span>
         <div style="flex:1">
           <div style="font-size:.76rem;font-weight:700;color:var(--ink)" id="bib-file-label">Cliquer pour choisir un fichier</div>
@@ -3383,11 +3383,11 @@ function buildRess(){
 }
 var ARTICLES=[];
 function loadArticles(){
-  if(ME.id===0){var pb=document.getElementById('art-pub-btn');if(pb)pb.style.display='';}
+  try{if(ME.id===0){var pb=document.getElementById('art-pub-btn');if(pb)pb.style.display='';var pb2=document.querySelector('#panel-body #art-pub-btn');if(pb2)pb2.style.display='';}}catch(e){}
   apiGet('/api/articles').then(function(data){
     ARTICLES=Array.isArray(data)?data:[];
     renderArticles();
-  });
+  }).catch(function(e){console.log('Erreur chargement articles:',e);});
 }
 function renderArticles(){
   var el=$('articles-list');if(!el)return;

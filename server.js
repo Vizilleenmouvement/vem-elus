@@ -543,7 +543,7 @@ const server=http.createServer(function(req,res){
       if(!rst||rst.expires<Date.now()){res.writeHead(302,{'Location':'/reset-password?token='+tk});return res.end();}
       if(np.length<5){res.writeHead(302,{'Location':'/reset-password?token='+tk+'&msg=short'});return res.end();}
       if(np!==np2){res.writeHead(302,{'Location':'/reset-password?token='+tk+'&msg=mismatch'});return res.end();}
-      ACCOUNTS[rst.username].pwd=bcrypt.hashSync(np,10);
+      ACCOUNTS[rst.username].pwd=np;
       try{fs.writeFileSync(path.join(DIR,'accounts.json'),JSON.stringify(ACCOUNTS,null,2),'utf8');}catch(e){}
       delete RESET_TOKENS[tk];
       res.writeHead(302,{'Location':'/reset-password?msg=ok'});res.end();
@@ -562,7 +562,7 @@ const server=http.createServer(function(req,res){
         var ip=req.headers['x-forwarded-for']||req.socket.remoteAddress||'';
         if(checkBruteForce(ip)){recordAttempt(ip,false);deny(res,'Trop de tentatives. Réessayez dans 15 minutes.');return;}
         var account=ACCOUNTS[user];
-        var pwdOk=account&&(account.pwd.startsWith('$2')?bcrypt.compareSync(pwd,account.pwd):account.pwd===pwd);
+        var pwdOk=account&&account.pwd===pwd;
         if(!account||!pwdOk){
           recordAttempt(ip,false);
           try{db.prepare('INSERT INTO access_logs (username,nom,ip,success) VALUES (?,?,?,0)').run(user,'',ip);}catch(e){}
@@ -571,7 +571,6 @@ const server=http.createServer(function(req,res){
         }
         recordAttempt(ip,true);
         try{db.prepare('INSERT INTO access_logs (username,nom,ip,success) VALUES (?,?,?,1)').run(user,account.nom||user,ip);}catch(e){}
-        if(!account.pwd.startsWith('$2')){account.pwd=bcrypt.hashSync(pwd,10);try{fs.writeFileSync(path.join(DIR,'accounts.json'),JSON.stringify(ACCOUNTS,null,2),'utf8');}catch(e){}}
         var token=makeToken();
         SESSIONS[token]={username:user,expires:Date.now()+7*24*3600*1000};
         res.writeHead(302,{
@@ -609,7 +608,7 @@ const server=http.createServer(function(req,res){
   if(p==='/api/change_pwd'&&m==='POST')return body(req,function(err,d){
     if(err)return J(res,{ok:false},400);
     if(!d.newpwd||d.newpwd.length<5)return J(res,{ok:false,error:'Mot de passe trop court (5 car. min.)'});
-    ACCOUNTS[ME.username].pwd=bcrypt.hashSync(d.newpwd,10);
+    ACCOUNTS[ME.username].pwd=d.newpwd;
     // Sauvegarder dans accounts.json
     try{fs.writeFileSync(path.join(DIR,'accounts.json'),JSON.stringify(ACCOUNTS,null,2),'utf8');}catch(e){}
     return J(res,{ok:true});
